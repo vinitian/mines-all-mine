@@ -5,6 +5,13 @@
   --foreground: #171717;
 }
 
+@theme {
+  --text-title: 32px;
+  --text-body: 16px;
+  --text-subtitle: 24px;
+  --text-body-small: 14px;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
