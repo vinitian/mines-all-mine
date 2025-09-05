@@ -1,10 +1,9 @@
-// app/gameGrid.tsx
 "use client";
 import React from "react";
 
 type GameGridProps = {
-  size: number;                 // e.g., 6, 8, 10
-  onPick: (i: number) => void;  // index 0..size*size-1
+  size: number;                 
+  onPick: (i: number) => void;  
 };
 
 export default function GameGrid({ size, onPick }: GameGridProps) {
