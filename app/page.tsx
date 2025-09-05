@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { socket } from "../socket";
+import GameGrid from "./gameGrid";
 
 interface Message {
   userID: string;
@@ -14,6 +15,9 @@ export default function Home() {
 
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
+
+  const [size, setSize] = useState<number>(6);
+  const sizes = [6, 8, 10];
 
   useEffect(() => {
     if (socket.connected) {
@@ -79,11 +83,40 @@ export default function Home() {
       sendMessage();
     }
   };
+  const handlePick = (i: number) => {
+    console.log(`Picked cell ${i} in a ${size}x${size} grid`);
+  };
 
   return (
     // todo: detect dark-light mode of user
     <div className="m-8">
+      <h1 className="text-title">Select Map Size</h1>
+      <div style={{ margin: "16px 0", display: "flex", gap: "8px" }}>
+        {sizes.map((s) => (
+          <button
+            key={s}
+            onClick={() => setSize(s)}
+            style={{
+              padding: "6px 12px",
+              borderRadius: "6px",
+              border: "1px solid gray",
+              background: s === size ? "#86efac" : "#e5e7eb", 
+              fontWeight: s === size ? 700 : 400,
+            }}
+            aria-pressed={s === size}
+          >
+            {s} × {s}
+          </button>
+        ))}
+        <span style={{ alignSelf: "center", marginLeft: "8px" }}>
+          Current: {size} × {size}
+        </span>
+      </div>
+      <div style={{ marginBottom: "24px" }}>
+        <GameGrid size={size} onPick={handlePick} />
+      </div>
       <h1 className="text-title">Real-Time Chat</h1>
+      
       <div>
         {messages.map((msg, index) => (
           <div key={index}>
