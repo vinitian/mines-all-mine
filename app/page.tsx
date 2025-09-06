@@ -163,10 +163,37 @@ export default function Home() {
   };
   
 
-  const startGame = () => {
+  {/*const startGame = () => {
+    setGameOver(false);
+    setWinners(null);
+    setLeaderboard([]);
+    setRevealed({});
+    setBombsInfo(null);
+    setStarted(true);
     const bombCount = size === 6 ? 11 : Math.floor(size * size * 0.3); 
     socket.emit("startGame", { size, bombCount });
+  };*/}
+
+  const handleStartClick = () => {
+    if (started) return; 
+  
+    if (gameOver) {
+     
+      setRevealed({});
+      setBombsInfo(null);
+      setWinners(null);
+      setLeaderboard([]);
+      setGameOver(false);   
+      return;               
+    }
+  
+    setStarted(true);      
+    const bombCount = size === 6 ? 11 : Math.floor(size * size * 0.3);
+    socket.emit("startGame", { size, bombCount });
   };
+  
+
+  const startBtnLabel = started ? "In Progress…" : gameOver ? "Play Again" : "Start Game";
 
   return (
     // todo: detect dark-light mode of user
@@ -205,25 +232,30 @@ export default function Home() {
 
 
       <div className="flex items-center gap-2 mb-3">
-        {sizes.map((s) => (
-          <button
-            key={s}
-            onClick={() => setSize(s)}
-            disabled={started}
-            className={`px-3 py-1 rounded border ${s === size ? "bg-green-300 font-semibold" : "bg-gray-200"}`}
-            aria-pressed={s === size}
-          >
-            {s} × {s}
-          </button>
-        ))}
+      {sizes.map((s) => (
+        <button
+          key={s}
+          onClick={() => setSize(s)}
+          disabled={started || gameOver}  // ← lock while running AND after game over
+          className={`px-3 py-1 rounded border ${
+            s === size ? "bg-green-300 font-semibold" : "bg-gray-200"
+          } ${started || gameOver ? "opacity-60 cursor-not-allowed" : ""}`}
+          aria-pressed={s === size}
+        >
+          {s} × {s}
+        </button>
+      ))}
 
         <button
-          onClick={() => !started && startGame()}
-          disabled={started} 
-          className={`ml-2 px-3 py-1 rounded border ${started ? "bg-blue-200 cursor-not-allowed" : "bg-blue-300"}`}
+          onClick={handleStartClick}    
+          disabled={started}           
+          className={`ml-2 px-3 py-1 rounded border ${
+            started ? "bg-blue-2 00 cursor-not-allowed" : "bg-blue-300"
+          }`}
         >
-          {started ? "In Progress…" : gameOver ? "Play Again" : "Start Game"}
+          {startBtnLabel}
         </button>
+
 
         {bombsInfo && (
           <span className="ml-3">
