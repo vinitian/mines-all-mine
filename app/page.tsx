@@ -19,6 +19,16 @@ export default function Home() {
   const [size, setSize] = useState<number>(6);
   const sizes = [6, 8, 10];
 
+  const [revealed, setRevealed] = useState<Record<number, "hit" | "miss">>({});
+  const [bombsInfo, setBombsInfo] = useState<{ total: number; found: number } | null>(null);
+
+  const [gameOver, setGameOver] = useState(false);
+  const [winners, setWinners] = useState<{ id: string; score: number }[] | null>(null);
+  const [leaderboard, setLeaderboard] = useState<[string, number][]>([]);
+  const short = (id: string) => id.slice(-4); 
+  const [started, setStarted] = useState(false);
+
+
   useEffect(() => {
     if (socket.connected) {
       onConnect();
@@ -48,6 +58,69 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
+    const onReady = (data: { size: number; bombsTotal: number; bombsFound: number }) => {
+      setBombsInfo({ total: data.bombsTotal, found: data.bombsFound });
+      setRevealed({});
+      setGameOver(false);
+      setWinners(null);
+      setLeaderboard([]);
+      setSize(data.size);    
+      setStarted(true); 
+    };
+    
+  
+    const onCell = (payload: {
+      index: number;
+      hit: boolean;
+      by: string;
+      bombsFound: number;
+      bombsTotal: number;
+      scores: Record<string, number>;
+    }) => {
+      console.log("cellResult", payload);
+      setBombsInfo({ total: payload.bombsTotal, found: payload.bombsFound });
+      setRevealed((prev) => ({ ...prev, [payload.index]: payload.hit ? "hit" : "miss" }));
+    };
+  
+    const onOver = (payload: {
+      winners?: { id: string; score: number }[];
+      scores: Record<string, number>;
+      size: number;
+      bombCount: number;
+    }) => {
+      setGameOver(true);
+      setStarted(false); 
+    
+      let w = Array.isArray(payload.winners) ? payload.winners : [];
+      if (w.length === 0) {
+        const entries = Object.entries(payload.scores); // [socketId, score][]
+        if (entries.length) {
+          const max = Math.max(...entries.map(([, s]) => s));
+          w = entries
+            .filter(([, s]) => s === max)
+            .map(([id, score]) => ({ id, score }));
+        }
+      }
+    
+      setWinners(w);
+      setLeaderboard(Object.entries(payload.scores).sort((a, b) => b[1] - a[1]));
+    };
+    
+    
+  
+    socket.on("map:ready", onReady);
+    socket.on("cellResult", onCell);
+    socket.on("gameOver", onOver);
+  
+    return () => {
+      socket.off("map:ready", onReady);
+      socket.off("cellResult", onCell);
+      socket.off("gameOver", onOver);
+    };
+  }, []);
+  
+
+  useEffect(() => {
     // Listen for messages from the server
     socket.on("message", (msg: string) => {
       setMessages((prev) => [
@@ -61,7 +134,7 @@ export default function Home() {
     });
 
     return () => {
-      socket.disconnect();
+      socket.disconnect(); 
     };
   }, []);
 
@@ -84,37 +157,85 @@ export default function Home() {
     }
   };
   const handlePick = (i: number) => {
-    console.log(`Picked cell ${i} in a ${size}x${size} grid`);
+    if (!started || gameOver) return;
+    if (revealed[i]) return;
+    socket.emit("pickCell", i);
+  };
+  
+
+  const startGame = () => {
+    const bombCount = size === 6 ? 11 : Math.floor(size * size * 0.3); 
+    socket.emit("startGame", { size, bombCount });
   };
 
   return (
     // todo: detect dark-light mode of user
     <div className="m-8">
       <h1 className="text-title">Select Map Size</h1>
-      <div style={{ margin: "16px 0", display: "flex", gap: "8px" }}>
+      {gameOver && (
+        <div className="mb-3 p-3 rounded border bg-yellow-100">
+          {winners && winners.length > 0 ? (
+            winners.length === 1 ? (
+              <p>
+                Winner: <strong>{short(winners[0].id)}</strong> with{" "}
+                <strong>{winners[0].score}</strong> bombs!
+              </p>
+            ) : (
+              <p>
+                Tie between{" "}
+                <strong>{winners.map((w) => short(w.id)).join(", ")}</strong> with{" "}
+                <strong>{winners[0].score}</strong> bombs!
+              </p>
+            )
+          ) : (
+            <p>All bombs found! (Awaiting winner data)</p>
+          )}
+
+          {leaderboard.length > 0 && (
+            <ul className="mt-2 list-disc list-inside text-sm">
+              {leaderboard.map(([id, score]) => (
+                <li key={id}>
+                  {short(id)} — {score}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+
+
+      <div className="flex items-center gap-2 mb-3">
         {sizes.map((s) => (
           <button
             key={s}
             onClick={() => setSize(s)}
-            style={{
-              padding: "6px 12px",
-              borderRadius: "6px",
-              border: "1px solid gray",
-              background: s === size ? "#86efac" : "#e5e7eb", 
-              fontWeight: s === size ? 700 : 400,
-            }}
+            disabled={started}
+            className={`px-3 py-1 rounded border ${s === size ? "bg-green-300 font-semibold" : "bg-gray-200"}`}
             aria-pressed={s === size}
           >
             {s} × {s}
           </button>
         ))}
-        <span style={{ alignSelf: "center", marginLeft: "8px" }}>
-          Current: {size} × {size}
-        </span>
+
+        <button
+          onClick={() => !started && startGame()}
+          disabled={started} 
+          className={`ml-2 px-3 py-1 rounded border ${started ? "bg-blue-200 cursor-not-allowed" : "bg-blue-300"}`}
+        >
+          {started ? "In Progress…" : gameOver ? "Play Again" : "Start Game"}
+        </button>
+
+        {bombsInfo && (
+          <span className="ml-3">
+            Bombs: {bombsInfo.found} / {bombsInfo.total}
+          </span>
+        )}
       </div>
-      <div style={{ marginBottom: "24px" }}>
-        <GameGrid size={size} onPick={handlePick} />
+
+      <div className="mb-6">
+        <GameGrid size={size} onPick={handlePick} revealed={revealed}/>
       </div>
+
       <h1 className="text-title">Real-Time Chat</h1>
       
       <div>
