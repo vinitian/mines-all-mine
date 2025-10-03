@@ -31,10 +31,10 @@ export default function RoomSettings() {
             <label htmlFor="timer">Timer</label>
             <div className="select-wrap">
                 <select id="timer" defaultValue="unlimited" aria-label="Timer">
-                <option value="unlimited">Unlimited</option>
-                <option value="10s">10 seconds</option>
-                <option value="20s">20 seconds</option>
-                <option value="30s">30 seconds</option>
+                <option value={0}>Unlimited</option>
+                <option value={10}>10 seconds</option>
+                <option value={20}>20 seconds</option>
+                <option value={30}>30 seconds</option>
                 </select>
             </div>
             </div>
@@ -52,6 +52,18 @@ export default function RoomSettings() {
                 <option value="8">8</option>
                 <option value="9">9</option>
                 <option value="10">10</option>
+                </select>
+                <span className="chev" aria-hidden>▾</span>
+            </div>
+            </div>
+
+            <div className="field">
+            <div className="select-wrap">
+            <label htmlFor="num-bombs">Bomb Amount</label>
+                <select id="num-player" defaultValue="medium" aria-label="Set the amount of bomb density you want for the game.">
+                <option value="low">low</option>
+                <option value="medium">medium</option>
+                <option value="high">high</option>
                 </select>
                 <span className="chev" aria-hidden>▾</span>
             </div>
