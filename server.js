@@ -125,7 +125,7 @@ app.prepare().then(() => {
       state.found = new Set();
       state.scores = {};
       state.started = true;
-      state.currentTurnIndex = 0; // Start with first player
+      state.currentTurnIndex = Math.floor(Math.random() * state.players.length); 
     
       io.emit("map:ready", {
         size: state.size,
@@ -133,8 +133,14 @@ app.prepare().then(() => {
         bombsFound: 0,
         turnLimit: state.turnLimit ?? 10,
       });
-      nextTurn("start");
+
+      io.emit("turnChanged", {
+        currentPlayer: state.players[state.currentTurnIndex],
+        reason: "start",
+      });
+      startTurnTimer();
     });
+
 
     socket.on("pickCell", (index) => {
       if (!state.started) {
