@@ -24,20 +24,21 @@ app.prepare().then(() => {
       console.log(`Player ${socket.id} joined. Total players: ${state.players.length}`);
      }
 
-     socket.emit("playersUpdated", {
-      players: state.players,
-      currentPlayer: state.started ? state.players[state.currentTurnIndex] : null,
-    });
-
       io.emit("playersUpdated", {
         players: state.players,
         currentPlayer: state.started ? state.players[state.currentTurnIndex] : null,
       });
-    
 
-    socket.on("message", (msg) => {
+      socket.on('requestState', () => {
+        socket.emit("playersUpdated", {
+          players: state.players,
+          currentPlayer: state.started ? state.players[state.currentTurnIndex] : null,
+        });
+      });
+
+      socket.on("message", (msg) => {
         socket.broadcast.emit("message", msg); // Send message to all except sender
-    });
+      });
 
     socket.on("disconnect", () => {
         console.log("User disconnected", socket.id);

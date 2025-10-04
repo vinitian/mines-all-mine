@@ -72,7 +72,9 @@ export function mineGameLogic(initialSize: number) {
         setTransport(socket.io.engine.transport.name);
         setMyId(socket.id||null);
         socket.io.engine.on('upgrade', (t) => setTransport(t.name));
+        socket.emit('requestState'); 
         };
+
 
         const onDisconnect = () => {
         setIsConnected(false);
@@ -151,6 +153,10 @@ export function mineGameLogic(initialSize: number) {
         socket.on('turnTime', onTurnTime);
         socket.on('playersUpdated', onPlayersUpdated);
         socket.on('error', onError);
+
+        if (socket.connected) {
+            socket.emit('requestState');
+          }
 
         return () => {
             socket.off('connect', onConnect);
