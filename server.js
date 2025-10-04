@@ -19,20 +19,63 @@ app.prepare().then(() => {
     // ...
      console.log("User connected", socket.id);
 
+     if (!state.players.includes(socket.id)) {
+      state.players.push(socket.id);
+      console.log(`Player ${socket.id} joined. Total players: ${state.players.length}`);
+     }
+
+     socket.emit("playersUpdated", {
+      players: state.players,
+      currentPlayer: state.started ? state.players[state.currentTurnIndex] : null,
+    });
+
+      io.emit("playersUpdated", {
+        players: state.players,
+        currentPlayer: state.started ? state.players[state.currentTurnIndex] : null,
+      });
+    
+
     socket.on("message", (msg) => {
         socket.broadcast.emit("message", msg); // Send message to all except sender
     });
 
     socket.on("disconnect", () => {
         console.log("User disconnected", socket.id);
+        // remove player
+        const playerIndex = state.players.indexOf(socket.id);
+        if (playerIndex !== -1) {
+          state.players.splice(playerIndex, 1);
+          if (state.currentTurnIndex >= state.players.length && state.players.length > 0) {
+            state.currentTurnIndex = 0;
+          }
+          io.emit("playersUpdated", {
+            players: state.players,
+            currentPlayer: state.started && state.players.length > 0 
+              ? state.players[state.currentTurnIndex] 
+              : null,
+          });
+          if (playerIndex === state.currentTurnIndex && state.started && state.players.length > 0) {
+            nextTurn("playerLeft");
+          }
+        }
     });
 
     if (state.started) {
       const hits = [...state.found].filter(i => state.bombs.has(i)).length;
       socket.emit("map:ready", {
-        size: state.size, bombsTotal: state.bombCount, bombsFound: hits
+        size: state.size, bombsTotal: state.bombCount, bombsFound: hits, turnLimit: state.turnLimit ?? 10,
       });
-    }
+      socket.emit("turnChanged", {
+        currentPlayer: state.players[state.currentTurnIndex],
+        reason: "reconnect",
+      });
+      if (state.turnLimit > 0) {
+        socket.emit("turnTime", {
+          currentPlayer: state.players[state.currentTurnIndex],
+          timeRemaining: state.turnTimeRemaining,
+        });
+      }
+    } 
 
     socket.on("settings:update", (payload, cb) => {
       try {
@@ -68,6 +111,7 @@ app.prepare().then(() => {
     
       if (typeof size === "number") state.size = size;
       if (typeof bombCount === "number") state.bombCount = bombCount;
+      if (typeof tl === "number") state.turnLimit = tl;
     
       // ensure defaults
       if (typeof state.size !== "number") state.size = 6;
@@ -80,6 +124,7 @@ app.prepare().then(() => {
       state.found = new Set();
       state.scores = {};
       state.started = true;
+      state.currentTurnIndex = 0; // Start with first player
     
       io.emit("map:ready", {
         size: state.size,
@@ -87,19 +132,34 @@ app.prepare().then(() => {
         bombsFound: 0,
         turnLimit: state.turnLimit ?? 10,
       });
+      nextTurn("start");
     });
 
     socket.on("pickCell", (index) => {
-      if (!state.started) return;
-    
+      if (!state.started) {
+        socket.emit("error", { message: "Game hasn't started yet" });
+        return;
+      }
+
+      if (state.players[state.currentTurnIndex] !== socket.id) {
+        socket.emit("error", { message: "It's not your turn!" });
+        return;
+      }
+
+      if (state.found.has(index)) {
+        socket.emit("error", { message: "Cell already revealed" });
+        return;
+      }
+
       const hit = state.bombs.has(index);
-      const already = state.found.has(index);
-      if (!already) {
-        state.found.add(index);
-        if (hit) state.scores[socket.id] = (state.scores[socket.id] || 0) + 1;
+      state.found.add(index);
+      
+      if (hit) {
+        state.scores[socket.id] = (state.scores[socket.id] || 0) + 1;
       }
     
       const hits = [...state.found].filter((i) => state.bombs.has(i)).length;
+
       io.emit("cellResult", {
         index,
         hit,
@@ -110,15 +170,27 @@ app.prepare().then(() => {
       });
     
       if (hits >= state.bombCount) {
+        if (state.turnTimer) {
+          clearInterval(state.turnTimer);
+          state.turnTimer = null;
+        }
+        
         state.started = false;
         const winners = computeWinners(state.scores);
-        console.log("emitting gameOver →", { winners, scores: state.scores }); // DEBUG
+        
         io.emit("gameOver", {
-          winners,                 
+          winners,
           scores: state.scores,
           size: state.size,
           bombCount: state.bombCount,
         });
+        return;
+      }
+
+      if (!hit) {
+        nextTurn("miss");
+      } else {
+        startTurnTimer();
       }
 
     });
@@ -156,7 +228,57 @@ app.prepare().then(() => {
     found: new Set(),
     scores: {},
     started: false,
+    players: [],
+    currentTurnIndex: 0,
+    turnTimer: null,
+    turnTimeRemaining: 10,
   }
+
+  function startTurnTimer() {
+    if (state.turnTimer) {
+      clearInterval(state.turnTimer);
+    }
+    state.turnTimeRemaining = state.turnLimit;
+  
+    io.emit("turnTime", {
+      currentPlayer: state.players[state.currentTurnIndex],
+      timeRemaining: state.turnTimeRemaining,
+    });
+    if (state.turnLimit === 0) return;
+
+    state.turnTimer = setInterval(() => {
+      state.turnTimeRemaining--;
+
+      io.emit("turnTime", {
+        currentPlayer: state.players[state.currentTurnIndex],
+        timeRemaining: state.turnTimeRemaining,
+      });
+
+      if (state.turnTimeRemaining <= 0) {
+        nextTurn("times up");
+      }
+    }, 1000);
+  }
+
+  function nextTurn(reason = "miss") {
+    if (state.turnTimer) {
+      clearInterval(state.turnTimer);
+      state.turnTimer = null;
+    }
+
+    state.currentTurnIndex = (state.currentTurnIndex + 1) % state.players.length;
+
+    io.emit("turnChanged", {
+      currentPlayer: state.players[state.currentTurnIndex],
+      reason, 
+    });
+
+    if (state.started) {
+      startTurnTimer();
+    }
+  }
+
+
 
   httpServer
     .once("error", (err) => {

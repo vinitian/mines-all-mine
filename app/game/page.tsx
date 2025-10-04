@@ -22,6 +22,7 @@ export default function GamePage() {
         started, gameOver,
         revealed, bombsInfo, winners, leaderboard,
         turnLimit,
+        currentPlayer, players, timeRemaining, myId, isMyTurn,
         pickCell, startGame, resetLocal,
     } = mineGameLogic(size);
     
@@ -47,6 +48,47 @@ export default function GamePage() {
             <span className="ml-3">Bombs: {bombsInfo.found} / {bombsInfo.total}</span>
           )}
         </div>
+
+        {started && !gameOver && (
+            <div className="turn-info" style={{ 
+              padding: '10px', 
+              margin: '10px 0', 
+              background: isMyTurn ? '#4CAF50' : '#f0f0f0',
+              color: isMyTurn ? 'white' : 'black',
+              borderRadius: '5px',
+              fontWeight: 'bold'
+            }}>
+              {isMyTurn ? (
+                <>
+                  YOUR TURN! 
+                  {turnLimit > 0 && ` (${timeRemaining}s remaining)`}
+                </>
+              ) : (
+                <>
+                  Waiting for Player {currentPlayer?.slice(-4)}'s turn
+                  {turnLimit > 0 && ` (${timeRemaining}s remaining)`}
+                </>
+              )}
+            </div>
+          )}
+
+          {players.length > 0 && (
+            <div style={{ margin: '10px 0', fontSize: '14px' }}>
+              <strong>Players ({players.length}):</strong>{' '}
+              {players.map(p => (
+                <span key={p} style={{ 
+                  marginRight: '8px',
+                  fontWeight: p === myId ? 'bold' : 'normal',
+                  color: p === currentPlayer ? '#4CAF50' : 'inherit'
+                }}>
+                  {p.slice(-4)}{p === myId ? ' (You)' : ''}
+                  {p === currentPlayer ? ' 👈' : ''}
+                </span>
+              ))}
+            </div>
+          )}
+
+
         <GameGrid size={size} onPick={pickCell} revealed={revealed} />
 
         {gameOver && (
