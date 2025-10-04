@@ -1,7 +1,8 @@
+//mineGameLogic.ts
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { socket } from "../../socket";
+import socket from "@/socket"
 
 type RevealMap = Record<number, 'hit' | 'miss'>;
 type Winner = { id: string; score: number };
@@ -16,6 +17,7 @@ export function mineGameLogic(initialSize: number) {
     const [gameOver, setGameOver] = useState(false);
     const [revealed, setRevealed] = useState<RevealMap>({});
     const [bombsInfo, setBombsInfo] = useState<{ total: number; found: number } | null>(null);
+    const [turnLimit, setTurnLimit] = useState<number>(0);
     const [winners, setWinners] = useState<Winner[] | null>(null);
     const [leaderboard, setLeaderboard] = useState<[string, number][]>([]);
 
@@ -25,12 +27,15 @@ export function mineGameLogic(initialSize: number) {
         socket.emit('pickCell', i);
     }, [started, gameOver, revealed]);
 
-    const startGame = useCallback((sz?: number) => {
-        const s = sz ?? size;
+    const startGame = useCallback((opts?: { size?: number; bombCount?: number; tl?: number }) => {
+        const payload: any = {};
+        if (typeof opts?.size === "number") payload.size = opts.size;
+        if (typeof opts?.bombCount === "number") payload.bombCount = opts.bombCount;
+        if (typeof opts?.tl === "number") payload.tl = opts.tl;
+    
         setStarted(true);
-        const bombCount = s === 6 ? 11 : Math.floor(s * s * 0.3);
-        socket.emit('startGame', { size: s, bombCount });
-    }, [size]);
+        socket.emit('startGame', payload);
+      }, []);
 
     const resetLocal = useCallback(() => {
         setRevealed({});
@@ -38,6 +43,8 @@ export function mineGameLogic(initialSize: number) {
         setWinners(null);
         setLeaderboard([]);
         setGameOver(false);
+        setStarted(false);
+        setTurnLimit(0);
     }, []);
 
     // socket thing
@@ -57,13 +64,14 @@ export function mineGameLogic(initialSize: number) {
         setTransport('N/A');
         };
 
-        const onReady = (data: { size: number; bombsTotal: number; bombsFound: number }) => {
+        const onReady = (data: { size: number; bombsTotal: number; bombsFound: number; turnLimit?:number; }) => {
         setBombsInfo({ total: data.bombsTotal, found: data.bombsFound });
         setRevealed({});
         setGameOver(false);
         setWinners(null);
         setLeaderboard([]);
         setSize(data.size);
+        setTurnLimit(data.turnLimit ?? 10);
         setStarted(true);
         };
 
@@ -117,7 +125,7 @@ export function mineGameLogic(initialSize: number) {
         size, setSize,
         started, gameOver,
         revealed, bombsInfo, winners, leaderboard,
-
+        turnLimit,
         pickCell, startGame, resetLocal,
     };
 }

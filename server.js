@@ -1,3 +1,4 @@
+//server.js
 import { createServer } from "node:http";
 import next from "next";
 import { Server } from "socket.io";
@@ -33,16 +34,59 @@ app.prepare().then(() => {
       });
     }
 
-    socket.on("startGame", ({ size, bombCount }) => {
+    socket.on("settings:update", (payload, cb) => {
+      try {
+        const { size, bombCount, turnLimit} = payload || {};
+    
+        if (state.started) {
+          throw new Error("Game already started; cannot change settings");
+        }
+    
+        if (size) state.size = Number(size);
+        if (typeof bombCount === "number") state.bombCount = bombCount;
+        if (typeof turnLimit === "number") state.turnLimit = turnLimit;
+        //if (typeof playerLimit === "number") state.playerLimit = playerLimit;
+    
+        // broadcast latest settings so all clients/lobby UIs sync
+        io.emit("settings:updated", {
+          size: state.size,
+          bombCount: state.bombCount,
+          turnLimit: state.turnLimit ?? 10,
+          //playerLimit: state.playerLimit ?? 2,
+        });
+    
+        cb?.({ ok: true });
+      } catch (err) {
+        cb?.({ ok: false, error: String(err?.message || err) });
+      }
+    });
+
+    socket.on("startGame", (payload = {}) => {
+      const { size, bombCount } = payload;  
+    
       if (state.started) return;
-      state.size = size;
-      state.bombCount = bombCount ?? (size === 6 ? 11 : Math.floor(size * size * 0.3));
-      state.bombs = randomize(size, state.bombCount);
+    
+      if (typeof size === "number") state.size = size;
+      if (typeof bombCount === "number") state.bombCount = bombCount;
+    
+      // ensure defaults
+      if (typeof state.size !== "number") state.size = 6;
+      if (!Number.isFinite(state.bombCount)) {
+        state.bombCount =
+          state.size === 6 ? 11 : Math.floor(state.size * state.size * 0.3);
+      }
+    
+      state.bombs = randomize(state.size, state.bombCount);
       state.found = new Set();
       state.scores = {};
       state.started = true;
     
-      io.emit("map:ready", { size: state.size, bombsTotal: state.bombCount, bombsFound: 0 });
+      io.emit("map:ready", {
+        size: state.size,
+        bombsTotal: state.bombCount,
+        bombsFound: 0,
+        turnLimit: state.turnLimit ?? 10,
+      });
     });
 
     socket.on("pickCell", (index) => {
@@ -107,6 +151,7 @@ app.prepare().then(() => {
   let state = {
     size: 6,
     bombCount: 11,
+    turnLimit: 10,
     bombs: new Set(),
     found: new Set(),
     scores: {},

@@ -1,8 +1,11 @@
+//page.tsx (game page)
 'use client';
 import { useSearchParams } from 'next/navigation';
 import GameGrid from "../gameGrid";
 import { mineGameLogic } from '../shared/mineGameLogic';
 import './page.css';
+import socket from "@/socket"
+import Link from "next/link";
 
 
 
@@ -12,12 +15,17 @@ export default function GamePage() {
     const n = Number(raw);
     const size = [6, 8, 10].includes(n) ? n : 6; 
 
+    const bombCount = Number(searchParams.get('bombCount')) || undefined;
+    const tl = Number(searchParams.get('tl')) || 10;
   
     const {
         started, gameOver,
         revealed, bombsInfo, winners, leaderboard,
+        turnLimit,
         pickCell, startGame, resetLocal,
-      } = mineGameLogic(size);
+    } = mineGameLogic(size);
+    
+    //console.log("Turn limit:", turnLimit, "seconds per turn")
 
     const startBtnLabel = started ? 'In Progress…' : gameOver ? 'Play Again' : 'Start Game';
 
@@ -25,6 +33,7 @@ export default function GamePage() {
       <div className="game-div-container">
         <h1 className="game-title"></h1>
         <div id="game-div">
+        <Link href="/" className="cta">Home</Link>
         <div className="bomb-count-div flex items-center gap-2">
           <button
             onClick={() => (gameOver ? resetLocal() : startGame())}
@@ -33,7 +42,7 @@ export default function GamePage() {
           >
             {startBtnLabel}
           </button>
-
+          {turnLimit > 0 && (<div>Time per turn: {turnLimit} seconds</div>)}
           {bombsInfo && (
             <span className="ml-3">Bombs: {bombsInfo.found} / {bombsInfo.total}</span>
           )}
