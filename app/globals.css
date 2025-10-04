@@ -6,10 +6,14 @@
 }
 
 @theme {
-  --text-title: 32px;
+  --text-title: 64px;
+  --text-subtitle: 48px;
+  --text-h1: 32px;
+  --text-h2: 28px;
+  --text-h3: 24px;
+  --text-h4: 20px;
   --text-body: 16px;
-  --text-subtitle: 24px;
-  --text-body-small: 14px;
+  --text-body-small: 12px;
   --color-red: #f26690;
   --color-purple: #e496f5;
   --color-blue: #8499ff;
