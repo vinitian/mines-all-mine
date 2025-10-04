@@ -79,7 +79,7 @@ export default function Home() {
     });
 
     return () => {
-      socket.disconnect(); 
+      socket.off("message"); 
     };
   }, []);
 
