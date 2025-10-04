@@ -10,6 +10,16 @@
   --text-body: 16px;
   --text-subtitle: 24px;
   --text-body-small: 14px;
+  --color-red: #f26690;
+  --color-purple: #e496f5;
+  --color-blue: #8499ff;
+  --color-blue-light: #ddf7ff;
+  --color-green: #2ddb81;
+  --color-green-light: #bdffd6;
+  --color-gray: #d4d4d4;
+  --color-gray-blue: #2b335b;
+  --color-gray-dark: #848484;
+  --color-border: rgba(55, 40, 190, 0.5);
 }
 
 @theme inline {
