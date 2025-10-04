@@ -8,6 +8,7 @@ type MapSize = typeof sizes[number]| null;
 
 export default function RoomSettings() {
     const [mapSize, setMapSize] = useState<MapSize>(null);
+    const [bombCount, setBombCount] = useState("medium")
     const router = useRouter();
 
     return (
@@ -43,15 +44,15 @@ export default function RoomSettings() {
             <div className="select-wrap">
             <label htmlFor="num-player">Player limit</label>
                 <select id="num-player" defaultValue="2" aria-label="Set the maximum number of players for the game.">
-                <option value="2">2</option>
-                <option value="3">3</option>
-                <option value="4">4</option>
-                <option value="5">5</option>
-                <option value="6">6</option>
-                <option value="7">7</option>
-                <option value="8">8</option>
-                <option value="9">9</option>
-                <option value="10">10</option>
+                <option value={2}>2</option>
+                <option value={3}>3</option>
+                <option value={4}>4</option>
+                <option value={5}>5</option>
+                <option value={6}>6</option>
+                <option value={7}>7</option>
+                <option value={8}>8</option>
+                <option value={9}>9</option>
+                <option value={10}>10</option>
                 </select>
                 <span className="chev" aria-hidden>▾</span>
             </div>
@@ -60,13 +61,14 @@ export default function RoomSettings() {
             <div className="field">
             <div className="select-wrap">
             <label htmlFor="num-bombs">Bomb Amount</label>
-                <select id="num-player" defaultValue="medium" aria-label="Set the amount of bomb density you want for the game.">
+                <select id="num-bombs" value={bombCount} onChange={(e) => setBombCount(e.target.value)} aria-label="Set the amount of bomb density you want for the game.">
                 <option value="low">low</option>
                 <option value="medium">medium</option>
                 <option value="high">high</option>
                 </select>
                 <span className="chev" aria-hidden>▾</span>
             </div>
+            
             </div>
         </section>
 
