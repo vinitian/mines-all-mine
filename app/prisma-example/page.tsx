@@ -1,7 +1,7 @@
 "use client";
 
 import createRoom from "@/services/client/createRoom";
-import { socket } from "@/socket";
+import socket from "@/socket";
 import { Room } from "../generated/prisma";
 import { useEffect, useState } from "react";
 import getUsers from "@/services/client/getUsers";
