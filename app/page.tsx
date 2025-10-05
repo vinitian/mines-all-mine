@@ -29,7 +29,6 @@ export default function Home() {
   >(null);
   const [leaderboard, setLeaderboard] = useState<[string, number][]>([]);
   const short = (id: string) => id.slice(-4);
-  const short = (id: string) => id.slice(-4);
   const [started, setStarted] = useState(false);
 
   useEffect(() => {
