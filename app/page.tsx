@@ -1,14 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { socket } from "../socket";
+import { socket } from "@/socket";
 import GameGrid from "./gameGrid";
+import { Message } from "@/interface";
 
-interface Message {
-  userID: string;
-  text: string;
-  timestamp: string;
-}
 export default function Home() {
   const [isConnected, setIsConnected] = useState(false);
   const [transport, setTransport] = useState("N/A");
@@ -20,14 +16,18 @@ export default function Home() {
   const sizes = [6, 8, 10];
 
   const [revealed, setRevealed] = useState<Record<number, "hit" | "miss">>({});
-  const [bombsInfo, setBombsInfo] = useState<{ total: number; found: number } | null>(null);
+  const [bombsInfo, setBombsInfo] = useState<{
+    total: number;
+    found: number;
+  } | null>(null);
 
   const [gameOver, setGameOver] = useState(false);
-  const [winners, setWinners] = useState<{ id: string; score: number }[] | null>(null);
+  const [winners, setWinners] = useState<
+    { id: string; score: number }[] | null
+  >(null);
   const [leaderboard, setLeaderboard] = useState<[string, number][]>([]);
-  const short = (id: string) => id.slice(-4); 
+  const short = (id: string) => id.slice(-4);
   const [started, setStarted] = useState(false);
-
 
   useEffect(() => {
     if (socket.connected) {
@@ -58,17 +58,20 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    const onReady = (data: { size: number; bombsTotal: number; bombsFound: number }) => {
+    const onReady = (data: {
+      size: number;
+      bombsTotal: number;
+      bombsFound: number;
+    }) => {
       setBombsInfo({ total: data.bombsTotal, found: data.bombsFound });
       setRevealed({});
       setGameOver(false);
       setWinners(null);
       setLeaderboard([]);
-      setSize(data.size);    
-      setStarted(true); 
+      setSize(data.size);
+      setStarted(true);
     };
-    
-  
+
     const onCell = (payload: {
       index: number;
       hit: boolean;
@@ -79,9 +82,12 @@ export default function Home() {
     }) => {
       console.log("cellResult", payload);
       setBombsInfo({ total: payload.bombsTotal, found: payload.bombsFound });
-      setRevealed((prev) => ({ ...prev, [payload.index]: payload.hit ? "hit" : "miss" }));
+      setRevealed((prev) => ({
+        ...prev,
+        [payload.index]: payload.hit ? "hit" : "miss",
+      }));
     };
-  
+
     const onOver = (payload: {
       winners?: { id: string; score: number }[];
       scores: Record<string, number>;
@@ -89,8 +95,8 @@ export default function Home() {
       bombCount: number;
     }) => {
       setGameOver(true);
-      setStarted(false); 
-    
+      setStarted(false);
+
       let w = Array.isArray(payload.winners) ? payload.winners : [];
       if (w.length === 0) {
         const entries = Object.entries(payload.scores); // [socketId, score][]
@@ -101,24 +107,23 @@ export default function Home() {
             .map(([id, score]) => ({ id, score }));
         }
       }
-    
+
       setWinners(w);
-      setLeaderboard(Object.entries(payload.scores).sort((a, b) => b[1] - a[1]));
+      setLeaderboard(
+        Object.entries(payload.scores).sort((a, b) => b[1] - a[1])
+      );
     };
-    
-    
-  
+
     socket.on("map:ready", onReady);
     socket.on("cellResult", onCell);
     socket.on("gameOver", onOver);
-  
+
     return () => {
       socket.off("map:ready", onReady);
       socket.off("cellResult", onCell);
       socket.off("gameOver", onOver);
     };
   }, []);
-  
 
   useEffect(() => {
     // Listen for messages from the server
@@ -134,7 +139,7 @@ export default function Home() {
     });
 
     return () => {
-      socket.disconnect(); 
+      socket.disconnect();
     };
   }, []);
 
@@ -161,9 +166,9 @@ export default function Home() {
     if (revealed[i]) return;
     socket.emit("pickCell", i);
   };
-  
 
-  {/*const startGame = () => {
+  {
+    /*const startGame = () => {
     setGameOver(false);
     setWinners(null);
     setLeaderboard([]);
@@ -172,28 +177,31 @@ export default function Home() {
     setStarted(true);
     const bombCount = size === 6 ? 11 : Math.floor(size * size * 0.3); 
     socket.emit("startGame", { size, bombCount });
-  };*/}
+  };*/
+  }
 
   const handleStartClick = () => {
-    if (started) return; 
-  
+    if (started) return;
+
     if (gameOver) {
-     
       setRevealed({});
       setBombsInfo(null);
       setWinners(null);
       setLeaderboard([]);
-      setGameOver(false);   
-      return;               
+      setGameOver(false);
+      return;
     }
-  
-    setStarted(true);      
+
+    setStarted(true);
     const bombCount = size === 6 ? 11 : Math.floor(size * size * 0.3);
     socket.emit("startGame", { size, bombCount });
   };
-  
 
-  const startBtnLabel = started ? "In Progress…" : gameOver ? "Play Again" : "Start Game";
+  const startBtnLabel = started
+    ? "In Progress…"
+    : gameOver
+    ? "Play Again"
+    : "Start Game";
 
   return (
     // todo: detect dark-light mode of user
@@ -210,8 +218,8 @@ export default function Home() {
             ) : (
               <p>
                 Tie between{" "}
-                <strong>{winners.map((w) => short(w.id)).join(", ")}</strong> with{" "}
-                <strong>{winners[0].score}</strong> bombs!
+                <strong>{winners.map((w) => short(w.id)).join(", ")}</strong>{" "}
+                with <strong>{winners[0].score}</strong> bombs!
               </p>
             )
           ) : (
@@ -230,32 +238,30 @@ export default function Home() {
         </div>
       )}
 
-
       <div className="flex items-center gap-2 mb-3">
-      {sizes.map((s) => (
-        <button
-          key={s}
-          onClick={() => setSize(s)}
-          disabled={started || gameOver}  // ← lock while running AND after game over
-          className={`px-3 py-1 rounded border ${
-            s === size ? "bg-green-300 font-semibold" : "bg-gray-200"
-          } ${started || gameOver ? "opacity-60 cursor-not-allowed" : ""}`}
-          aria-pressed={s === size}
-        >
-          {s} × {s}
-        </button>
-      ))}
+        {sizes.map((s) => (
+          <button
+            key={s}
+            onClick={() => setSize(s)}
+            disabled={started || gameOver} // ← lock while running AND after game over
+            className={`px-3 py-1 rounded border ${
+              s === size ? "bg-green-300 font-semibold" : "bg-gray-200"
+            } ${started || gameOver ? "opacity-60 cursor-not-allowed" : ""}`}
+            aria-pressed={s === size}
+          >
+            {s} × {s}
+          </button>
+        ))}
 
         <button
-          onClick={handleStartClick}    
-          disabled={started}           
+          onClick={handleStartClick}
+          disabled={started}
           className={`ml-2 px-3 py-1 rounded border ${
             started ? "bg-blue-2 00 cursor-not-allowed" : "bg-blue-300"
           }`}
         >
           {startBtnLabel}
         </button>
-
 
         {bombsInfo && (
           <span className="ml-3">
@@ -265,11 +271,11 @@ export default function Home() {
       </div>
 
       <div className="mb-6">
-        <GameGrid size={size} onPick={handlePick} revealed={revealed}/>
+        <GameGrid size={size} onPick={handlePick} revealed={revealed} />
       </div>
 
       <h1 className="text-title">Real-Time Chat</h1>
-      
+
       <div>
         {messages.map((msg, index) => (
           <div key={index}>
