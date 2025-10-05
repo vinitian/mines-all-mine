@@ -67,13 +67,13 @@ export default function Home() {
 
   useEffect(() => {
     // Listen for messages from the server
-    socket.on("message", (msg: string) => {
+    socket.on("message", (msg: Message) => {
       setMessages((prev) => [
         ...prev,
         {
-          userID: socket.id!,
-          text: msg,
-          timestamp: Date(),
+          userID: msg.userID,
+          text: msg.text,
+          timestamp: msg.timestamp,
         },
       ]);
     });
@@ -84,15 +84,13 @@ export default function Home() {
   }, []);
 
   const sendMessage = () => {
-    socket.emit("message", message); // Send message to server
-    setMessages((prev) => [
-      ...prev,
-      {
-        userID: socket.id!,
-        text: message,
-        timestamp: Date(),
-      },
-    ]); // Add your message to the chat
+    const newMessageObj = {
+      userID: socket.id!,
+      text: message,
+      timestamp: Date(),
+    };
+    socket.emit("message", newMessageObj); // Send message to server
+    setMessages((prev) => [...prev, newMessageObj]); // Add your message to the chat
     setMessage(""); // Clear input field
   };
 
@@ -114,7 +112,9 @@ export default function Home() {
       <div>
         {messages.map((msg, index) => (
           <div key={index}>
-            {msg.userID}: {msg.text} ({msg.timestamp})
+            {msg.timestamp.split(" ")[4].slice(0, 5)}{" "}
+            <span className="font-semibold text-gray-blue">{msg.userID}</span>:{" "}
+            {msg.text}
           </div>
         ))}
       </div>
