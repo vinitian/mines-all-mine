@@ -13,6 +13,8 @@ export default function Home() {
   const [isConnected, setIsConnected] = useState(false);
   const [transport, setTransport] = useState("N/A");
 
+  const [room_id, setRoomID] = useState<number>();
+
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
 
@@ -25,7 +27,7 @@ export default function Home() {
   const [gameOver, setGameOver] = useState(false);
   const [winners, setWinners] = useState<{ id: string; score: number }[] | null>(null);
   const [leaderboard, setLeaderboard] = useState<[string, number][]>([]);
-  const short = (id: string) => id.slice(-4); 
+  const short = (id: string) => id.slice(-4);
   const [started, setStarted] = useState(false);
 
 
@@ -64,11 +66,11 @@ export default function Home() {
       setGameOver(false);
       setWinners(null);
       setLeaderboard([]);
-      setSize(data.size);    
-      setStarted(true); 
+      setSize(data.size);
+      setStarted(true);
     };
-    
-  
+
+
     const onCell = (payload: {
       index: number;
       hit: boolean;
@@ -81,7 +83,7 @@ export default function Home() {
       setBombsInfo({ total: payload.bombsTotal, found: payload.bombsFound });
       setRevealed((prev) => ({ ...prev, [payload.index]: payload.hit ? "hit" : "miss" }));
     };
-  
+
     const onOver = (payload: {
       winners?: { id: string; score: number }[];
       scores: Record<string, number>;
@@ -89,8 +91,8 @@ export default function Home() {
       bombCount: number;
     }) => {
       setGameOver(true);
-      setStarted(false); 
-    
+      setStarted(false);
+
       let w = Array.isArray(payload.winners) ? payload.winners : [];
       if (w.length === 0) {
         const entries = Object.entries(payload.scores); // [socketId, score][]
@@ -101,24 +103,24 @@ export default function Home() {
             .map(([id, score]) => ({ id, score }));
         }
       }
-    
+
       setWinners(w);
       setLeaderboard(Object.entries(payload.scores).sort((a, b) => b[1] - a[1]));
     };
-    
-    
-  
+
+
+
     socket.on("map:ready", onReady);
     socket.on("cellResult", onCell);
     socket.on("gameOver", onOver);
-  
+
     return () => {
       socket.off("map:ready", onReady);
       socket.off("cellResult", onCell);
       socket.off("gameOver", onOver);
     };
   }, []);
-  
+
 
   useEffect(() => {
     // Listen for messages from the server
@@ -134,7 +136,7 @@ export default function Home() {
     });
 
     return () => {
-      socket.disconnect(); 
+      socket.disconnect();
     };
   }, []);
 
@@ -145,7 +147,7 @@ export default function Home() {
       timestamp: Date(),
     };
 
-    socket.emit("message", newMessageObj); // Send message to server
+    socket.emit("message", newMessageObj, room_id); // Send message to server
     setMessages((prev) => [...prev, newMessageObj]); // Add your message to the chat
     setMessage(""); // Clear input field
   };
@@ -155,28 +157,28 @@ export default function Home() {
       sendMessage();
     }
   };
+
+  const handleKeyDownRoom = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" && room_id) {
+      joinRoom(room_id);
+    }
+  };
+
   const handlePick = (i: number) => {
     if (!started || gameOver) return;
     if (revealed[i]) return;
     socket.emit("pickCell", i);
   };
 
-  const joinRoom1 = () => {
-    socket.emit("joinRoom1");
+  const joinRoom = (id: number) => {
+    socket.emit("joinRoom", id);
   };
 
-  const leaveRoom1 = () => {
-    socket.emit("leaveRoom1");
+  const leaveRoom = () => {
+    socket.emit("leaveRoom");
   };
 
-  const joinRoom2 = () => {
-    socket.emit("joinRoom2");
-  };
 
-  const leaveRoom2 = () => {
-    socket.emit("leaveRoom2");
-  };
-  
 
   {/*const startGame = () => {
     setGameOver(false);
@@ -190,19 +192,19 @@ export default function Home() {
   };*/}
 
   const handleStartClick = () => {
-    if (started) return; 
-  
+    if (started) return;
+
     if (gameOver) {
-     
+
       setRevealed({});
       setBombsInfo(null);
       setWinners(null);
       setLeaderboard([]);
-      setGameOver(false);   
-      return;               
+      setGameOver(false);
+      return;
     }
-  
-    setStarted(true);      
+
+    setStarted(true);
     const bombCount = size === 6 ? 11 : Math.floor(size * size * 0.3);
     socket.emit("startGame", { size, bombCount });
   };
@@ -246,72 +248,54 @@ export default function Home() {
 
 
       <div className="flex items-center gap-2 mb-3">
-      {sizes.map((s) => (
-        <button
-          key={s}
-          onClick={() => setSize(s)}
-          disabled={started || gameOver}  // ← lock while running AND after game over
-          className={`px-3 py-1 rounded border ${
-            s === size ? "bg-green-300 font-semibold" : "bg-gray-200"
-          } ${started || gameOver ? "opacity-60 cursor-not-allowed" : ""}`}
-          aria-pressed={s === size}
-        >
-          {s} × {s}
-        </button>
-      ))}
+        {sizes.map((s) => (
+          <button
+            key={s}
+            onClick={() => setSize(s)}
+            disabled={started || gameOver}  // ← lock while running AND after game over
+            className={`px-3 py-1 rounded border ${s === size ? "bg-green-300 font-semibold" : "bg-gray-200"
+              } ${started || gameOver ? "opacity-60 cursor-not-allowed" : ""}`}
+            aria-pressed={s === size}
+          >
+            {s} × {s}
+          </button>
+        ))}
 
         <button
-          onClick={handleStartClick}    
-          disabled={started}           
-          className={`ml-2 px-3 py-1 rounded border ${
-            started ? "bg-blue-2 00 cursor-not-allowed" : "bg-blue-300"
-          }`}
+          onClick={handleStartClick}
+          disabled={started}
+          className={`ml-2 px-3 py-1 rounded border ${started ? "bg-blue-2 00 cursor-not-allowed" : "bg-blue-300"
+            }`}
         >
           {startBtnLabel}
         </button>
 
-
+        <input
+          value={room_id}
+          type="number"
+          onChange={(e) => setRoomID(+e.target.value)}
+          onKeyDown={handleKeyDownRoom}
+          placeholder="Join a room..."
+          className="border-2 rounded-md w-full border-gray-400"
+        />
 
         <button
-          onClick={joinRoom1}    
-          disabled={started}           
-          className={`ml-2 px-3 py-1 rounded border ${
-            started ? "bg-blue-2 00 cursor-not-allowed" : "bg-blue-300"
-          }`}
+          onClick={() => { if (room_id) joinRoom(room_id) }}
+          disabled={started}
+          className={`ml-2 px-3 py-1 rounded border ${started ? "bg-blue-2 00 cursor-not-allowed" : "bg-blue-300"
+            }`}
         >
-          join room 1
+          Join room
 
         </button>
 
         <button
-          onClick={leaveRoom1}    
-          disabled={started}           
-          className={`ml-2 px-3 py-1 rounded border ${
-            started ? "bg-blue-2 00 cursor-not-allowed" : "bg-blue-300"
-          }`}
+          onClick={leaveRoom}
+          disabled={started}
+          className={`ml-2 px-3 py-1 rounded border ${started ? "bg-blue-2 00 cursor-not-allowed" : "bg-blue-300"
+            }`}
         >
-          leave room 1
-
-        </button>
-
-                <button
-          onClick={joinRoom2}    
-          disabled={started}           
-          className={`ml-2 px-3 py-1 rounded border ${
-            started ? "bg-blue-2 00 cursor-not-allowed" : "bg-blue-300"
-          }`}
-        >
-          join room 2
-        </button>
-
-        <button
-          onClick={leaveRoom2}    
-          disabled={started}           
-          className={`ml-2 px-3 py-1 rounded border ${
-            started ? "bg-blue-2 00 cursor-not-allowed" : "bg-blue-300"
-          }`}
-        >
-          leave room 2
+          Leave room
 
         </button>
 
@@ -326,11 +310,11 @@ export default function Home() {
       </div>
 
       <div className="mb-6">
-        <GameGrid size={size} onPick={handlePick} revealed={revealed}/>
+        <GameGrid size={size} onPick={handlePick} revealed={revealed} />
       </div>
 
       <h1 className="text-title">Real-Time Chat</h1>
-      
+
       <div>
         {messages.map((msg, index) => (
           <div key={index}>

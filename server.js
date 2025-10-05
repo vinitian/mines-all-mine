@@ -16,19 +16,14 @@ app.prepare().then(() => {
 
   io.on("connection", (socket) => {
     // ...
-     console.log("User connected", socket.id);
+    console.log("User connected", socket.id);
 
-    socket.on("message", (msg) => {
-
-      if (socket.rooms.has('ROOM1')) {
-        socket.to("ROOM1").emit("message", msg);
-      } else {
-        socket.to("ROOM2").emit("message", msg);
-      }
+    socket.on("message", (msg, id) => {
+      socket.to(id).emit("message", msg);
     });
 
     socket.on("disconnect", () => {
-        console.log("User disconnected", socket.id);
+      console.log("User disconnected", socket.id);
     });
 
     if (state.started) {
@@ -46,36 +41,32 @@ app.prepare().then(() => {
       state.found = new Set();
       state.scores = {};
       state.started = true;
-    
+
       io.emit("map:ready", { size: state.size, bombsTotal: state.bombCount, bombsFound: 0 });
     });
 
-    socket.on("joinRoom1", () => {
-        socket.join("ROOM1");
+    socket.on("joinRoom", (room_id) => {
+      socket.join(room_id);
     });
 
-    socket.on("leaveRoom1", () => {
-        socket.leave("ROOM1");
-    });
-
-    socket.on("joinRoom2", () => {
-        socket.join("ROOM2");
-    });
-
-    socket.on("leaveRoom2", () => {
-        socket.leave("ROOM2");
+    socket.on("leaveRoom", () => {
+      socket.rooms.forEach(room => {
+        if (room !== socket.id) {
+          socket.leave(room);
+        }
+      });
     });
 
     socket.on("pickCell", (index) => {
       if (!state.started) return;
-    
+
       const hit = state.bombs.has(index);
       const already = state.found.has(index);
       if (!already) {
         state.found.add(index);
         if (hit) state.scores[socket.id] = (state.scores[socket.id] || 0) + 1;
       }
-    
+
       const hits = [...state.found].filter((i) => state.bombs.has(i)).length;
       io.emit("cellResult", {
         index,
@@ -85,13 +76,13 @@ app.prepare().then(() => {
         bombsTotal: state.bombCount,
         scores: state.scores,
       });
-    
+
       if (hits >= state.bombCount) {
         state.started = false;
         const winners = computeWinners(state.scores);
         console.log("emitting gameOver →", { winners, scores: state.scores }); // DEBUG
         io.emit("gameOver", {
-          winners,                 
+          winners,
           scores: state.scores,
           size: state.size,
           bombCount: state.bombCount,
@@ -99,7 +90,7 @@ app.prepare().then(() => {
       }
 
     });
-    
+
   });
 
   function computeWinners(scores) {
@@ -114,10 +105,10 @@ app.prepare().then(() => {
         winners.push({ id, score });
       }
     }
-    return winners; 
+    return winners;
   }
-  
-  function randomize(size=6, bombCount=11) {
+
+  function randomize(size = 6, bombCount = 11) {
     const bombs = new Set();
     while (bombs.size < bombCount) {
       bombs.add(Math.floor(Math.random() * (size * size)));
