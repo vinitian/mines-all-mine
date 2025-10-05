@@ -1,17 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import socket from "../socket";
-import GameGrid from "./gameGrid";
+import socket from "@/socket";
 import Link from "next/link";
+import { Message } from "@/interface";
 
-
-
-interface Message {
-  userID: string;
-  text: string;
-  timestamp: string;
-}
 export default function Home() {
   const [isConnected, setIsConnected] = useState(false);
   const [transport, setTransport] = useState("N/A");
@@ -25,15 +18,19 @@ export default function Home() {
   const sizes = [6, 8, 10];
 
   const [revealed, setRevealed] = useState<Record<number, "hit" | "miss">>({});
-  const [bombsInfo, setBombsInfo] = useState<{ total: number; found: number } | null>(null);
+  const [bombsInfo, setBombsInfo] = useState<{
+    total: number;
+    found: number;
+  } | null>(null);
 
   const [gameOver, setGameOver] = useState(false);
-  const [winners, setWinners] = useState<{ id: string; score: number }[] | null>(null);
+  const [winners, setWinners] = useState<
+    { id: string; score: number }[] | null
+  >(null);
   const [leaderboard, setLeaderboard] = useState<[string, number][]>([]);
   const short = (id: string) => id.slice(-4);
+  const short = (id: string) => id.slice(-4);
   const [started, setStarted] = useState(false);
-
-
 
   useEffect(() => {
     if (socket.connected) {
@@ -82,6 +79,7 @@ export default function Home() {
 
     return () => {
       socket.off("message");
+      socket.off("message");
     };
   }, []);
 
@@ -123,39 +121,6 @@ export default function Home() {
     socket.emit("leaveRoom");
   };
 
-
-
-  {/*const startGame = () => {
-    setGameOver(false);
-    setWinners(null);
-    setLeaderboard([]);
-    setRevealed({});
-    setBombsInfo(null);
-    setStarted(true);
-    const bombCount = size === 6 ? 11 : Math.floor(size * size * 0.3); 
-    socket.emit("startGame", { size, bombCount });
-  };*/}
-
-  const handleStartClick = () => {
-    if (started) return;
-
-    if (gameOver) {
-
-      setRevealed({});
-      setBombsInfo(null);
-      setWinners(null);
-      setLeaderboard([]);
-      setGameOver(false);
-      return;
-    }
-
-    setStarted(true);
-    const bombCount = size === 6 ? 11 : Math.floor(size * size * 0.3);
-    socket.emit("startGame", { size, bombCount });
-  };
-
-  const startBtnLabel = started ? "In Progress…" : gameOver ? "Play Again" : "Start Game";
-
   return (
     // todo: detect dark-light mode of user
     <div className="m-8">
@@ -192,6 +157,7 @@ export default function Home() {
 
       </button>
       <h1 className="text-title">Real-Time Chat</h1>
+
 
       <div>
         {messages.map((msg, index) => (
