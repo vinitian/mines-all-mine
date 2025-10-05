@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "Room" ALTER COLUMN "host_id" SET DATA TYPE TEXT,
+ALTER COLUMN "player_id_list" SET DATA TYPE TEXT[];
