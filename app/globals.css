@@ -47,3 +47,10 @@ body {
   );
   font-family: Helvetica, sans-serif;
 }
+
+.cta {
+  text-decoration: underline;
+  color: blue;
+  cursor: pointer;
+  margin-right: 10px;
+}

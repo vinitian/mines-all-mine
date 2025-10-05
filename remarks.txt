@@ -1,0 +1,6 @@
+1. added gradient background to global css
+2. built room setting page (based from the figma styling at the time but not accurate to the figma styling yet)
+3. built game page with corresponding map size (playable. still not turn based.)
+Question: is drop down 6,8,10 enough or do we need more? input number?
+4. adjust game cell color to white
+5. deleted game play from home
