@@ -11,9 +11,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   ],
   callbacks: {
     async signIn({ user, account, profile }) {
-      console.log(
-        "user:" + user + "\naccount:" + account + "\nprofile:" + profile
-      );
+      // console.log(
+      //   "user:" +
+      //     JSON.stringify(user) +
+      //     "\naccount:" +
+      //     JSON.stringify(account) +
+      //     "\nprofile:" +
+      //     JSON.stringify(profile)
+      // );
       if (!user.email || !user.name || !user.image) {
         return false;
       }
