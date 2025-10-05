@@ -19,7 +19,12 @@ app.prepare().then(() => {
      console.log("User connected", socket.id);
 
     socket.on("message", (msg) => {
-        socket.broadcast.emit("message", msg); // Send message to all except sender
+
+      if (socket.rooms.has('ROOM1')) {
+        socket.to("ROOM1").emit("message", msg);
+      } else {
+        socket.to("ROOM2").emit("message", msg);
+      }
     });
 
     socket.on("disconnect", () => {
@@ -43,6 +48,22 @@ app.prepare().then(() => {
       state.started = true;
     
       io.emit("map:ready", { size: state.size, bombsTotal: state.bombCount, bombsFound: 0 });
+    });
+
+    socket.on("joinRoom1", () => {
+        socket.join("ROOM1");
+    });
+
+    socket.on("leaveRoom1", () => {
+        socket.leave("ROOM1");
+    });
+
+    socket.on("joinRoom2", () => {
+        socket.join("ROOM2");
+    });
+
+    socket.on("leaveRoom2", () => {
+        socket.leave("ROOM2");
     });
 
     socket.on("pickCell", (index) => {

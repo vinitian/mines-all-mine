@@ -144,6 +144,7 @@ export default function Home() {
       text: message,
       timestamp: Date(),
     };
+
     socket.emit("message", newMessageObj); // Send message to server
     setMessages((prev) => [...prev, newMessageObj]); // Add your message to the chat
     setMessage(""); // Clear input field
@@ -158,6 +159,22 @@ export default function Home() {
     if (!started || gameOver) return;
     if (revealed[i]) return;
     socket.emit("pickCell", i);
+  };
+
+  const joinRoom1 = () => {
+    socket.emit("joinRoom1");
+  };
+
+  const leaveRoom1 = () => {
+    socket.emit("leaveRoom1");
+  };
+
+  const joinRoom2 = () => {
+    socket.emit("joinRoom2");
+  };
+
+  const leaveRoom2 = () => {
+    socket.emit("leaveRoom2");
   };
   
 
@@ -189,7 +206,6 @@ export default function Home() {
     const bombCount = size === 6 ? 11 : Math.floor(size * size * 0.3);
     socket.emit("startGame", { size, bombCount });
   };
-  
 
   const startBtnLabel = started ? "In Progress…" : gameOver ? "Play Again" : "Start Game";
 
@@ -253,6 +269,53 @@ export default function Home() {
         >
           {startBtnLabel}
         </button>
+
+
+
+        <button
+          onClick={joinRoom1}    
+          disabled={started}           
+          className={`ml-2 px-3 py-1 rounded border ${
+            started ? "bg-blue-2 00 cursor-not-allowed" : "bg-blue-300"
+          }`}
+        >
+          join room 1
+
+        </button>
+
+        <button
+          onClick={leaveRoom1}    
+          disabled={started}           
+          className={`ml-2 px-3 py-1 rounded border ${
+            started ? "bg-blue-2 00 cursor-not-allowed" : "bg-blue-300"
+          }`}
+        >
+          leave room 1
+
+        </button>
+
+                <button
+          onClick={joinRoom2}    
+          disabled={started}           
+          className={`ml-2 px-3 py-1 rounded border ${
+            started ? "bg-blue-2 00 cursor-not-allowed" : "bg-blue-300"
+          }`}
+        >
+          join room 2
+        </button>
+
+        <button
+          onClick={leaveRoom2}    
+          disabled={started}           
+          className={`ml-2 px-3 py-1 rounded border ${
+            started ? "bg-blue-2 00 cursor-not-allowed" : "bg-blue-300"
+          }`}
+        >
+          leave room 2
+
+        </button>
+
+
 
 
         {bombsInfo && (
