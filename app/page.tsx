@@ -1,10 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import socket from "@/socket";
+import socket from "../socket";
+import GameGrid from "./gameGrid";
 import Link from "next/link";
-import { Message } from "@/interface";
+import createRoom from "@/services/client/createRoom";
+import { useRouter } from "next/navigation";
 
+interface Message {
+  userID: string;
+  text: string;
+  timestamp: string;
+}
 export default function Home() {
   const [isConnected, setIsConnected] = useState(false);
   const [transport, setTransport] = useState("N/A");
@@ -28,6 +35,10 @@ export default function Home() {
   const [leaderboard, setLeaderboard] = useState<[string, number][]>([]);
   const short = (id: string) => id.slice(-4);
   const [started, setStarted] = useState(false);
+
+  const [username, setUsername] = useState("john");
+
+  const router = useRouter();
 
   useEffect(() => {
     if (socket.connected) {
@@ -92,6 +103,22 @@ export default function Home() {
     }
   };
 
+  const handleCreateRoom = async () => {
+    const response = await createRoom({
+      id: socket.id!,
+      username: username,
+    });
+
+    if (response.success) {
+      router.push(`/room-settings`);
+    }
+    // if (response.success) {
+    //   setRoomDetails(response.data);
+    // } else {
+    //   setError(response.error);
+    // }
+  };
+
   return (
     // todo: detect dark-light mode of user
     <div className="m-8">
@@ -134,6 +161,8 @@ export default function Home() {
         <p>Status: {isConnected ? "connected" : "disconnected"}</p>
         <p>Transport: {transport}</p>
       </div>
+
+      <button onClick={handleCreateRoom}>Create new room!</button>
     </div>
   );
 }

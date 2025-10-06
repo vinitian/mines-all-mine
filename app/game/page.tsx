@@ -49,101 +49,113 @@ export default function GamePage() {
         <Link href="/" className="cta">
           Home
         </Link>
-        <div className="bomb-count-div flex items-center gap-2">
-          <button
-            onClick={() => (gameOver ? resetLocal() : startGame())}
-            disabled={started}
-            className="start-btn"
-          >
-            {startBtnLabel}
-          </button>
-          {turnLimit > 0 && <div>Time per turn: {turnLimit} seconds</div>}
-          {bombsInfo && (
-            <span className="ml-3">
-              Bombs: {bombsInfo.found} / {bombsInfo.total}
-            </span>
-          )}
-        </div>
+        return (
+        <div className="game-div-container">
+          <h1 className="absolute text-3xl text-semibold top-[2%] left-[2%]">
+            Room 1
+          </h1>
+          <div id="game-div">
+            <Link href="/" className="cta">
+              Home
+            </Link>
+            <div className="bomb-count-div flex items-center gap-2">
+              <button
+                onClick={() => (gameOver ? resetLocal() : startGame())}
+                disabled={started}
+                className="start-btn"
+              >
+                {startBtnLabel}
+              </button>
+              {turnLimit > 0 && <div>Time per turn: {turnLimit} seconds</div>}
+              {bombsInfo && (
+                <span className="ml-3">
+                  Bombs: {bombsInfo.found} / {bombsInfo.total}
+                </span>
+              )}
+            </div>
 
-        {started && !gameOver && (
-          <div
-            className="turn-info"
-            style={{
-              padding: "10px",
-              margin: "10px 0",
-              background: isMyTurn ? "#4CAF50" : "#f0f0f0",
-              color: isMyTurn ? "white" : "black",
-              borderRadius: "5px",
-              fontWeight: "bold",
-            }}
-          >
-            {isMyTurn ? (
-              <>
-                YOUR TURN!
-                {turnLimit > 0 && ` (${timeRemaining}s remaining)`}
-              </>
-            ) : (
-              <>
-                Waiting for Player {currentPlayer?.slice(-4)}'s turn
-                {turnLimit > 0 && ` (${timeRemaining}s remaining)`}
-              </>
-            )}
-          </div>
-        )}
-
-        {players.length > 0 && (
-          <div style={{ margin: "10px 0", fontSize: "14px" }}>
-            <strong>Players ({players.length}):</strong>{" "}
-            {players.map((p) => (
-              <span
-                key={p}
+            {started && !gameOver && (
+              <div
+                className="turn-info"
                 style={{
-                  marginRight: "8px",
-                  fontWeight: p === myId ? "bold" : "normal",
-                  color: p === currentPlayer ? "#4CAF50" : "inherit",
+                  padding: "10px",
+                  margin: "10px 0",
+                  background: isMyTurn ? "#4CAF50" : "#f0f0f0",
+                  color: isMyTurn ? "white" : "black",
+                  borderRadius: "5px",
+                  fontWeight: "bold",
                 }}
               >
-                {p.slice(-4)}
-                {p === myId ? " (You)" : ""}
-                {p === currentPlayer ? " 👈" : ""}
-              </span>
-            ))}
-          </div>
-        )}
-
-        <GameGrid size={size} onPick={pickCell} revealed={revealed} />
-
-        {gameOver && (
-          <div className="result-div">
-            {winners?.length ? (
-              winners.length === 1 ? (
-                <>
-                  Winner: <strong>{winners[0].id.slice(-4)}</strong> with{" "}
-                  <strong>{winners[0].score}</strong> bombs!
-                </>
-              ) : (
-                <>
-                  Tie:{" "}
-                  <strong>
-                    {winners.map((w) => w.id.slice(-4)).join(", ")}
-                  </strong>{" "}
-                  with <strong>{winners[0].score}</strong> bombs!
-                </>
-              )
-            ) : (
-              "All bombs found!"
+                {isMyTurn ? (
+                  <>
+                    YOUR TURN!
+                    {turnLimit > 0 && ` (${timeRemaining}s remaining)`}
+                  </>
+                ) : (
+                  <>
+                    Waiting for Player {currentPlayer?.slice(-4)}'s turn
+                    {turnLimit > 0 && ` (${timeRemaining}s remaining)`}
+                  </>
+                )}
+              </div>
             )}
-            {leaderboard.length > 0 && (
-              <ul className="score-div list-disc list-inside text-sm">
-                {leaderboard.map(([id, score]) => (
-                  <li key={id}>
-                    {id.slice(-4)} — {score}
-                  </li>
+
+            {players.length > 0 && (
+              <div style={{ margin: "10px 0", fontSize: "14px" }}>
+                <strong>Players ({players.length}):</strong>{" "}
+                {players.map((p) => (
+                  <span
+                    key={p}
+                    style={{
+                      marginRight: "8px",
+                      fontWeight: p === myId ? "bold" : "normal",
+                      color: p === currentPlayer ? "#4CAF50" : "inherit",
+                    }}
+                  >
+                    {p.slice(-4)}
+                    {p === myId ? " (You)" : ""}
+                    {p === currentPlayer ? " 👈" : ""}
+                  </span>
                 ))}
-              </ul>
+              </div>
+            )}
+
+            <GameGrid size={size} onPick={pickCell} revealed={revealed} />
+
+            {gameOver && (
+              <div className="result-div">
+                {winners?.length ? (
+                  winners.length === 1 ? (
+                    <>
+                      Winner: <strong>{winners[0].id.slice(-4)}</strong> with{" "}
+                      <strong>{winners[0].score}</strong> bombs!
+                    </>
+                  ) : (
+                    <>
+                      Tie:{" "}
+                      <strong>
+                        {winners.map((w) => w.id.slice(-4)).join(", ")}
+                      </strong>{" "}
+                      with <strong>{winners[0].score}</strong> bombs!
+                    </>
+                  )
+                ) : (
+                  "All bombs found!"
+                )}
+                {leaderboard.length > 0 && (
+                  <ul className="score-div list-disc list-inside text-sm">
+                    {leaderboard.map(([id, score]) => (
+                      <li key={id}>
+                        {id.slice(-4)} — {score}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
             )}
           </div>
-        )}
+        </div>
+        );
       </div>
     </div>
   );
