@@ -19,10 +19,30 @@ app.prepare().then(() => {
     // ...
     console.log("User connected", socket.id);
 
+    const isLocalhost = socket.handshake.headers.origin === 'http://localhost:3000' ||
+      socket.handshake.headers.host === 'localhost:3000' ||
+      socket.handshake.address === '::1' ||
+      socket.handshake.address === '127.0.0.1';
+
+    console.log(`Connection from: ${socket.handshake.headers.origin}, isLocalhost: ${isLocalhost}`);
+
     if (!state.players.includes(socket.id)) {
       state.players.push(socket.id);
       console.log(`Player ${socket.id} joined. Total players: ${state.players.length}`);
     }
+
+    io.emit('onlineCountUpdate', {
+      count: state.players.length,
+      isHost: isLocalhost
+    });
+
+    socket.on('getOnlineCount', () => {
+      console.log(`getOnlineCount requested by ${socket.id}, current players: ${state.players.length}`);
+      socket.emit('onlineCountUpdate', {
+        count: state.players.length,
+        isHost: isLocalhost
+      });
+    });
 
     io.emit("playersUpdated", {
       players: state.players,
@@ -42,11 +62,17 @@ app.prepare().then(() => {
 
     socket.on("disconnect", () => {
       console.log("User disconnected", socket.id);
-      console.log("User disconnected", socket.id);
       // remove player
       const playerIndex = state.players.indexOf(socket.id);
       if (playerIndex !== -1) {
         state.players.splice(playerIndex, 1);
+
+        io.emit('onlineCountUpdate', {
+          count: state.players.length,
+          isHost: false
+        });
+
+
         if (state.currentTurnIndex >= state.players.length && state.players.length > 0) {
           state.currentTurnIndex = 0;
         }
