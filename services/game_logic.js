@@ -26,12 +26,20 @@ class Field{
             }
         }
     }
-    load(field, size){
+    load(field, properties){
         this.field=field;
-        this.size=size;
+        this.size=properties.size;
+        this.bombs=properties.bombs;
     }
     export(){
-        return this.field;
+        return(
+        [
+            this.field,
+            {
+                size:this.size,
+                bombs:this.bombs,
+            }
+        ]);
     }
     coordinate_to_index(x,y){
         //x rows y columns like 2D array
@@ -113,7 +121,8 @@ class Field{
         if(cell.bomb==true){
             //console.log(3)
             cell.state=Cell.states.FLAGGED;
-            console.log(this.field[this.coordinate_to_index(x,y)])
+            this.bombs=this.bombs-1;
+            //console.log(this.field[this.coordinate_to_index(x,y)])
             return [Field.open_cell_flags.BOMB,true];
         }
         if(cell.number==0){
@@ -162,7 +171,8 @@ class Field{
                     mark=cell.number;
                 }
                 if(cell.bomb==true){
-                    bracket=["{","}"];
+                    //bracket=["{","}"];
+                    bracket=["[","]"];
                 }else{
                     bracket=["[","]"];
                 }
@@ -186,7 +196,7 @@ const rl = readline.createInterface({
 
 let field=new Field()
 let result;
-field.generate_field([10,10],10)
+field.generate_field([10,10],20)
 
 // Function to handle user commands
 function handleCommand(position) {
@@ -199,6 +209,7 @@ function handleCommand(position) {
         console.log(result)
     }  
     field.print_field()
+    console.log(field.bombs+ " bombs remaining")
     askForCommand();
 }
 
