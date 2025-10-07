@@ -1,14 +1,10 @@
 class Cell{
-    static states={
-        UNOPENED: 'unopened',
-        OPENED: 'opened',
-        FLAGGED: 'flagged'
-    }
-    constructor(position){
-        this.state=Cell.states.UNOPENED
-        this.position=position
-        this.number=0
-        this.bomb=false
+    constructor(x,y){
+        this.is_open=false;
+        this.posx=x;
+        this.posy=y;
+        this.number=0;
+        this.bomb=false;
     }
 }
 
@@ -22,7 +18,7 @@ class Field{
         this.size=size;
         for(let y=0;y<this.size[1];y++){
             for(let x=0;x<this.size[0];x++){
-                this.field.push(new Cell([x,y]));
+                this.field.push(new Cell(x,y));
             }
         }
     }
@@ -114,13 +110,13 @@ class Field{
             return [Field.open_cell_flags.OUTSIDE,false];
         }
         let cell=this.field[this.coordinate_to_index(x,y)];
-        if(cell.state==Cell.states.OPENED||cell.state==Cell.states.FLAGGED){
+        if(cell.is_open||(cell.is_open==true&&cell.bomb==true)){
             //console.log(2)
             return [Field.open_cell_flags.OPENED,false];
         }
         if(cell.bomb==true){
             //console.log(3)
-            cell.state=Cell.states.FLAGGED;
+            cell.is_open=true;
             this.bombs=this.bombs-1;
             //console.log(this.field[this.coordinate_to_index(x,y)])
             return [Field.open_cell_flags.BOMB,true];
@@ -132,21 +128,21 @@ class Field{
             let index;
             let sel;
             const range=[-1,0,1];
-            cell.state=Cell.states.OPENED;
+            cell.is_open=true;
             range.forEach((dx)=>{range.forEach((dy)=>{
                 xc=x+dx;
                 yc=y+dy;
                 if(this.is_in_field(xc,yc)){
                     index=this.coordinate_to_index(xc,yc);
                     sel=this.field[index];
-                    if(!(xc==0&&yc==0)&&sel.state==Cell.states.UNOPENED){
+                    if(!(xc==0&&yc==0)&&sel.is_open==false){
                         //console.log(xc,yc);
                         this.open_cell(xc,yc);
                     }
                 }
             })})
         }
-        cell.state=Cell.states.OPENED;
+        cell.is_open=true;
         return [Field.open_cell_flags.NOBOMB,true];
     }
     print_field(){
@@ -162,10 +158,10 @@ class Field{
             const row=[];
             for(let j=0;j<arranged[0].length;j++){
                 cell=arranged[i][j];
-                if(cell.state==Cell.states.UNOPENED){
+                if(cell.is_open==false){
                     mark="-";
                     //mark=cell.number;
-                }else if(cell.state==Cell.states.FLAGGED){
+                }else if(cell.is_open==true&&cell.bomb==true){
                     mark="X";
                 }else{
                     mark=cell.number;
