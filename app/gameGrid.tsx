@@ -25,7 +25,7 @@ export default function GameGrid({ size, onPick, revealed }: GameGridProps) {
         const bg =
           status === "hit" ? "#fecaca" :           
           status === "miss" ? "#e5e7eb" :        
-          "#d1d5db";                              
+          "#ffffff";                              
 
         const label =
           status === "hit" ? "💣" :

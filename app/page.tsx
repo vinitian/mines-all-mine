@@ -1,14 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { socket } from "../socket";
-import GameGrid from "./gameGrid";
+import socket from "@/socket";
+import Link from "next/link";
+import { Message } from "@/interface";
 
-interface Message {
-  userID: string;
-  text: string;
-  timestamp: string;
-}
 export default function Home() {
   const [isConnected, setIsConnected] = useState(false);
   const [transport, setTransport] = useState("N/A");
@@ -20,14 +16,18 @@ export default function Home() {
   const sizes = [6, 8, 10];
 
   const [revealed, setRevealed] = useState<Record<number, "hit" | "miss">>({});
-  const [bombsInfo, setBombsInfo] = useState<{ total: number; found: number } | null>(null);
+  const [bombsInfo, setBombsInfo] = useState<{
+    total: number;
+    found: number;
+  } | null>(null);
 
   const [gameOver, setGameOver] = useState(false);
-  const [winners, setWinners] = useState<{ id: string; score: number }[] | null>(null);
+  const [winners, setWinners] = useState<
+    { id: string; score: number }[] | null
+  >(null);
   const [leaderboard, setLeaderboard] = useState<[string, number][]>([]);
-  const short = (id: string) => id.slice(-4); 
+  const short = (id: string) => id.slice(-4);
   const [started, setStarted] = useState(false);
-
 
   useEffect(() => {
     if (socket.connected) {
@@ -58,96 +58,31 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    const onReady = (data: { size: number; bombsTotal: number; bombsFound: number }) => {
-      setBombsInfo({ total: data.bombsTotal, found: data.bombsFound });
-      setRevealed({});
-      setGameOver(false);
-      setWinners(null);
-      setLeaderboard([]);
-      setSize(data.size);    
-      setStarted(true); 
-    };
-    
-  
-    const onCell = (payload: {
-      index: number;
-      hit: boolean;
-      by: string;
-      bombsFound: number;
-      bombsTotal: number;
-      scores: Record<string, number>;
-    }) => {
-      console.log("cellResult", payload);
-      setBombsInfo({ total: payload.bombsTotal, found: payload.bombsFound });
-      setRevealed((prev) => ({ ...prev, [payload.index]: payload.hit ? "hit" : "miss" }));
-    };
-  
-    const onOver = (payload: {
-      winners?: { id: string; score: number }[];
-      scores: Record<string, number>;
-      size: number;
-      bombCount: number;
-    }) => {
-      setGameOver(true);
-      setStarted(false); 
-    
-      let w = Array.isArray(payload.winners) ? payload.winners : [];
-      if (w.length === 0) {
-        const entries = Object.entries(payload.scores); // [socketId, score][]
-        if (entries.length) {
-          const max = Math.max(...entries.map(([, s]) => s));
-          w = entries
-            .filter(([, s]) => s === max)
-            .map(([id, score]) => ({ id, score }));
-        }
-      }
-    
-      setWinners(w);
-      setLeaderboard(Object.entries(payload.scores).sort((a, b) => b[1] - a[1]));
-    };
-    
-    
-  
-    socket.on("map:ready", onReady);
-    socket.on("cellResult", onCell);
-    socket.on("gameOver", onOver);
-  
-    return () => {
-      socket.off("map:ready", onReady);
-      socket.off("cellResult", onCell);
-      socket.off("gameOver", onOver);
-    };
-  }, []);
-  
-
-  useEffect(() => {
     // Listen for messages from the server
-    socket.on("message", (msg: string) => {
+    socket.on("message", (msg: Message) => {
       setMessages((prev) => [
         ...prev,
         {
-          userID: socket.id!,
-          text: msg,
-          timestamp: Date(),
+          userID: msg.userID,
+          text: msg.text,
+          timestamp: msg.timestamp,
         },
       ]);
     });
 
     return () => {
-      socket.disconnect(); 
+      socket.off("message");
     };
   }, []);
 
   const sendMessage = () => {
-    socket.emit("message", message); // Send message to server
-    setMessages((prev) => [
-      ...prev,
-      {
-        userID: socket.id!,
-        text: message,
-        timestamp: Date(),
-      },
-    ]); // Add your message to the chat
+    const newMessageObj = {
+      userID: socket.id!,
+      text: message,
+      timestamp: Date(),
+    };
+    socket.emit("message", newMessageObj); // Send message to server
+    setMessages((prev) => [...prev, newMessageObj]); // Add your message to the chat
     setMessage(""); // Clear input field
   };
 
@@ -156,124 +91,25 @@ export default function Home() {
       sendMessage();
     }
   };
-  const handlePick = (i: number) => {
-    if (!started || gameOver) return;
-    if (revealed[i]) return;
-    socket.emit("pickCell", i);
-  };
-  
-
-  {/*const startGame = () => {
-    setGameOver(false);
-    setWinners(null);
-    setLeaderboard([]);
-    setRevealed({});
-    setBombsInfo(null);
-    setStarted(true);
-    const bombCount = size === 6 ? 11 : Math.floor(size * size * 0.3); 
-    socket.emit("startGame", { size, bombCount });
-  };*/}
-
-  const handleStartClick = () => {
-    if (started) return; 
-  
-    if (gameOver) {
-     
-      setRevealed({});
-      setBombsInfo(null);
-      setWinners(null);
-      setLeaderboard([]);
-      setGameOver(false);   
-      return;               
-    }
-  
-    setStarted(true);      
-    const bombCount = size === 6 ? 11 : Math.floor(size * size * 0.3);
-    socket.emit("startGame", { size, bombCount });
-  };
-  
-
-  const startBtnLabel = started ? "In Progress…" : gameOver ? "Play Again" : "Start Game";
 
   return (
     // todo: detect dark-light mode of user
     <div className="m-8">
-      <h1 className="text-title">Select Map Size</h1>
-      {gameOver && (
-        <div className="mb-3 p-3 rounded border bg-yellow-100">
-          {winners && winners.length > 0 ? (
-            winners.length === 1 ? (
-              <p>
-                Winner: <strong>{short(winners[0].id)}</strong> with{" "}
-                <strong>{winners[0].score}</strong> bombs!
-              </p>
-            ) : (
-              <p>
-                Tie between{" "}
-                <strong>{winners.map((w) => short(w.id)).join(", ")}</strong> with{" "}
-                <strong>{winners[0].score}</strong> bombs!
-              </p>
-            )
-          ) : (
-            <p>All bombs found! (Awaiting winner data)</p>
-          )}
-
-          {leaderboard.length > 0 && (
-            <ul className="mt-2 list-disc list-inside text-sm">
-              {leaderboard.map(([id, score]) => (
-                <li key={id}>
-                  {short(id)} — {score}
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      )}
-
-
-      <div className="flex items-center gap-2 mb-3">
-      {sizes.map((s) => (
-        <button
-          key={s}
-          onClick={() => setSize(s)}
-          disabled={started || gameOver}  // ← lock while running AND after game over
-          className={`px-3 py-1 rounded border ${
-            s === size ? "bg-green-300 font-semibold" : "bg-gray-200"
-          } ${started || gameOver ? "opacity-60 cursor-not-allowed" : ""}`}
-          aria-pressed={s === size}
-        >
-          {s} × {s}
-        </button>
-      ))}
-
-        <button
-          onClick={handleStartClick}    
-          disabled={started}           
-          className={`ml-2 px-3 py-1 rounded border ${
-            started ? "bg-blue-2 00 cursor-not-allowed" : "bg-blue-300"
-          }`}
-        >
-          {startBtnLabel}
-        </button>
-
-
-        {bombsInfo && (
-          <span className="ml-3">
-            Bombs: {bombsInfo.found} / {bombsInfo.total}
-          </span>
-        )}
-      </div>
-
-      <div className="mb-6">
-        <GameGrid size={size} onPick={handlePick} revealed={revealed}/>
-      </div>
-
+      <h1 className="text-title">Temporary Page links</h1>
+      <Link href="/room-settings" className="cta">
+        Room Setting
+      </Link>
+      <Link href="/game" className="cta">
+        Game Page
+      </Link>
       <h1 className="text-title">Real-Time Chat</h1>
-      
+
       <div>
         {messages.map((msg, index) => (
           <div key={index}>
-            {msg.userID}: {msg.text} ({msg.timestamp})
+            {msg.timestamp.split(" ")[4].slice(0, 5)}{" "}
+            <span className="font-semibold text-gray-blue">{msg.userID}</span>:{" "}
+            {msg.text}
           </div>
         ))}
       </div>

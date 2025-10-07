@@ -1,0 +1,29 @@
+
+.game-div-container {
+    background-color: white;
+    display: flex;
+    justify-content: center; /* Centers horizontally */
+    align-items: center;    /* Centers vertically */
+    height: 100vh; 
+    
+}
+.start-btn {
+    background-color: #4AF089;
+    border: 1px solid grey;
+    padding: 3px 20px;
+    border-radius: 5px;
+}
+.start-btn:disabled {
+    background-color: #65ef9a7b;
+}
+
+.result-div {
+    margin-top: 20px;
+    border-radius: 5px;
+    background-color: #BDFFD6 ;
+    padding: 10px 25px;
+}
+
+.bomb-count-div {
+    margin-bottom: 20px;
+}

@@ -6,17 +6,29 @@
 }
 
 @theme {
-  --text-title: 32px;
+  --text-title: 64px;
+  --text-subtitle: 48px;
+  --text-h1: 32px;
+  --text-h2: 28px;
+  --text-h3: 24px;
+  --text-h4: 20px;
   --text-body: 16px;
-  --text-subtitle: 24px;
-  --text-body-small: 14px;
+  --text-body-small: 12px;
+  --color-red: #f26690;
+  --color-purple: #e496f5;
+  --color-blue: #8499ff;
+  --color-blue-light: #ddf7ff;
+  --color-green: #2ddb81;
+  --color-green-light: #bdffd6;
+  --color-gray: #d4d4d4;
+  --color-gray-blue: #2b335b;
+  --color-gray-dark: #848484;
+  --color-border: rgba(55, 40, 190, 0.5);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -27,7 +39,18 @@
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: linear-gradient(
+    to bottom,
+    #fffff5 30%,
+    var(--color-blue-light) 71%,
+    #dde4ff 100%
+  );
+  font-family: Helvetica, sans-serif;
+}
+
+.cta {
+  text-decoration: underline;
+  color: blue;
+  cursor: pointer;
+  margin-right: 10px;
 }
