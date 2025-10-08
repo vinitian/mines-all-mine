@@ -30,8 +30,7 @@ export async function POST(request: NextRequest) {
     });
 
     console.log(
-      `${new Date().toISOString()} : [INFO] Created new room with ID ${
-        newRoom.id
+      `${new Date().toISOString()} : [INFO] Created new room with ID ${newRoom.id
       }`
     );
 
