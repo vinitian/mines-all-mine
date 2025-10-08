@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import socket from "@/socket";
-import getTotalRooms from "@/services/client/getTotalRooms";
+import { getTotalRooms } from "@/services/client/roomService";
 
 export default function StatisticsButton() {
   const [isPopupOpen, setIsPopupOpen] = useState(false);
@@ -51,7 +51,7 @@ export default function StatisticsButton() {
   const handleOpenPopup = () => {
     setIsPopupOpen(true);
     fetchServerInfo();
-    fetchTotalRooms(); // This will now use your existing /api/room endpoint
+    fetchTotalRooms();
 
     if (socket) {
       console.log('Requesting fresh online count...');
@@ -63,7 +63,7 @@ export default function StatisticsButton() {
     <>
       <button
         onClick={handleOpenPopup}
-        className="fixed top-4 right-4 bg-[#DDF7FF] text-black p-5 rounded-xl hover:bg-[#cdeff7] transition-colors z-50 border-1 border-black"
+        className="fixed top-4 right-4 bg-[#DDF7FF] text-black p-5 rounded-xl hover:bg-[#cdeff7] transition-colors z-50 border-1 border-black cursor-pointer"
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -88,7 +88,7 @@ export default function StatisticsButton() {
               <h2 className="text-h3 font-bold">Statistics</h2>
               <button
                 onClick={() => setIsPopupOpen(false)}
-                className="text-gray-500 hover:text-gray-700"
+                className="text-gray-500 hover:text-gray-700 cursor-pointer"
               >
                 ✕
               </button>
@@ -113,7 +113,6 @@ export default function StatisticsButton() {
               </div>
             )}
 
-            {/* Add more rows here later */}
           </div>
         </div>
       )}
