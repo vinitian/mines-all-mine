@@ -4,135 +4,87 @@ import { useEffect, useState } from "react";
 import socket from "@/socket";
 import Link from "next/link";
 import { Message } from "@/interface";
+import Image from "next/image";
+import StatisticsButton from "@/components/StatisticsButton";
+import { useRouter } from "next/navigation";
 
 export default function Home() {
-  const [isConnected, setIsConnected] = useState(false);
-  const [transport, setTransport] = useState("N/A");
+  const [nickname, setNickname] = useState("");
+  const [showError, setShowError] = useState(false);
+  const router = useRouter();
 
-  const [message, setMessage] = useState("");
-  const [messages, setMessages] = useState<Message[]>([]);
-
-  const [size, setSize] = useState<number>(6);
-  const sizes = [6, 8, 10];
-
-  const [revealed, setRevealed] = useState<Record<number, "hit" | "miss">>({});
-  const [bombsInfo, setBombsInfo] = useState<{
-    total: number;
-    found: number;
-  } | null>(null);
-
-  const [gameOver, setGameOver] = useState(false);
-  const [winners, setWinners] = useState<
-    { id: string; score: number }[] | null
-  >(null);
-  const [leaderboard, setLeaderboard] = useState<[string, number][]>([]);
-  const short = (id: string) => id.slice(-4);
-  const [started, setStarted] = useState(false);
-
-  useEffect(() => {
-    if (socket.connected) {
-      onConnect();
+  const handleJoinRoom = () => {
+    if (nickname.trim()) {
+      setShowError(false);
+      router.push(`/room?nickname=${encodeURIComponent(nickname)}`);
+    } else {
+      setShowError(true);
     }
-
-    function onConnect() {
-      setIsConnected(true);
-      setTransport(socket.io.engine.transport.name);
-
-      socket.io.engine.on("upgrade", (transport) => {
-        setTransport(transport.name);
-      });
-    }
-
-    function onDisconnect() {
-      setIsConnected(false);
-      setTransport("N/A");
-    }
-
-    socket.on("connect", onConnect);
-    socket.on("disconnect", onDisconnect);
-
-    return () => {
-      socket.off("connect", onConnect);
-      socket.off("disconnect", onDisconnect);
-    };
-  }, []);
-
-  useEffect(() => {
-    // Listen for messages from the server
-    socket.on("message", (msg: Message) => {
-      setMessages((prev) => [
-        ...prev,
-        {
-          userID: msg.userID,
-          text: msg.text,
-          timestamp: msg.timestamp,
-        },
-      ]);
-    });
-
-    return () => {
-      socket.off("message");
-    };
-  }, []);
-
-  const sendMessage = () => {
-    const newMessageObj = {
-      userID: socket.id!,
-      text: message,
-      timestamp: Date(),
-    };
-    socket.emit("message", newMessageObj); // Send message to server
-    setMessages((prev) => [...prev, newMessageObj]); // Add your message to the chat
-    setMessage(""); // Clear input field
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
-      sendMessage();
+  const handleCreateRoom = () => {
+    if (nickname.trim()) {
+      setShowError(false);
+      //อย่าลืม router push ตรงนี้ เพื่อ link ไป create room page
+    } else {
+      setShowError(true);
+    }
+  };
+
+  const isNicknameValid = nickname.trim().length > 0;
+
+  // Hide error when user starts typing
+  const handleNicknameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setNickname(e.target.value);
+    if (showError && e.target.value.trim()) {
+      setShowError(false);
     }
   };
 
   return (
-    // todo: detect dark-light mode of user
-    <div className="m-8">
-      <h1 className="text-title">Temporary Page links</h1>
-      <Link href="/room-settings" className="cta">
-        Room Setting
-      </Link>
-      <Link href="/game" className="cta">
-        Game Page
-      </Link>
-      <h1 className="text-title">Real-Time Chat</h1>
+    <div className="min-h-screen bg-gradient-to-b from-[#fffff5] from-30% via-[#ddf7ff] via-71% to-[#dde4ff] to-100% flex items-center justify-center p-4">
+      <StatisticsButton />
+      <div className="bg-white rounded-3xl border border-black p-6 w-full max-w-md md:max-w-lg lg:max-w-xl">
+        <div className="flex justify-center text-title font-bold text-center">
+          Mines, All Mine!
+        </div>
 
-      <div>
-        {messages.map((msg, index) => (
-          <div key={index}>
-            {msg.timestamp.split(" ")[4].slice(0, 5)}{" "}
-            <span className="font-semibold text-gray-blue">{msg.userID}</span>:{" "}
-            {msg.text}
-          </div>
-        ))}
-      </div>
-      <div className="flex gap-4">
-        <input
-          value={message}
-          onChange={(e) => setMessage(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="Type a message..."
-          className="border-2 rounded-md w-full border-gray-400"
-        />
+        <div className="flex justify-center items-center gap-4 mt-2">
+          <div className="text-h3">Nickname</div>
+          <input
+            type="text"
+            placeholder="Type your nickname here..."
+            className="w-full border-2 border-border rounded-2xl px-4 py-2 placeholder-gray-400 text-h4 focus:outline-none focus:border-[#3728BE]"
+            value={nickname}
+            onChange={handleNicknameChange}
+          />
+        </div>
+
+        <div className="flex justify-center">
+          {showError && (
+            <div className="w-[60%] mt-2 p-2 text-red-700 rounded-lg text-center">
+              Please enter your nickname first!
+            </div>
+          )}
+        </div>
+
         <button
-          onClick={sendMessage}
-          type="submit"
-          className="bg-green-300 px-4 py-1 rounded-md"
+          onClick={handleJoinRoom}
+          className="w-full bg-blue text-white text-h3 border-2 border-border rounded-2xl py-2 hover:bg-[#7388ee] transition-colors duration-200 flex justify-center mt-4 cursor-pointer"
         >
-          Send
+          Join Room
         </button>
-      </div>
-      <div>
-        <div className="bg-white py-0.5 mt-8" />
-        <p>Status: {isConnected ? "connected" : "disconnected"}</p>
-        <p>Transport: {transport}</p>
+
+        <button
+          onClick={handleCreateRoom}
+          className="w-full bg-purple text-white text-h3 border-2 border-border rounded-2xl py-2 hover:bg-[#d68ee7] transition-colors duration-200 flex justify-center mt-4 cursor-pointer"
+        >
+          Create Room
+        </button>
+
+        <button className="w-full bg-white text-black text-h3 border-2 border-border rounded-2xl py-2 hover:bg-[#f0f0f0] transition-colors duration-200 flex justify-center mt-4 cursor-pointer">
+          <div>Sign in with Google</div>
+        </button>
       </div>
     </div>
   );
