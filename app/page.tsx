@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import socket from "@/socket";
 import Link from "next/link";
 import { Message } from "@/interface";
-import Image from 'next/image';
+import Image from "next/image";
 import StatisticsButton from "@/components/StatisticsButton";
 import { useRouter } from "next/navigation";
 
@@ -45,15 +45,12 @@ export default function Home() {
     <div className="min-h-screen bg-gradient-to-b from-[#fffff5] from-30% via-[#ddf7ff] via-71% to-[#dde4ff] to-100% flex items-center justify-center p-4">
       <StatisticsButton />
       <div className="bg-white rounded-3xl border border-black p-6 w-full max-w-md md:max-w-lg lg:max-w-xl">
-
         <div className="flex justify-center text-title font-bold text-center">
           Mines, All Mine!
         </div>
 
         <div className="flex justify-center items-center gap-4 mt-2">
-          <div className="text-h3">
-            Nickname
-          </div>
+          <div className="text-h3">Nickname</div>
           <input
             type="text"
             placeholder="Type your nickname here..."
@@ -86,12 +83,9 @@ export default function Home() {
         </button>
 
         <button className="w-full bg-white text-black text-h3 border-2 border-border rounded-2xl py-2 hover:bg-[#f0f0f0] transition-colors duration-200 flex justify-center mt-4 cursor-pointer">
-          <div>
-            Sign in with Google
-          </div>
+          <div>Sign in with Google</div>
         </button>
-
       </div>
     </div>
-  )
+  );
 }
