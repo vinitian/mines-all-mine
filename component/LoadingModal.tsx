@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { BeatLoader } from "react-spinners";
 
-export default function LoadingModal({ text = "Loading" }: { text: string }) {
+export default function LoadingModal({ text = "Loading" }: { text?: string }) {
   const [loadingText, setLoadingText] = useState(`${text}.`);
 
   useEffect(() => {
