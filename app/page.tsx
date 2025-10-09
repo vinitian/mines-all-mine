@@ -66,7 +66,9 @@ export default function Home() {
               referrerPolicy="no-referrer"
               className="rounded-full size-16"
             />
-            <div className="text-h1">Welcome, {session.user?.name}!</div>
+            <div className="text-h1 text-center">
+              Welcome, {session.user?.name}!
+            </div>
             <div className="text-gray-dark">{session.user?.email}</div>
           </div>
         )}
