@@ -4,11 +4,14 @@ import { useEffect, useState } from "react";
 import socket from "@/socket";
 import Link from "next/link";
 import { Message } from "@/interface";
-import Image from 'next/image';
+import Image from "next/image";
+import { signIn, signOut, useSession } from "next-auth/react";
 import StatisticsButton from "@/components/StatisticsButton";
 import { useRouter } from "next/navigation";
 
 export default function Home() {
+  const { data: session } = useSession();
+
   const [nickname, setNickname] = useState("");
   const [showError, setShowError] = useState(false);
   const router = useRouter();
@@ -41,19 +44,34 @@ export default function Home() {
     }
   };
 
+  useEffect(() => {
+    setNickname(session?.user?.name ?? "");
+  }, [session]);
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#fffff5] from-30% via-[#ddf7ff] via-71% to-[#dde4ff] to-100% flex items-center justify-center p-4">
       <StatisticsButton />
       <div className="bg-white rounded-3xl border border-black p-6 w-full max-w-md md:max-w-lg lg:max-w-xl">
-
-        <div className="flex justify-center text-title font-bold text-center">
+        <div className="flex justify-center text-title/16 font-bold text-center my-4">
           Mines, All Mine!
         </div>
 
-        <div className="flex justify-center items-center gap-4 mt-2">
-          <div className="text-h3">
-            Nickname
+        {session && (
+          <div className="flex flex-col justify-center items-center my-4">
+            <Image
+              src={session.user?.image ?? ""}
+              alt="Profile image"
+              width={100}
+              height={100}
+              referrerPolicy="no-referrer"
+              className="rounded-full size-16"
+            />
+            <div className="text-h1">Welcome, {session.user?.name}!</div>
+            <div className="text-gray-dark">{session.user?.email}</div>
           </div>
+        )}
+        <div className="flex justify-center items-center gap-4 mt-2">
+          <div className="text-h3">Nickname</div>
           <input
             type="text"
             placeholder="Type your nickname here..."
@@ -85,13 +103,22 @@ export default function Home() {
           Create Room
         </button>
 
-        <button className="w-full bg-white text-black text-h3 border-2 border-border rounded-2xl py-2 hover:bg-[#f0f0f0] transition-colors duration-200 flex justify-center mt-4 cursor-pointer">
-          <div>
+        {session ? (
+          <button
+            className="w-full bg-white text-black text-h3 border-2 border-border rounded-2xl py-2 hover:bg-[#f0f0f0] transition-colors duration-200 flex justify-center mt-4 cursor-pointer"
+            onClick={() => signOut()}
+          >
+            Sign out
+          </button>
+        ) : (
+          <button
+            className="w-full bg-white text-black text-h3 border-2 border-border rounded-2xl py-2 hover:bg-[#f0f0f0] transition-colors duration-200 flex justify-center mt-4 cursor-pointer"
+            onClick={() => signIn("google")}
+          >
             Sign in with Google
-          </div>
-        </button>
-
+          </button>
+        )}
       </div>
     </div>
-  )
+  );
 }
