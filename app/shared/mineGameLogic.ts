@@ -63,18 +63,6 @@ export function mineGameLogic() {
 
     // socket thing
 
-    useEffect(() => {
-        const onAny = (event: string, ...args: any[]) => {
-          console.log("📡 socket event:", event, args);
-        };
-        // @ts-ignore
-        socket.onAny(onAny);
-        return () => {
-          // @ts-ignore
-          socket.offAny(onAny);
-        };
-      }, []);
-
       
     useEffect(() => {
         if (socket.connected) {
