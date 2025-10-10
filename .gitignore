@@ -42,3 +42,6 @@ next-env.d.ts
 
 # prisma
 app/generated
+
+#typescript version
+.vscode

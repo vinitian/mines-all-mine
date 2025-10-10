@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import prisma from "@/services/client/prisma";
+import prisma from "@/prisma/prisma";
 
 // get all rooms
 export async function GET() {
@@ -30,8 +30,7 @@ export async function POST(request: NextRequest) {
     });
 
     console.log(
-      `${new Date().toISOString()} : [INFO] Created new room with ID ${
-        newRoom.id
+      `${new Date().toISOString()} : [INFO] Created new room with ID ${newRoom.id
       }`
     );
 
