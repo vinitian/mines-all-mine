@@ -137,6 +137,7 @@ export default function RoomSettings() {
     );
   };
 
+
   return (
     <main className="bg">
       <section className="card">
@@ -276,7 +277,13 @@ export default function RoomSettings() {
           <button
             className="primary red"
             disabled={!mapSize}
-            // onClick={handleLeaveGame}
+            onClick={() => {
+              if (!socket.connected) {
+                console.error("Socket not connected!");
+                return;
+              }
+              router.push("/home");
+            }}
           >
             Leave Room
           </button>
