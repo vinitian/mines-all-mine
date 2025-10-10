@@ -60,6 +60,21 @@ export default function RoomSettings() {
   }, []);
 
   useEffect(() => {
+    const onReady = (data: any) => {
+      console.log("navigating", data);
+      router.push("/game");
+    };
+  
+    socket.once("map:ready", onReady);
+  
+    return () => {
+      socket.off("map:ready", onReady);
+    };
+  }, [router]);
+  
+  
+
+  useEffect(() => {
     handleEditRoom();
   }, [roomname, mapSize, bombCount, turnLimit, playerLimit, chatState]);
 
@@ -86,23 +101,38 @@ export default function RoomSettings() {
       console.error("Socket not connected!");
       return;
     }
+
     const bombs = densityToCount(bombCount, mapSize);
-    console.log("Emitting settings:update with:", {
+    console.log("Starting game with settings:", {
       size: mapSize,
       bombCount: bombs,
       turnLimit,
-      chatState,
+      playerLimit,
+      chatEnabled: chatState,
     });
+
     socket.emit(
       "settings:update",
-      { size: mapSize, bombCount: bombs, turnLimit },
+      { 
+        size: mapSize, 
+        bombCount: bombs, 
+        turnLimit,
+        playerLimit,
+        chatEnabled: chatState,
+        roomName: roomname,
+      },
       (ack: any) => {
         if (!ack?.ok) {
           console.error("Failed to save settings:", ack?.error);
           return;
         }
-        console.log("Settings saved, navigating...");
-        router.push(`/game?size=${mapSize}&tl=${turnLimit}&bombCount=${bombs}`);
+
+        socket.emit("startGame", { 
+          size: mapSize, 
+          bombCount: densityToCount(bombCount, mapSize),
+          turnLimit 
+        });
+        
       }
     );
   };
@@ -252,11 +282,11 @@ export default function RoomSettings() {
           </button>
 
           <button
-            className="primary"
+            className = "primary"
             disabled={!mapSize}
             onClick={handleStartGame}
           >
-            Open Room
+            Start Game
           </button>
         </div>
       </section>
