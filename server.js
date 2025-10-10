@@ -196,7 +196,7 @@ app.prepare().then(() => {
       state.found = new Set();
       state.scores = {};
       state.started = true;
-      state.currentTurnIndex = 0;
+      state.currentTurnIndex = Math.floor(Math.random() * state.players.length);;
     
       console.log(`Game started: ${state.size}x${state.size}, ${state.bombCount} bombs, ${state.turnLimit}s turns`);
     
@@ -205,7 +205,7 @@ app.prepare().then(() => {
         bombsTotal: state.bombCount,
         bombsFound: 0,
         turnLimit: state.turnLimit,
-        currentPlayer: state.players[state.currentTurnIndex], // 🔧 send who starts
+        currentPlayer: state.players[state.currentTurnIndex], 
       });
       
     
