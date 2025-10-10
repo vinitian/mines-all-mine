@@ -242,13 +242,23 @@ export default function RoomSettings() {
           </span>
         </div>
 
-        <button
-          className="primary"
-          disabled={!mapSize}
-          onClick={handleStartGame}
-        >
-          Open Room
-        </button>
+        <div className="flex gap-5">
+          <button
+            className="primary red"
+            disabled={!mapSize}
+            // onClick={handleLeaveGame}
+          >
+            Leave Room
+          </button>
+
+          <button
+            className="primary"
+            disabled={!mapSize}
+            onClick={handleStartGame}
+          >
+            Open Room
+          </button>
+        </div>
       </section>
     </main>
   );

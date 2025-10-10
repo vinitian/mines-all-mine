@@ -1,7 +1,7 @@
 //page.tsx (game page)
 "use client";
 import { useSearchParams } from "next/navigation";
-import GameGrid from "../gameGrid";
+import GameGrid from "@/components/gameGrid";
 import { mineGameLogic } from "../shared/mineGameLogic";
 import "./page.css";
 import socket from "@/socket";
