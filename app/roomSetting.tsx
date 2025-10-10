@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import "../app/roomSetting.css";
 import socket from "@/socket"
 
+
 const sizes = [6, 8, 10] as const;
 type MapSize = typeof sizes[number]| null;
 type bombDensity = "low"|"medium"|"high";
@@ -70,8 +71,11 @@ export default function RoomSettings() {
                 console.error("Failed to save settings:", ack?.error);
                 return;
               }
-            console.log("Settings saved, navigating...")
-            router.push(`/game?size=${mapSize}&tl=${turnLimit}&bombCount=${bombs}`);
+              const bombs = densityToCount(bombCount, mapSize);
+              console.log("starting game:", { size: mapSize, bombCount: bombs, turnLimit });
+              socket.emit("startGame", { size: mapSize, bombCount: bombs, turnLimit });
+
+            // router.push(`/game?size=${mapSize}&tl=${turnLimit}&bombCount=${bombs}`);
             }
         )
     }
@@ -137,7 +141,7 @@ export default function RoomSettings() {
             </div>
         </section>
 
-        <button className="primary" disabled={!mapSize} onClick={onOpenRoom}>Open Room</button>
+        <button className="primary" disabled={!mapSize} onClick={onOpenRoom}>Start Game</button>
         </main>
   );
 }

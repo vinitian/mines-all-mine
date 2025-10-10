@@ -1,7 +1,7 @@
 //page.tsx (game page)
 "use client";
 import { useSearchParams } from "next/navigation";
-import GameGrid from "../gameGrid";
+import GameGrid from "../../components/gameGrid";
 import { mineGameLogic } from "../shared/mineGameLogic";
 import "./page.css";
 import socket from "@/socket";
@@ -30,7 +30,7 @@ export default function GamePage() {
     myId,
     isMyTurn,
     pickCell,
-    startGame,
+  
     resetLocal,
   } = mineGameLogic(size);
 
@@ -50,13 +50,13 @@ export default function GamePage() {
           Home
         </Link>
         <div className="bomb-count-div flex items-center gap-2">
-          <button
+          {/* <button
             onClick={() => (gameOver ? resetLocal() : startGame())}
             disabled={started}
             className="start-btn"
           >
             {startBtnLabel}
-          </button>
+          </button> */}
           {turnLimit > 0 && <div>Time per turn: {turnLimit} seconds</div>}
           {bombsInfo && (
             <span className="ml-3">

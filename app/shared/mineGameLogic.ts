@@ -37,15 +37,15 @@ export function mineGameLogic(initialSize: number) {
         socket.emit('pickCell', i);
     }, [started, gameOver, revealed, currentPlayer, myId]);
 
-    const startGame = useCallback((opts?: { size?: number; bombCount?: number; tl?: number }) => {
-        const payload: any = {};
-        if (typeof opts?.size === "number") payload.size = opts.size;
-        if (typeof opts?.bombCount === "number") payload.bombCount = opts.bombCount;
-        if (typeof opts?.tl === "number") payload.tl = opts.tl;
+    // const startGame = useCallback((opts?: { size?: number; bombCount?: number; tl?: number }) => {
+    //     const payload: any = {};
+    //     if (typeof opts?.size === "number") payload.size = opts.size;
+    //     if (typeof opts?.bombCount === "number") payload.bombCount = opts.bombCount;
+    //     if (typeof opts?.tl === "number") payload.tl = opts.tl;
     
-        setStarted(true);
-        socket.emit('startGame', payload);
-      }, []);
+    //     setStarted(true);
+    //     socket.emit('startGame', payload);
+    //   }, []);
 
     const resetLocal = useCallback(() => {
         setRevealed({});
@@ -87,6 +87,7 @@ export function mineGameLogic(initialSize: number) {
             bombsFound: number;
             turnLimit?: number;
         }) => {
+            console.log("map ready received", data);
             setBombsInfo({ total: data.bombsTotal, found: data.bombsFound });
             setRevealed({});
             setGameOver(false);
@@ -184,6 +185,6 @@ export function mineGameLogic(initialSize: number) {
         timeRemaining,
         myId,
         isMyTurn: currentPlayer === myId,
-        pickCell, startGame, resetLocal,
+        pickCell, resetLocal,
     };
 }
