@@ -1,20 +1,28 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import socket from "@/socket";
+import socket from "../socket";
+import GameGrid from "@/components/gameGrid";
 import Link from "next/link";
 import { Message } from "@/interface";
 import Image from "next/image";
 import { signIn, signOut, useSession } from "next-auth/react";
 import StatisticsButton from "@/components/StatisticsButton";
 import { useRouter } from "next/navigation";
-
+import createRoom from "@/services/client/createRoom";
+// interface Message {
+//   userID: string;
+//   text: string;
+//   timestamp: string;
+// }
 export default function Home() {
   const { data: session } = useSession();
 
   const [nickname, setNickname] = useState("");
   const [showError, setShowError] = useState(false);
   const router = useRouter();
+
+  const [username, setUsername] = useState("john");
 
   const handleJoinRoom = () => {
     if (nickname.trim()) {
@@ -25,10 +33,16 @@ export default function Home() {
     }
   };
 
-  const handleCreateRoom = () => {
+  const handleCreateRoom = async () => {
     if (nickname.trim()) {
       setShowError(false);
-      //อย่าลืม router push ตรงนี้ เพื่อ link ไป create room page
+
+      const response = await createRoom({
+        id: socket.id!,
+        username: username,
+      });
+
+      router.push(`/room-settings?nickname=${encodeURIComponent(nickname)}`);
     } else {
       setShowError(true);
     }
