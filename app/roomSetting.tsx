@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import "../app/roomSetting.css";
 import socket from "@/socket";
 import editRoom from "@/services/client/editRoom";
+import CountdownModal from "@/components/CountDownModal";
 
 const sizes = [6, 8, 10] as const;
 const sizes2 = [2, 3, 4, 5, 6, 7, 8, 9, 10];
@@ -28,6 +29,11 @@ export default function RoomSettings() {
   const [isConnected, setIsConnected] = useState(false);
   const [chatState, setChatState] = useState<boolean>(true);
   const router = useRouter();
+  const [showCountdown, setShowCountdown] = useState(false);
+
+  const handleStartClick = () => {
+    setShowCountdown(true);
+  };
 
   useEffect(() => {
     // Check if already connected
@@ -64,15 +70,13 @@ export default function RoomSettings() {
       console.log("navigating", data);
       router.push("/game");
     };
-  
+
     socket.once("map:ready", onReady);
-  
+
     return () => {
       socket.off("map:ready", onReady);
     };
   }, [router]);
-  
-  
 
   useEffect(() => {
     handleEditRoom();
@@ -101,42 +105,8 @@ export default function RoomSettings() {
       console.error("Socket not connected!");
       return;
     }
-
-    const bombs = densityToCount(bombCount, mapSize);
-    console.log("Starting game with settings:", {
-      size: mapSize,
-      bombCount: bombs,
-      turnLimit,
-      playerLimit,
-      chatEnabled: chatState,
-    });
-
-    socket.emit(
-      "settings:update",
-      { 
-        size: mapSize, 
-        bombCount: bombs, 
-        turnLimit,
-        playerLimit,
-        chatEnabled: chatState,
-        roomName: roomname,
-      },
-      (ack: any) => {
-        if (!ack?.ok) {
-          console.error("Failed to save settings:", ack?.error);
-          return;
-        }
-
-        socket.emit("startGame", { 
-          size: mapSize, 
-          bombCount: densityToCount(bombCount, mapSize),
-          turnLimit 
-        });
-        
-      }
-    );
+    setShowCountdown(true);
   };
-
 
   return (
     <main className="bg">
@@ -289,12 +259,51 @@ export default function RoomSettings() {
           </button>
 
           <button
-            className = "primary"
+            className="primary"
             disabled={!mapSize}
             onClick={handleStartGame}
           >
             Start Game
           </button>
+
+          <CountdownModal
+            open={showCountdown}
+            seconds={3}
+            onComplete={() => {
+              const bombs = densityToCount(bombCount, mapSize);
+              console.log("Starting game with settings:", {
+                size: mapSize,
+                bombCount: bombs,
+                turnLimit,
+                playerLimit,
+                chatEnabled: chatState,
+              });
+
+              socket.emit(
+                "settings:update",
+                {
+                  size: mapSize,
+                  bombCount: bombs,
+                  turnLimit,
+                  playerLimit,
+                  chatEnabled: chatState,
+                  roomName: roomname,
+                },
+                (ack: any) => {
+                  if (!ack?.ok) {
+                    console.error("Failed to save settings:", ack?.error);
+                    return;
+                  }
+
+                  socket.emit("startGame", {
+                    size: mapSize,
+                    bombCount: densityToCount(bombCount, mapSize),
+                    turnLimit,
+                  });
+                }
+              );
+            }}
+          />
         </div>
       </section>
     </main>
