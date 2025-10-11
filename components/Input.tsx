@@ -7,7 +7,7 @@ export default function Input({
   onKeyDown,
 }: {
   value: string;
-  placeholder: string;
+  placeholder?: string;
   onChange?: React.ChangeEventHandler<HTMLInputElement>;
   onKeyDown?: React.KeyboardEventHandler<HTMLInputElement>;
 }) {
