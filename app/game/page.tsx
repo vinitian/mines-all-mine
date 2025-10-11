@@ -5,6 +5,7 @@ import { mineGameLogic } from "../shared/mineGameLogic";
 import "./page.css";
 import socket from "@/socket";
 import Link from "next/link";
+import WelcomeMessage from "@/components/WelcomeMessage";
 
 export default function GamePage() {
 
@@ -26,9 +27,13 @@ export default function GamePage() {
     resetLocal,
   } = mineGameLogic();
 
+
   // REMOVED duplicate return - fixed syntax error
   return (
     <div className="game-div-container">
+      {started && <WelcomeMessage/>}
+      {/* later {started && <WelcomeMessage text={`Welcome to Mines all Mine, ${nickname}!`} />} */}
+
       <h1 className="absolute text-3xl text-semibold top-[2%] left-[2%]">
         Room 1
       </h1>
