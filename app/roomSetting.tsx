@@ -252,7 +252,7 @@ export default function RoomSettings() {
                 console.error("Socket not connected!");
                 return;
               }
-              router.push("/home");
+              router.push("/");
             }}
           >
             Leave Room
