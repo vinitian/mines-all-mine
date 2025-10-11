@@ -5,6 +5,7 @@ import socket from "@/socket";
 import Link from "next/link";
 import { Message } from "@/interface";
 import Chat from "@/components/Chat";
+import RoomName from "@/components/RoomName";
 
 export default function Home() {
   const [isConnected, setIsConnected] = useState(false);
@@ -57,7 +58,7 @@ export default function Home() {
 
   return (
     // todo: detect dark-light mode of user
-    <div className="m-8 h-svh flex flex-col">
+    <div className="m-8 h-svh flex flex-col gap-1">
       <h1 className="text-title">Temporary Page links</h1>
       <Link href="/room-settings" className="cta">
         Room Setting
@@ -96,6 +97,11 @@ export default function Home() {
         <p>Status: {isConnected ? "connected" : "disconnected"}</p>
         <p>Transport: {transport}</p>
       </div>
+      <RoomName
+        roomName={"Vinitian's Room"}
+        roomCode={1234}
+        trashVisible={true}
+      />
       <Chat />
     </div>
   );
