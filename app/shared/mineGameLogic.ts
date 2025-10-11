@@ -7,12 +7,12 @@ import socket from "@/socket"
 type RevealMap = Record<number, 'hit' | 'miss'>;
 type Winner = { id: string; score: number };
 
-export function mineGameLogic(initialSize: number) {
+export function mineGameLogic() {
 
     const [isConnected, setIsConnected] = useState(false);
     const [transport, setTransport] = useState('N/A');
+    const [size, setSize] = useState<number|null>(null);
 
-    const [size, setSize] = useState<number>(initialSize);
     const [started, setStarted] = useState(false);
     const [gameOver, setGameOver] = useState(false);
     const [revealed, setRevealed] = useState<RevealMap>({});
@@ -37,15 +37,17 @@ export function mineGameLogic(initialSize: number) {
         socket.emit('pickCell', i);
     }, [started, gameOver, revealed, currentPlayer, myId]);
 
-    const startGame = useCallback((opts?: { size?: number; bombCount?: number; tl?: number }) => {
-        const payload: any = {};
-        if (typeof opts?.size === "number") payload.size = opts.size;
-        if (typeof opts?.bombCount === "number") payload.bombCount = opts.bombCount;
-        if (typeof opts?.tl === "number") payload.tl = opts.tl;
     
-        setStarted(true);
-        socket.emit('startGame', payload);
-      }, []);
+
+    // const startGame = useCallback((opts?: { size?: number; bombCount?: number; tl?: number }) => {
+    //     const payload: any = {};
+    //     if (typeof opts?.size === "number") payload.size = opts.size;
+    //     if (typeof opts?.bombCount === "number") payload.bombCount = opts.bombCount;
+    //     if (typeof opts?.tl === "number") payload.tl = opts.tl;
+    
+    //     setStarted(true);
+    //     socket.emit('startGame', payload);
+    //   }, []);
 
     const resetLocal = useCallback(() => {
         setRevealed({});
@@ -60,6 +62,8 @@ export function mineGameLogic(initialSize: number) {
     }, []);
 
     // socket thing
+
+      
     useEffect(() => {
         if (socket.connected) {
         setIsConnected(true);
@@ -86,6 +90,7 @@ export function mineGameLogic(initialSize: number) {
             bombsTotal: number; 
             bombsFound: number;
             turnLimit?: number;
+            currentPlayer?: string;
         }) => {
             setBombsInfo({ total: data.bombsTotal, found: data.bombsFound });
             setRevealed({});
@@ -95,6 +100,7 @@ export function mineGameLogic(initialSize: number) {
             setSize(data.size);
             setTurnLimit(data.turnLimit ?? 10);
             setStarted(true);
+            if (data.currentPlayer) setCurrentPlayer(data.currentPlayer); 
         };
 
         const onCell = (p: {
@@ -184,6 +190,6 @@ export function mineGameLogic(initialSize: number) {
         timeRemaining,
         myId,
         isMyTurn: currentPlayer === myId,
-        pickCell, startGame, resetLocal,
+        pickCell, resetLocal,
     };
 }

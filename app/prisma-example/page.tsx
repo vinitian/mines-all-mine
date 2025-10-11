@@ -35,11 +35,11 @@ export default function PrismaExample() {
       id: socket.id!,
       username: username,
     });
-    if (response.success) {
-      setRoomDetails(response.data);
-    } else {
-      setError(response.error);
-    }
+    // if (response.success) {
+    //   setRoomDetails(response.data);
+    // } else {
+    //   setError(response.error);
+    // }
   };
   return (
     <div>
