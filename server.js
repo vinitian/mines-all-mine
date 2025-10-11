@@ -98,8 +98,12 @@ app.prepare().then(() => {
       }
     }
   
-    socket.on("message", (msg, id) => {
-      socket.to(id).emit("message", msg);
+    socket.on("message", (msg) => {
+      socket.rooms.forEach(room => {
+        if (room !== socket.id) {
+          socket.to(room).emit("message", msg);
+        }
+      });
     });
   
 
@@ -218,6 +222,11 @@ app.prepare().then(() => {
     });
 
     socket.on("joinRoom", (room_id) => {
+      socket.rooms.forEach(room => {
+        if (room !== socket.id) {
+          socket.leave(room);
+        }
+      });
       socket.join(room_id);
     });
 

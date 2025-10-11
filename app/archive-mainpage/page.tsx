@@ -4,32 +4,13 @@ import { useEffect, useState } from "react";
 import socket from "@/socket";
 import Link from "next/link";
 import { Message } from "@/interface";
+import Chat from "@/components/Chat";
 
 export default function Home() {
   const [isConnected, setIsConnected] = useState(false);
   const [transport, setTransport] = useState("N/A");
 
   const [room_id, setRoomID] = useState<number>();
-
-  const [message, setMessage] = useState("");
-  const [messages, setMessages] = useState<Message[]>([]);
-
-  const [size, setSize] = useState<number>(6);
-  const sizes = [6, 8, 10];
-
-  const [revealed, setRevealed] = useState<Record<number, "hit" | "miss">>({});
-  const [bombsInfo, setBombsInfo] = useState<{
-    total: number;
-    found: number;
-  } | null>(null);
-
-  const [gameOver, setGameOver] = useState(false);
-  const [winners, setWinners] = useState<
-    { id: string; score: number }[] | null
-  >(null);
-  const [leaderboard, setLeaderboard] = useState<[string, number][]>([]);
-  const short = (id: string) => id.slice(-4);
-  const [started, setStarted] = useState(false);
 
   useEffect(() => {
     if (socket.connected) {
@@ -59,61 +40,15 @@ export default function Home() {
     };
   }, []);
 
-
-
-
-
-  useEffect(() => {
-    // Listen for messages from the server
-    socket.on("message", (msg: Message) => {
-      setMessages((prev) => [
-        ...prev,
-        {
-          userID: msg.userID,
-          text: msg.text,
-          timestamp: msg.timestamp,
-        },
-      ]);
-    });
-
-    return () => {
-      socket.off("message");
-      socket.off("message");
-    };
-  }, []);
-
-  const sendMessage = () => {
-    const newMessageObj = {
-      userID: socket.id!,
-      text: message,
-      timestamp: Date(),
-    };
-
-    socket.emit("message", newMessageObj, room_id); // Send message to server
-    setMessages((prev) => [...prev, newMessageObj]); // Add your message to the chat
-    setMessage(""); // Clear input field
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
-      sendMessage();
-    }
-  };
-
   const handleKeyDownRoom = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" && room_id) {
       joinRoom(room_id);
     }
   };
 
-  const handlePick = (i: number) => {
-    if (!started || gameOver) return;
-    if (revealed[i]) return;
-    socket.emit("pickCell", i);
-  };
-
   const joinRoom = (id: number) => {
     socket.emit("joinRoom", id);
+    console.log(socket);
   };
 
   const leaveRoom = () => {
@@ -122,10 +57,14 @@ export default function Home() {
 
   return (
     // todo: detect dark-light mode of user
-    <div className="m-8">
+    <div className="m-8 h-svh flex flex-col">
       <h1 className="text-title">Temporary Page links</h1>
-      <Link href="/room-settings" className="cta">Room Setting</Link>
-      <Link href="/game" className="cta">Game Page</Link>
+      <Link href="/room-settings" className="cta">
+        Room Setting
+      </Link>
+      <Link href="/game" className="cta">
+        Game Page
+      </Link>
 
       <input
         value={room_id}
@@ -137,57 +76,27 @@ export default function Home() {
       />
 
       <button
-        onClick={() => { if (room_id) joinRoom(room_id) }}
-        disabled={started}
-        className={`ml-2 px-3 py-1 rounded border ${started ? "bg-blue-2 00 cursor-not-allowed" : "bg-blue-300"
-          }`}
+        onClick={() => {
+          if (room_id) joinRoom(room_id);
+        }}
+        className={`ml-2 px-3 py-1 rounded border bg-blue-300`}
       >
         Join room
-
       </button>
 
       <button
         onClick={leaveRoom}
-        disabled={started}
-        className={`ml-2 px-3 py-1 rounded border ${started ? "bg-blue-2 00 cursor-not-allowed" : "bg-blue-300"
-          }`}
+        className={`ml-2 px-3 py-1 rounded border bg-blue-300`}
       >
         Leave room
-
       </button>
-      <h1 className="text-title">Real-Time Chat</h1>
 
-
-      <div>
-        {messages.map((msg, index) => (
-          <div key={index}>
-            {msg.timestamp.split(" ")[4].slice(0, 5)}{" "}
-            <span className="font-semibold text-gray-blue">{msg.userID}</span>:{" "}
-            {msg.text}
-          </div>
-        ))}
-      </div>
-      <div className="flex gap-4">
-        <input
-          value={message}
-          onChange={(e) => setMessage(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="Type a message..."
-          className="border-2 rounded-md w-full border-gray-400"
-        />
-        <button
-          onClick={sendMessage}
-          type="submit"
-          className="bg-green-300 px-4 py-1 rounded-md"
-        >
-          Send
-        </button>
-      </div>
       <div>
         <div className="bg-white py-0.5 mt-8" />
         <p>Status: {isConnected ? "connected" : "disconnected"}</p>
         <p>Transport: {transport}</p>
       </div>
+      <Chat />
     </div>
   );
 }
