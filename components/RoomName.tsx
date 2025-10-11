@@ -1,15 +1,17 @@
+"use client";
+
 import React, { useEffect, useState } from "react";
 
 export default function RoomName({
   roomName,
   roomCode,
   trashVisible = true,
-  trashOnClick,
+  trashOnClickAction,
 }: {
   roomName: string;
   roomCode: number;
   trashVisible?: boolean;
-  trashOnClick?: React.MouseEventHandler<SVGSVGElement>;
+  trashOnClickAction?: React.MouseEventHandler<SVGSVGElement>;
 }) {
   const [serverInfo, setServerInfo] = useState<string>("");
 
@@ -107,7 +109,7 @@ export default function RoomName({
           strokeWidth="2"
           strokeLinecap="round"
           strokeLinejoin="round"
-          onClick={trashOnClick}
+          onClick={trashOnClickAction}
           className="lucide lucide-trash-icon lucide-trash
           size-[60px] hover:stroke-red transition-colors duration-200 cursor-pointer
           hidden md:block"
