@@ -12,6 +12,12 @@ export interface User {
   win_count: number;
 }
 
+export interface Placement {
+  x: number;
+  y: number;
+  value: number;
+  isOpen: boolean;
+}
 export interface Room {
   id: number;
   name: string;
@@ -22,5 +28,5 @@ export interface Room {
   bomb_count: number;
   chat_enabled: boolean;
   timer: number;
-  placement: number[];
+  placement: Placement[];
 }
