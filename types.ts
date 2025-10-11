@@ -1,7 +1,12 @@
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace PrismaJson {
-    type PlacementType = { x: number; y: number; value: number };
+    type PlacementType = {
+      x: number;
+      y: number;
+      value: number;
+      isOpen: boolean;
+    };
   }
 }
 
