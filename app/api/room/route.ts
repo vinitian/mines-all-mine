@@ -30,12 +30,48 @@ export async function POST(request: NextRequest) {
     });
 
     console.log(
-      `${new Date().toISOString()} : [INFO] Created new room with ID ${
-        newRoom.id
+      `${new Date().toISOString()} : [INFO] Created new room with ID ${newRoom.id
       }`
     );
 
     return NextResponse.json({ success: true, data: newRoom });
+  } catch (error: any) {
+    return NextResponse.json(
+      { success: false, error: error.message },
+      { status: 500 }
+    );
+  }
+}
+
+// update room
+export async function PATCH(request: NextRequest) {
+  const data = await request.json();
+  const {
+    user_id,
+    name,
+    size,
+    bomb_count,
+    turn_limit,
+    player_limit,
+    chat_enabled,
+  } = data;
+
+  try {
+    const updateRoom = await prisma.room.update({
+      where: {
+        host_id: user_id,
+      },
+      data: {
+        name: name,
+        size: size,
+        bomb_count: bomb_count,
+        timer: turn_limit,
+        player_limit: player_limit,
+        chat_enabled: chat_enabled,
+      },
+    });
+
+    return NextResponse.json({ success: true, data: updateRoom });
   } catch (error: any) {
     return NextResponse.json(
       { success: false, error: error.message },
