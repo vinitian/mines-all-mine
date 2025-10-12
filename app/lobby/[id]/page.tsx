@@ -1,5 +1,4 @@
-import RoomSettings from "@/app/roomSetting";
-import RoomSetting from "@/app/roomSetting";
+import RoomSettings from "@/components/roomSetting";
 import Chat from "@/components/Chat";
 import RoomName from "@/components/RoomName";
 
