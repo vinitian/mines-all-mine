@@ -2,12 +2,13 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import "../app/roomSetting.css";
 import socket from "@/socket";
 import editRoom from "@/services/client/editRoom";
 import CountdownModal from "@/components/CountDownModal";
+import Input from "@/components/Input";
+import Button from "@/components/Button";
 
-const sizes = [6, 8, 10] as const;
+const sizes = [6, 8, 10, 20, 30] as const;
 const sizes2 = [2, 3, 4, 5, 6, 7, 8, 9, 10];
 type MapSize = (typeof sizes)[number];
 type bombDensity = "low" | "medium" | "high";
@@ -109,203 +110,187 @@ export default function RoomSettings() {
   };
 
   return (
-    <main className="bg">
-      <section className="card">
-        <div className="field">
-          <label htmlFor="roomName">Room name</label>
-          <input
-            id="roomName"
-            value={roomname}
-            onChange={(e) => setRoomname(e.target.value)}
-            aria-label="Room name"
-            placeholder="Room 1"
-          />
-        </div>
+    <div
+      className="bg-white border rounded-lg p-[25px] w-full h-fit
+    flex flex-col gap-[10px]"
+    >
+      <div className="border flex flex-col">
+        <div className="text-h3">Room name</div>
+        <Input value={roomname} onChange={(e) => setRoomname(e.target.value)} />
+      </div>
 
-        <div className="field">
-          <span className="label">Map size</span>
-          <div
-            className="segmented"
-            role="radiogroup"
-            aria-label="Set the Map size"
+      <div className="border border-green flex flex-col">
+        <div className="text-h3">Map size</div>
+        <div className="border flex flex-wrap gap-[6px]">
+          <Button
+            onClick={() => setMapSize(6)}
+            textColor={mapSize === 6 ? "" : "text-black"}
+            className={`w-min ${mapSize === 6 ? "" : "bg-white"}`}
           >
-            <button
-              type="button"
-              role="radio"
-              aria-checked={mapSize == 6}
-              onClick={() => setMapSize(6)}
-              className={`${mapSize === 6 ? "active" : ""}`}
-            >
-              6×6
-            </button>
-            <button
-              type="button"
-              role="radio"
-              aria-checked={mapSize == 8}
-              onClick={() => setMapSize(8)}
-              className={`${mapSize === 8 ? "active" : ""}`}
-            >
-              8×8
-            </button>
-            <button
-              type="button"
-              role="radio"
-              aria-checked={mapSize == 10}
-              onClick={() => setMapSize(10)}
-              className={`${mapSize === 10 ? "active" : ""}`}
-            >
-              10×10
-            </button>
-          </div>
+            6×6
+          </Button>
+          <Button
+            onClick={() => setMapSize(8)}
+            textColor={mapSize === 8 ? "" : "text-black"}
+            className={`w-min ${mapSize === 8 ? "" : "bg-white"}`}
+          >
+            8×8
+          </Button>
+          <Button
+            onClick={() => setMapSize(10)}
+            textColor={mapSize === 10 ? "" : "text-black"}
+            className={`w-min ${mapSize === 10 ? "" : "bg-white"}`}
+          >
+            10×10
+          </Button>
+          <Button
+            onClick={() => setMapSize(20)}
+            textColor={mapSize === 20 ? "" : "text-black"}
+            className={`w-min ${mapSize === 20 ? "" : "bg-white"}`}
+          >
+            20×20
+          </Button>
+          <Button
+            onClick={() => setMapSize(30)}
+            textColor={mapSize === 30 ? "" : "text-black"}
+            className={`w-min ${mapSize === 30 ? "" : "bg-white"}`}
+          >
+            30×30
+          </Button>
         </div>
+      </div>
 
-        <div className="field">
-          <label htmlFor="timer">Timer</label>
-          <div className="select-wrap">
-            <select
-              id="timer"
-              value={turnLimit}
-              onChange={(e) =>
-                setTurnLimit(Number(e.target.value) as 0 | 10 | 20 | 30)
-              }
-              aria-label="Timer"
-            >
-              <option value={0}>Unlimited</option>
-              <option value={10}>10 seconds</option>
-              <option value={20}>20 seconds</option>
-              <option value={30}>30 seconds</option>
-            </select>
-          </div>
+      <div className="flex flex-col">
+        <div className="text-h3">Timer</div>
+        <div className="w-full border-2 border-border rounded-2xl px-4 py-2 placeholder-gray-400 text-h4 focus:outline-none focus:border-[#3728BE]">
+          <select
+            value={turnLimit}
+            onChange={(e) =>
+              setTurnLimit(Number(e.target.value) as 0 | 10 | 20 | 30)
+            }
+            aria-label="Timer"
+            className="w-full"
+          >
+            <option value={0}>Unlimited</option>
+            <option value={10}>10 seconds</option>
+            <option value={20}>20 seconds</option>
+            <option value={30}>30 seconds</option>
+          </select>
         </div>
+      </div>
 
-        <div className="field">
-          <div className="select-wrap">
-            <label htmlFor="num-player">Player limit</label>
-            <select
-              id="num-player"
-              value={playerLimit}
-              onChange={(e) =>
-                setPlayerLimit(Number(e.target.value) as PlayerLimit)
-              }
-              aria-label="Set the maximum number of players for the game."
-            >
-              <option value={2}>2</option>
-              <option value={3}>3</option>
-              <option value={4}>4</option>
-              <option value={5}>5</option>
-              <option value={6}>6</option>
-              <option value={7}>7</option>
-              <option value={8}>8</option>
-              <option value={9}>9</option>
-              <option value={10}>10</option>
-            </select>
-            <span className="chev" aria-hidden>
-              ▾
-            </span>
-          </div>
+      <div className="flex flex-col">
+        <div className="text-h3">Player limit</div>
+        <div className="w-full border-2 border-border rounded-2xl px-4 py-2 placeholder-gray-400 text-h4 focus:outline-none focus:border-[#3728BE]">
+          <select
+            value={playerLimit}
+            onChange={(e) =>
+              setPlayerLimit(Number(e.target.value) as PlayerLimit)
+            }
+            aria-label="Set the maximum number of players for the game."
+            className="w-full"
+          >
+            <option value={2}>2</option>
+            <option value={3}>3</option>
+            <option value={4}>4</option>
+            <option value={5}>5</option>
+            <option value={6}>6</option>
+            <option value={7}>7</option>
+            <option value={8}>8</option>
+            <option value={9}>9</option>
+            <option value={10}>10</option>
+          </select>
         </div>
+      </div>
 
-        <div className="field">
-          <div className="select-wrap">
-            <label htmlFor="num-bombs">Bomb Amount</label>
-            <select
-              id="num-bombs"
-              value={bombCount}
-              onChange={(e) => setBombCount(e.target.value as bombDensity)}
-              aria-label="Set the amount of bomb density you want for the game."
-            >
-              <option value="low">low</option>
-              <option value="medium">medium</option>
-              <option value="high">high</option>
-            </select>
-            <span className="chev" aria-hidden>
-              ▾
-            </span>
-          </div>
+      <div className="flex flex-col">
+        <div className="text-h3">Bomb Amount</div>
+        <div className="w-full border-2 border-border rounded-2xl px-4 py-2 placeholder-gray-400 text-h4 focus:outline-none focus:border-[#3728BE]">
+          <select
+            id="num-bombs"
+            value={bombCount}
+            onChange={(e) => setBombCount(e.target.value as bombDensity)}
+            aria-label="Set the amount of bomb density you want for the game."
+            className="w-full"
+          >
+            <option value="low">low</option>
+            <option value="medium">medium</option>
+            <option value="high">high</option>
+          </select>
         </div>
+      </div>
 
-        <div className="mb-[22px] relative">
-          <label htmlFor="chat">Chat</label>
+      <div className="mb-[22px] relative">
+        <div className="text-h3">Player limit</div>
+        <div className="w-full border-2 border-border rounded-2xl px-4 py-2 placeholder-gray-400 text-h4 focus:outline-none focus:border-[#3728BE]">
           <select
             id="chat"
             value={chatState ? "enable" : "disable"}
             onChange={(e) => setChatState(e.target.value === "enable")}
             aria-label="Set to enable/disable chat"
+            className="w-full"
           >
             <option value="enable">enable</option>
             <option value="disable">disable</option>
           </select>
-          <span
-            className="absolute right-[12px] top-[70%] -translate-y-1/2 pointer-events-none text-[#6b7280]"
-            aria-hidden
-          >
-            ▾
-          </span>
         </div>
+      </div>
 
-        <div className="flex gap-5">
-          <button
-            className="primary red"
-            disabled={!mapSize}
-            onClick={() => {
-              if (!socket.connected) {
-                console.error("Socket not connected!");
-                return;
-              }
-              router.push("/");
-            }}
-          >
-            Leave Room
-          </button>
+      <div className="flex gap-5">
+        <Button
+          onClick={() => {
+            if (!socket.connected) {
+              console.error("Socket not connected!");
+              return;
+            }
+            router.push("/");
+          }}
+          className="bg-red"
+        >
+          Leave Room
+        </Button>
 
-          <button
-            className="primary"
-            disabled={!mapSize}
-            onClick={handleStartGame}
-          >
-            Start Game
-          </button>
+        <Button onClick={handleStartGame}>Start Game</Button>
 
-          <CountdownModal
-            open={showCountdown}
-            seconds={3}
-            onComplete={() => {
-              const bombs = densityToCount(bombCount, mapSize);
-              console.log("Starting game with settings:", {
+        <CountdownModal
+          open={showCountdown}
+          seconds={3}
+          onComplete={() => {
+            const bombs = densityToCount(bombCount, mapSize);
+            console.log("Starting game with settings:", {
+              size: mapSize,
+              bombCount: bombs,
+              turnLimit,
+              playerLimit,
+              chatEnabled: chatState,
+            });
+
+            socket.emit(
+              "settings:update",
+              {
                 size: mapSize,
                 bombCount: bombs,
                 turnLimit,
                 playerLimit,
                 chatEnabled: chatState,
-              });
-
-              socket.emit(
-                "settings:update",
-                {
-                  size: mapSize,
-                  bombCount: bombs,
-                  turnLimit,
-                  playerLimit,
-                  chatEnabled: chatState,
-                  roomName: roomname,
-                },
-                (ack: any) => {
-                  if (!ack?.ok) {
-                    console.error("Failed to save settings:", ack?.error);
-                    return;
-                  }
-
-                  socket.emit("startGame", {
-                    size: mapSize,
-                    bombCount: densityToCount(bombCount, mapSize),
-                    turnLimit,
-                  });
+                roomName: roomname,
+              },
+              (ack: any) => {
+                if (!ack?.ok) {
+                  console.error("Failed to save settings:", ack?.error);
+                  return;
                 }
-              );
-            }}
-          />
-        </div>
-      </section>
-    </main>
+
+                socket.emit("startGame", {
+                  size: mapSize,
+                  bombCount: densityToCount(bombCount, mapSize),
+                  turnLimit,
+                });
+              }
+            );
+          }}
+        />
+      </div>
+    </div>
   );
 }
