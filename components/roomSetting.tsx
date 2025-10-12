@@ -114,14 +114,14 @@ export default function RoomSettings() {
       className="bg-white border rounded-lg p-[25px] w-full h-fit
     flex flex-col gap-[10px]"
     >
-      <div className="border flex flex-col">
+      <div className="flex flex-col">
         <div className="text-h3">Room name</div>
         <Input value={roomname} onChange={(e) => setRoomname(e.target.value)} />
       </div>
 
-      <div className="border border-green flex flex-col">
+      <div className="flex flex-col">
         <div className="text-h3">Map size</div>
-        <div className="border flex flex-wrap gap-[6px]">
+        <div className="flex flex-wrap gap-[6px]">
           <Button
             onClick={() => setMapSize(6)}
             textColor={mapSize === 6 ? "" : "text-black"}
