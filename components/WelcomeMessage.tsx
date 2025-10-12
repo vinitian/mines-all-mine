@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 
 export default function WelcomeMessage({
-  text = "Welcome to the Mines all Mine!",
+  text = "Welcome to the Mines, All Mine!",
   duration = 3000,
 }: {
   text?: string;
