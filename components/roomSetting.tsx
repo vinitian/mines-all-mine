@@ -161,28 +161,6 @@ export default function RoomSettings() {
       </div>
 
       <div className="flex flex-col">
-        <div className="text-h3">Timer</div>
-        <div
-          className="w-full border-2 border-border rounded-2xl px-4 py-2 placeholder-gray-400 text-h4 focus:outline-none focus:border-[#3728BE]
-        max-w-[250px]"
-        >
-          <select
-            value={turnLimit}
-            onChange={(e) =>
-              setTurnLimit(Number(e.target.value) as 0 | 10 | 20 | 30)
-            }
-            aria-label="Timer"
-            className="w-full"
-          >
-            <option value={0}>Unlimited</option>
-            <option value={10}>10 seconds</option>
-            <option value={20}>20 seconds</option>
-            <option value={30}>30 seconds</option>
-          </select>
-        </div>
-      </div>
-
-      <div className="flex flex-col">
         <div className="text-h3">Player limit</div>
         <div
           className="w-full border-2 border-border rounded-2xl px-4 py-2 placeholder-gray-400 text-h4 focus:outline-none focus:border-[#3728BE]
@@ -210,7 +188,7 @@ export default function RoomSettings() {
       </div>
 
       <div className="flex flex-col">
-        <div className="text-h3">Bomb Amount</div>
+        <div className="text-h3">Number of mines</div>
         <div
           className="w-full border-2 border-border rounded-2xl px-4 py-2 placeholder-gray-400 text-h4 focus:outline-none focus:border-[#3728BE]
         max-w-[250px]"
@@ -229,7 +207,7 @@ export default function RoomSettings() {
         </div>
       </div>
 
-      <div className="mb-[10px] relative">
+      <div className="flex flex-col">
         <div className="text-h3">Chat</div>
         <div
           className="w-full border-2 border-border rounded-2xl px-4 py-2 placeholder-gray-400 text-h4 focus:outline-none focus:border-[#3728BE]
@@ -242,8 +220,30 @@ export default function RoomSettings() {
             aria-label="Set to enable/disable chat"
             className="w-full"
           >
-            <option value="enable">enable</option>
-            <option value="disable">disable</option>
+            <option value="enable">Enable</option>
+            <option value="disable">Disable</option>
+          </select>
+        </div>
+      </div>
+
+      <div className="flex flex-col mb-[10px] ">
+        <div className="text-h3">Timer</div>
+        <div
+          className="w-full border-2 border-border rounded-2xl px-4 py-2 placeholder-gray-400 text-h4 focus:outline-none focus:border-[#3728BE]
+        max-w-[250px]"
+        >
+          <select
+            value={turnLimit}
+            onChange={(e) =>
+              setTurnLimit(Number(e.target.value) as 0 | 10 | 20 | 30)
+            }
+            aria-label="Timer"
+            className="w-full"
+          >
+            <option value={0}>Unlimited</option>
+            <option value={10}>10 seconds</option>
+            <option value={20}>20 seconds</option>
+            <option value={30}>30 seconds</option>
           </select>
         </div>
       </div>
