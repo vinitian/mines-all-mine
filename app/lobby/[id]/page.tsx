@@ -6,18 +6,23 @@ import RoomName from "@/components/RoomName";
 
 export default function Page() {
   return (
-    <div>
-      <div className="flex flex-col gap-[25px] p-[25px] h-dvh">
+    <div className="flex flex-col px-[25px]">
+      <div className="flex flex-col gap-[25px] py-[25px] md:h-dvh">
         <RoomName roomName="Vinitian's Room" roomCode={1234} />
-        <div className="flex gap-[20px] h-10/12 md:h-9/12">
-          <div className="flex flex-col gap-[20px] h-full w-1/2 max-w-[315px]">
+        <div className="flex flex-col md:flex-row gap-[20px] h-10/12 md:h-9/12">
+          <div className="flex flex-col gap-[20px] md:h-full md:w-1/2 md:max-w-[315px]">
             <div className="bg-gray-dark">
               Player 6/8 sadfasf asddads asdfasdf
             </div>
-            <Chat />
+            <div className="hidden md:block w-full h-full">
+              <Chat />
+            </div>
           </div>
           <RoomSettings />
         </div>
+      </div>
+      <div className="md:hidden w-full h-[60dvh]">
+        <Chat />
       </div>
       <div className="md:hidden flex w-full my-6 justify-center">
         <svg
