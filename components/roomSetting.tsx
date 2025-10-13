@@ -111,8 +111,8 @@ export default function RoomSettings() {
 
   return (
     <div
-      className="bg-white border rounded-lg p-[25px] w-full h-fit
-    flex flex-col gap-[10px]"
+      className="bg-white border rounded-lg p-[25px] w-full h-full
+    flex flex-col gap-[10px] overflow-y-scroll"
     >
       <div className="flex flex-col">
         <div className="text-h3">Room name</div>
@@ -162,7 +162,10 @@ export default function RoomSettings() {
 
       <div className="flex flex-col">
         <div className="text-h3">Timer</div>
-        <div className="w-full border-2 border-border rounded-2xl px-4 py-2 placeholder-gray-400 text-h4 focus:outline-none focus:border-[#3728BE]">
+        <div
+          className="w-full border-2 border-border rounded-2xl px-4 py-2 placeholder-gray-400 text-h4 focus:outline-none focus:border-[#3728BE]
+        max-w-[250px]"
+        >
           <select
             value={turnLimit}
             onChange={(e) =>
@@ -181,7 +184,10 @@ export default function RoomSettings() {
 
       <div className="flex flex-col">
         <div className="text-h3">Player limit</div>
-        <div className="w-full border-2 border-border rounded-2xl px-4 py-2 placeholder-gray-400 text-h4 focus:outline-none focus:border-[#3728BE]">
+        <div
+          className="w-full border-2 border-border rounded-2xl px-4 py-2 placeholder-gray-400 text-h4 focus:outline-none focus:border-[#3728BE]
+        max-w-[250px]"
+        >
           <select
             value={playerLimit}
             onChange={(e) =>
@@ -205,7 +211,10 @@ export default function RoomSettings() {
 
       <div className="flex flex-col">
         <div className="text-h3">Bomb Amount</div>
-        <div className="w-full border-2 border-border rounded-2xl px-4 py-2 placeholder-gray-400 text-h4 focus:outline-none focus:border-[#3728BE]">
+        <div
+          className="w-full border-2 border-border rounded-2xl px-4 py-2 placeholder-gray-400 text-h4 focus:outline-none focus:border-[#3728BE]
+        max-w-[250px]"
+        >
           <select
             id="num-bombs"
             value={bombCount}
@@ -220,9 +229,12 @@ export default function RoomSettings() {
         </div>
       </div>
 
-      <div className="mb-[22px] relative">
-        <div className="text-h3">Player limit</div>
-        <div className="w-full border-2 border-border rounded-2xl px-4 py-2 placeholder-gray-400 text-h4 focus:outline-none focus:border-[#3728BE]">
+      <div className="mb-[10px] relative">
+        <div className="text-h3">Chat</div>
+        <div
+          className="w-full border-2 border-border rounded-2xl px-4 py-2 placeholder-gray-400 text-h4 focus:outline-none focus:border-[#3728BE]
+        max-w-[250px]"
+        >
           <select
             id="chat"
             value={chatState ? "enable" : "disable"}

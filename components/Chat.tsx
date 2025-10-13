@@ -51,10 +51,12 @@ export default function Chat() {
       <div className="text-h1/tight">Chat</div>
       <div className="rounded-lg bg-[#efefef] p-2 grow">
         {messages.map((msg, index) => (
-          <div key={index}>
+          <div key={index} className="wrap-anywhere">
             {msg.timestamp.split(" ")[4].slice(0, 5)}{" "}
-            <span className="font-semibold text-gray-blue">{msg.userID}</span>:{" "}
-            {msg.text}
+            <span className="font-semibold text-gray-blue wrap-anywhere">
+              {msg.userID}
+            </span>
+            : {msg.text}
           </div>
         ))}
       </div>
