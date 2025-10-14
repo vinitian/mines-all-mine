@@ -7,12 +7,16 @@ import { Message } from "@/interface";
 import Image from "next/image";
 import StatisticsButton from "@/components/StatisticsButton";
 import { useSearchParams, useRouter } from "next/navigation";
-import { getRooms, Room as RoomType } from "@/services/client/roomService";
+import { getRooms, checkRoomExists } from "@/services/client/roomService";
+import { Room as RoomType } from "@/interface";
 
 export default function Room() {
   const [nickname, setNickname] = useState("");
   const [rooms, setRooms] = useState<RoomType[]>([]);
   const [loading, setLoading] = useState(true);
+  const [roomCode, setRoomCode] = useState("");
+  const [error, setError] = useState("");
+  const [checkingRoom, setCheckingRoom] = useState(false);
   const searchParams = useSearchParams();
   const router = useRouter();
 
@@ -42,6 +46,45 @@ export default function Room() {
   const handleJoinRoom = (roomId: number) => {
     console.log(`Joining room ${roomId}`);
     socket.emit("joinRoom", roomId);
+    router.push(`/lobby/${roomId}`);
+  };
+
+  const handleJoinByCode = async () => {
+    setError("");
+
+    if (!roomCode.trim()) {
+      setError("Please enter a room ID");
+      return;
+    }
+
+    const roomId = parseInt(roomCode.trim());
+    if (isNaN(roomId)) {
+      setError("Please enter a valid room ID!");
+      return;
+    }
+
+    try {
+      setCheckingRoom(true);
+      const roomExists = await checkRoomExists(roomId);
+
+      if (roomExists) {
+        socket.emit("joinRoom", roomId);
+        router.push(`/lobby/${roomId}`);
+      } else {
+        setError(`Room with ID: ${roomId} not found!`);
+      }
+    } catch (error) {
+      console.error("Error checking room:", error);
+      setError("Error checking room. Please try again.");
+    } finally {
+      setCheckingRoom(false);
+    }
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      handleJoinByCode();
+    }
   };
 
   const handleBack = () => {
@@ -87,14 +130,24 @@ export default function Room() {
           <div className="flex gap-4 items-center mb-6">
             <input
               type="text"
-              placeholder="Enter 5-digit code"
+              placeholder="Enter 3-digit code"
               className="w-full border-2 bg-white border-border rounded-2xl px-4 py-3 placeholder-gray-400 text-h4 focus:outline-none focus:border-[#3728BE]"
             />
 
-            <button className="bg-[#8499FF] text-white text-h3 border-2 border-border rounded-2xl px-6 py-2 hover:bg-[#7388ee] transition-colors duration-200 whitespace-nowrap flex-shrink-0 cursor-pointer">
-              Enter
+            <button
+              onClick={handleJoinByCode}
+              disabled={checkingRoom}
+              className="bg-[#8499FF] text-white text-h3 border-2 border-border rounded-2xl px-6 py-2 hover:bg-[#7388ee] transition-colors duration-200 whitespace-nowrap flex-shrink-0 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {checkingRoom ? "Checking..." : "Enter"}
             </button>
           </div>
+
+          {error && (
+            <div className="mb-4">
+              <span className="text-red text-h4">{error}</span>
+            </div>
+          )}
 
           <div className="mb-4">
             <span className="text-h4 sm:text-h3 xl:text-h2">Room List</span>
@@ -113,7 +166,7 @@ export default function Room() {
               rooms.map((room) => (
                 <div
                   key={room.id}
-                  className="bg-white border-1 rounded-2xl p-4 transition-shadow"
+                  className="bg-white border-1 rounded-2xl p-4 transition-shadow cursor-pointer"
                   onClick={() => handleJoinRoom(room.id)}
                 >
                   <div className="flex justify-between items-start mb-2">

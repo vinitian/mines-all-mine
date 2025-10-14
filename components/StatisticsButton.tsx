@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import socket from "@/socket";
 import { getTotalRooms } from "@/services/client/roomService";
+import resetEverything from "@/services/client/resetEverything";
 
 export default function StatisticsButton() {
   const [isPopupOpen, setIsPopupOpen] = useState(false);
@@ -10,6 +11,8 @@ export default function StatisticsButton() {
   const [onlineCount, setOnlineCount] = useState<number>(0);
   const [isHost, setIsHost] = useState<boolean>(false);
   const [totalRooms, setTotalRooms] = useState<number>(0);
+  const [resetLoading, setResetLoading] = useState<boolean>(false);
+  const [resetMessage, setResetMessage] = useState<string>("");
 
   const fetchServerInfo = async () => {
     try {
@@ -28,6 +31,36 @@ export default function StatisticsButton() {
     } catch (error) {
       console.error('Failed to fetch total rooms:', error);
       setTotalRooms(0);
+    }
+  };
+
+  const handleResetEverything = async () => {
+    if (!confirm("Are you sure you want to reset everything? This will delete all rooms and reset all user win counts.")) {
+      return;
+    }
+
+    setResetLoading(true);
+    setResetMessage("");
+
+    try {
+      const result = await resetEverything();
+
+      if (result.success) {
+        setResetMessage(result.message || "Reset completed successfully!");
+        // Refresh the room count
+        await fetchTotalRooms();
+      } else {
+        setResetMessage(`Error: ${result.error}`);
+      }
+    } catch (error) {
+      setResetMessage("Failed to reset data");
+    } finally {
+      setResetLoading(false);
+
+      // Clear the message after 5 seconds
+      setTimeout(() => {
+        setResetMessage("");
+      }, 5000);
     }
   };
 
@@ -113,6 +146,43 @@ export default function StatisticsButton() {
               </div>
             )}
 
+            {isHost && (
+              <div className="pt-4">
+                <button
+                  onClick={handleResetEverything}
+                  disabled={resetLoading}
+                  className={`w-full text-body font-medium border-2 rounded-2xl py-3 transition-colors duration-200 flex justify-center items-center gap-2 ${resetLoading
+                    ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                    : "bg-blue text-white text-h3 border-2 border-border rounded-2xl py-2 hover:bg-[#7388ee] transition-colors duration-200 cursor-pointer"
+                    }`}
+                >
+                  {resetLoading ? (
+                    <>
+                      <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Resetting...
+                    </>
+                  ) : (
+                    <>
+                      Reset Everything
+                    </>
+                  )}
+                </button>
+
+                {/* Reset status message */}
+                {resetMessage && (
+                  <div className={`mt-2 p-2 rounded-lg text-center text-body-small ${resetMessage.includes("Error")
+                    ? "bg-red-100 text-red-700 border border-red-200"
+                    : "bg-green-100 text-green-700 border border-green-200"
+                    }`}>
+                    {resetMessage}
+                  </div>
+                )}
+
+              </div>
+            )}
           </div>
         </div>
       )}
