@@ -54,6 +54,8 @@ app.prepare().then(() => {
   });
 
   io.on("connection", (socket) => {
+    console.log("User connected", socket.id);
+
     console.log("User connected", socket.data.sessionID);
 
     sessionStore.saveSession(socket.data.sessionID, {
@@ -68,9 +70,13 @@ app.prepare().then(() => {
       socket.handshake.address === "::1" ||
       socket.handshake.address === "127.0.0.1";
 
+
     console.log(
       `Connection from: ${socket.handshake.headers.origin}, isLocalhost: ${isLocalhost}`
     );
+
+    if (!state.players.includes(socket.id)) {
+      state.players.push(socket.id);
 
     socket.emit("session", {
       sessionID: socket.data.sessionID,
@@ -84,6 +90,22 @@ app.prepare().then(() => {
         `Player ${socket.data.sessionID} joined. Total players: ${state.players.length}`
       );
     }
+
+
+    socket.on('getOnlineCount', () => {
+      console.log(`getOnlineCount requested by ${socket.id}, current players: ${state.players.length}`);
+
+      const isLocalhost =
+        socket.handshake.headers.origin === "http://localhost:3000" ||
+        socket.handshake.headers.host === "localhost:3000" ||
+        socket.handshake.address === "::1" ||
+        socket.handshake.address === "127.0.0.1";
+
+      socket.emit('onlineCountUpdate', {
+        count: state.players.length,
+        isHost: isLocalhost,
+      });
+    });
 
     io.emit("onlineCountUpdate", {
       count: state.players.length,
@@ -150,6 +172,13 @@ app.prepare().then(() => {
 
     socket.on("message", (msg, id) => {
       socket.to(id).emit("message", msg);
+
+    socket.on("message", (msg) => {
+      socket.rooms.forEach(room => {
+        if (room !== socket.id) {
+          socket.to(room).emit("message", msg);
+        }
+      });
     });
 
     socket.on("disconnect", () => {
@@ -284,6 +313,11 @@ app.prepare().then(() => {
     });
 
     socket.on("joinRoom", (room_id) => {
+      socket.rooms.forEach((room) => {
+        if (room !== socket.id) {
+          socket.leave(room);
+        }
+      });
       socket.join(room_id);
     });
 

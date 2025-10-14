@@ -1,27 +1,16 @@
-export interface Room {
-  id: number;
-  name: string;
-  host_id: string;
-  player_id_list: string[];
-  size: number;
-  player_limit: number;
-  bomb_count: number;
-  chat_enabled: boolean;
-  timer: number;
-  placement: number[];
-}
+import { Room } from "@/interface";
 
 export async function getRooms(): Promise<Room[]> {
   try {
-    const response = await fetch('/api/room', {
-      method: 'GET',
+    const response = await fetch("/api/room", {
+      method: "GET",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
     });
 
     if (!response.ok) {
-      throw new Error('Failed to fetch rooms');
+      throw new Error("Failed to fetch rooms");
     }
 
     const data = await response.json();
@@ -29,11 +18,40 @@ export async function getRooms(): Promise<Room[]> {
     if (data.success && Array.isArray(data.data)) {
       return data.data;
     } else {
-      throw new Error('Invalid response format');
+      throw new Error("Invalid response format");
     }
   } catch (error) {
-    console.error('Error fetching rooms:', error);
+    console.error("Error fetching rooms:", error);
     return [];
+  }
+}
+
+export async function getRoom(id: number): Promise<Room | null> {
+  try {
+    const response = await fetch(`/api/room/${id}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      if (response.status === 404) {
+        return null;
+      }
+      throw new Error("Failed to fetch room");
+    }
+
+    const data = await response.json();
+
+    if (data.success) {
+      return data.data;
+    } else {
+      throw new Error(data.error || "Invalid response format");
+    }
+  } catch (error) {
+    console.error("Error fetching room:", error);
+    return null;
   }
 }
 
@@ -42,9 +60,23 @@ export async function getTotalRooms(): Promise<number> {
     const rooms = await getRooms();
     return rooms.length;
   } catch (error) {
-    console.error('Error fetching room count:', error);
+    console.error("Error fetching room count:", error);
     return 0;
   }
 }
+
+export const checkRoomExists = async (roomId: number): Promise<boolean> => {
+  try {
+    const response = await fetch(`/api/room/${roomId}`);
+    if (!response.ok) {
+      return false;
+    }
+    const data = await response.json();
+    return data.success;
+  } catch (error) {
+    console.error('Error checking room existence:', error);
+    return false;
+  }
+};
 
 export default getRooms;
