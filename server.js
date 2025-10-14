@@ -1,7 +1,8 @@
-//server.js
 import { createServer } from "node:http";
 import next from "next";
 import { Server } from "socket.io";
+import InMemorySessionStore from "./sessionStore.js";
+import { randomBytes } from "node:crypto";
 
 const dev = process.env.NODE_ENV !== "production";
 const hostname = "localhost";
@@ -11,12 +12,57 @@ const app = next({ dev, hostname, port });
 const handler = app.getRequestHandler();
 
 app.prepare().then(() => {
-  const httpServer = createServer(handler);
+  const randomId = () => randomBytes(8).toString("hex");
+  const sessionStore = new InMemorySessionStore();
 
+  const httpServer = createServer(handler);
   const io = new Server(httpServer);
+
+  io.use((socket, next) => {
+    console.log("handshake AUTH", socket.handshake.auth);
+    const sessionID = socket.handshake.auth.sessionID;
+    let session;
+
+    if (sessionID && sessionID.trim()) {
+      session = sessionStore.findSession(sessionID); // find existing session
+      if (session && session.connected) {
+        socket.emit("duplicateConnectedSession");
+      }
+    }
+
+    const auth = socket.handshake.auth;
+    // prioritise the data that the client sends first, then session from `sessionStore`, else randomise new ID.
+    socket.data.sessionID =
+      sessionID && sessionID.trim() ? sessionID : randomId();
+    socket.data.userID =
+      auth.userID && auth.userID.trim()
+        ? auth.userID
+        : session && session.userID
+        ? session.userID
+        : randomId();
+    socket.data.username =
+      auth.username && auth.username.trim() ? auth.username : session.username;
+    sessionStore.saveSession(socket.data.sessionID, {
+      userID: socket.data.userID,
+      username: socket.data.username,
+      connected: false,
+    });
+
+    console.log("DONE io.use() socket socket data:", socket.data);
+
+    return next();
+  });
 
   io.on("connection", (socket) => {
     console.log("User connected", socket.id);
+
+    console.log("User connected", socket.data.sessionID);
+
+    sessionStore.saveSession(socket.data.sessionID, {
+      userID: socket.data.userID,
+      username: socket.data.username,
+      connected: true,
+    });
 
     const isLocalhost =
       socket.handshake.headers.origin === "http://localhost:3000" ||
@@ -24,16 +70,27 @@ app.prepare().then(() => {
       socket.handshake.address === "::1" ||
       socket.handshake.address === "127.0.0.1";
 
+
     console.log(
       `Connection from: ${socket.handshake.headers.origin}, isLocalhost: ${isLocalhost}`
     );
 
     if (!state.players.includes(socket.id)) {
       state.players.push(socket.id);
+
+    socket.emit("session", {
+      sessionID: socket.data.sessionID,
+      userID: socket.data.userID,
+      username: socket.data.username,
+    });
+
+    if (!state.players.includes(socket.data.sessionID)) {
+      state.players.push(socket.data.sessionID);
       console.log(
-        `Player ${socket.id} joined. Total players: ${state.players.length}`
+        `Player ${socket.data.sessionID} joined. Total players: ${state.players.length}`
       );
     }
+
 
     socket.on('getOnlineCount', () => {
       console.log(`getOnlineCount requested by ${socket.id}, current players: ${state.players.length}`);
@@ -113,6 +170,9 @@ app.prepare().then(() => {
       }
     }
 
+    socket.on("message", (msg, id) => {
+      socket.to(id).emit("message", msg);
+
     socket.on("message", (msg) => {
       socket.rooms.forEach(room => {
         if (room !== socket.id) {
@@ -121,38 +181,54 @@ app.prepare().then(() => {
       });
     });
 
-
     socket.on("disconnect", () => {
-      console.log("User disconnected", socket.id);
+      console.log("User disconnected", socket.data.sessionID);
+      sessionStore.saveSession(socket.data.sessionID, {
+        userID: socket.data.userID,
+        username: socket.data.username,
+        connected: false,
+      });
+
       // remove player
       const playerIndex = state.players.indexOf(socket.id);
       if (playerIndex !== -1) {
         state.players.splice(playerIndex, 1);
 
-        io.emit('onlineCountUpdate', {
+        io.emit("onlineCountUpdate", {
           count: state.players.length,
+          isHost: false,
         });
 
-
-        if (state.currentTurnIndex >= state.players.length && state.players.length > 0) {
+        if (
+          state.currentTurnIndex >= state.players.length &&
+          state.players.length > 0
+        ) {
           state.currentTurnIndex = 0;
         }
         io.emit("playersUpdated", {
           players: state.players,
-          currentPlayer: state.started && state.players.length > 0
-            ? state.players[state.currentTurnIndex]
-            : null,
+          currentPlayer:
+            state.started && state.players.length > 0
+              ? state.players[state.currentTurnIndex]
+              : null,
         });
-        if (playerIndex === state.currentTurnIndex && state.started && state.players.length > 0) {
+        if (
+          playerIndex === state.currentTurnIndex &&
+          state.started &&
+          state.players.length > 0
+        ) {
           nextTurn("playerLeft");
         }
       }
     });
 
     if (state.started) {
-      const hits = [...state.found].filter(i => state.bombs.has(i)).length;
+      const hits = [...state.found].filter((i) => state.bombs.has(i)).length;
       socket.emit("map:ready", {
-        size: state.size, bombsTotal: state.bombCount, bombsFound: hits, turnLimit: state.turnLimit ?? 10,
+        size: state.size,
+        bombsTotal: state.bombCount,
+        bombsFound: hits,
+        turnLimit: state.turnLimit ?? 10,
       });
       socket.emit("turnChanged", {
         currentPlayer: state.players[state.currentTurnIndex],
@@ -214,9 +290,11 @@ app.prepare().then(() => {
       state.found = new Set();
       state.scores = {};
       state.started = true;
-      state.currentTurnIndex = Math.floor(Math.random() * state.players.length);;
+      state.currentTurnIndex = Math.floor(Math.random() * state.players.length);
 
-      console.log(`Game started: ${state.size}x${state.size}, ${state.bombCount} bombs, ${state.turnLimit}s turns`);
+      console.log(
+        `Game started: ${state.size}x${state.size}, ${state.bombCount} bombs, ${state.turnLimit}s turns`
+      );
 
       io.emit("map:ready", {
         size: state.size,
@@ -225,7 +303,6 @@ app.prepare().then(() => {
         turnLimit: state.turnLimit,
         currentPlayer: state.players[state.currentTurnIndex],
       });
-
 
       io.emit("turnChanged", {
         currentPlayer: state.players[state.currentTurnIndex],
@@ -236,7 +313,7 @@ app.prepare().then(() => {
     });
 
     socket.on("joinRoom", (room_id) => {
-      socket.rooms.forEach(room => {
+      socket.rooms.forEach((room) => {
         if (room !== socket.id) {
           socket.leave(room);
         }
@@ -245,7 +322,7 @@ app.prepare().then(() => {
     });
 
     socket.on("leaveRoom", () => {
-      socket.rooms.forEach(room => {
+      socket.rooms.forEach((room) => {
         if (room !== socket.id) {
           socket.leave(room);
         }
@@ -311,9 +388,7 @@ app.prepare().then(() => {
       } else {
         startTurnTimer();
       }
-
     });
-
   });
 
   function computeWinners(scores) {
@@ -365,7 +440,7 @@ app.prepare().then(() => {
     currentTurnIndex: 0,
     turnTimer: null,
     turnTimeRemaining: 10,
-  }
+  };
 
   function startTurnTimer() {
     if (state.turnTimer) {
@@ -399,7 +474,8 @@ app.prepare().then(() => {
       state.turnTimer = null;
     }
 
-    state.currentTurnIndex = (state.currentTurnIndex + 1) % state.players.length;
+    state.currentTurnIndex =
+      (state.currentTurnIndex + 1) % state.players.length;
 
     io.emit("turnChanged", {
       currentPlayer: state.players[state.currentTurnIndex],
@@ -410,8 +486,6 @@ app.prepare().then(() => {
       startTurnTimer();
     }
   }
-
-
 
   httpServer
     .once("error", (err) => {

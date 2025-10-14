@@ -2,16 +2,12 @@
 
 import { useEffect, useState } from "react";
 import socket from "@/socket";
-import Link from "next/link";
-import { Message } from "@/interface";
-import Image from 'next/image';
 import StatisticsButton from "@/components/StatisticsButton";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { getRooms, checkRoomExists } from "@/services/client/roomService";
 import { Room as RoomType } from "@/interface";
 
 export default function Room() {
-  const [nickname, setNickname] = useState("");
   const [rooms, setRooms] = useState<RoomType[]>([]);
   const [loading, setLoading] = useState(true);
   const [roomCode, setRoomCode] = useState("");
@@ -21,11 +17,8 @@ export default function Room() {
   const router = useRouter();
 
   useEffect(() => {
-    const urlNickname = searchParams.get('nickname');
-    if (urlNickname) {
-      setNickname(decodeURIComponent(urlNickname));
-    }
-  }, [searchParams]);
+    console.log("ROOM auth", socket.auth); // FOR TEST
+  }, []);
 
   useEffect(() => {
     const fetchRooms = async () => {
@@ -34,7 +27,7 @@ export default function Room() {
         const roomsData = await getRooms();
         setRooms(roomsData);
       } catch (error) {
-        console.error('Error fetching rooms:', error);
+        console.error("Error fetching rooms:", error);
       } finally {
         setLoading(false);
       }
@@ -72,7 +65,7 @@ export default function Room() {
         setError(`Room with ID: ${roomId} not found!`);
       }
     } catch (error) {
-      console.error('Error checking room:', error);
+      console.error("Error checking room:", error);
       setError("Error checking room. Please try again.");
     } finally {
       setCheckingRoom(false);
@@ -80,7 +73,7 @@ export default function Room() {
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
+    if (e.key === "Enter") {
       handleJoinByCode();
     }
   };
@@ -91,7 +84,6 @@ export default function Room() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#fffff5] from-30% via-[#ddf7ff] via-71% to-[#dde4ff] to-100% bg-fixed">
-
       <button
         onClick={handleBack}
         className="p-6 text-h4 flex items-center gap-2 cursor-pointer"
@@ -115,15 +107,15 @@ export default function Room() {
       <StatisticsButton />
 
       <div className="flex flex-col items-center p-6">
-
         <div className="flex justify-center text-h1 xl:text-subtitle font-bold text-center mb-2">
-          Welcome, {nickname || "Guest"}!
+          Welcome, {socket.auth.username || "Guest"}!
         </div>
 
         <div className="p-6 w-full max-w-md md:max-w-3xl xl:max-w-4xl mb-8">
-
           <div className="mb-2">
-            <span className="text-h4 sm:text-h3 xl:text-h2">Join by Room Code</span>
+            <span className="text-h4 sm:text-h3 xl:text-h2">
+              Join by Room Code
+            </span>
           </div>
 
           <div className="flex gap-4 items-center mb-6">
@@ -131,12 +123,6 @@ export default function Room() {
               type="text"
               placeholder="Enter 3-digit code"
               className="w-full border-2 bg-white border-border rounded-2xl px-4 py-3 placeholder-gray-400 text-h4 focus:outline-none focus:border-[#3728BE]"
-              value={roomCode}
-              onChange={(e) => {
-                setRoomCode(e.target.value);
-                setError("");
-              }}
-              onKeyPress={handleKeyPress}
             />
 
             <button
@@ -175,24 +161,31 @@ export default function Room() {
                   onClick={() => handleJoinRoom(room.id)}
                 >
                   <div className="flex justify-between items-start mb-2">
-                    <h3 className="text-h2 font-bold text-gray-800">{room.name}</h3>
+                    <h3 className="text-h2 font-bold text-gray-800">
+                      {room.name}
+                    </h3>
                   </div>
 
                   <div className="text-h4 flex flex-col -space-y-1">
                     <div>
-                      <span className="font-regular">Status:</span> <span className="font-bold text-red">REDACTED</span>
+                      <span className="font-regular">Status:</span>{" "}
+                      <span className="font-bold text-red">REDACTED</span>
                     </div>
                     <div>
-                      <span className="font-regular">Map Size:</span> {room.size}x{room.size}
+                      <span className="font-regular">Map Size:</span>{" "}
+                      {room.size}x{room.size}
                     </div>
                     <div>
-                      <span className="font-regular">Capacity:</span> {room.player_id_list.length}/{room.player_limit}
+                      <span className="font-regular">Capacity:</span>{" "}
+                      {room.player_id_list.length}/{room.player_limit}
                     </div>
                     <div>
-                      <span className="font-regular">Number of mines:</span> {room.bomb_count}
+                      <span className="font-regular">Number of mines:</span>{" "}
+                      {room.bomb_count}
                     </div>
                     <div>
-                      <span className="font-regular">Time Limit:</span> {room.timer === 0 ? "Unlimited" : `${room.timer} seconds`}
+                      <span className="font-regular">Time Limit:</span>{" "}
+                      {room.timer === 0 ? "Unlimited" : `${room.timer} seconds`}
                     </div>
                   </div>
 
@@ -214,5 +207,5 @@ export default function Room() {
         </div>
       </div>
     </div>
-  )
+  );
 }
