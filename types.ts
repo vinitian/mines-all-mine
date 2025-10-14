@@ -6,6 +6,7 @@ declare global {
       y: number;
       value: number;
       isOpen: boolean;
+      isBomb: boolean;
     };
   }
 }
