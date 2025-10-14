@@ -2,30 +2,22 @@
 
 import { useEffect, useState } from "react";
 import socket from "@/socket";
-import Link from "next/link";
-import { Message } from "@/interface";
-import Image from "next/image";
 import StatisticsButton from "@/components/StatisticsButton";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { getRooms, checkRoomExists } from "@/services/client/roomService";
 import { Room as RoomType } from "@/interface";
 
 export default function Room() {
-  const [nickname, setNickname] = useState("");
   const [rooms, setRooms] = useState<RoomType[]>([]);
   const [loading, setLoading] = useState(true);
   const [roomCode, setRoomCode] = useState("");
   const [error, setError] = useState("");
   const [checkingRoom, setCheckingRoom] = useState(false);
-  const searchParams = useSearchParams();
   const router = useRouter();
 
   useEffect(() => {
-    const urlNickname = searchParams.get("nickname");
-    if (urlNickname) {
-      setNickname(decodeURIComponent(urlNickname));
-    }
-  }, [searchParams]);
+    console.log("ROOM auth", socket.auth); // FOR TEST
+  }, []);
 
   useEffect(() => {
     const fetchRooms = async () => {
@@ -117,7 +109,7 @@ export default function Room() {
 
       <div className="flex flex-col items-center p-6">
         <div className="flex justify-center text-h1 xl:text-subtitle font-bold text-center mb-2">
-          Welcome, {nickname || "Guest"}!
+          Welcome, {socket.auth.username || "Guest"}!
         </div>
 
         <div className="p-6 w-full max-w-md md:max-w-3xl xl:max-w-4xl mb-8">
@@ -132,6 +124,9 @@ export default function Room() {
               type="text"
               placeholder="Enter 3-digit code"
               className="w-full border-2 bg-white border-border rounded-2xl px-4 py-3 placeholder-gray-400 text-h4 focus:outline-none focus:border-[#3728BE]"
+              onChange={(e) => {
+                setRoomCode(e.target.value);
+              }}
             />
 
             <button
