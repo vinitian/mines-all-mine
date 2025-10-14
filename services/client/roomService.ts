@@ -26,6 +26,35 @@ export async function getRooms(): Promise<Room[]> {
   }
 }
 
+export async function getRoom(id: number): Promise<Room | null> {
+  try {
+    const response = await fetch(`/api/room/${id}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      if (response.status === 404) {
+        return null;
+      }
+      throw new Error("Failed to fetch room");
+    }
+
+    const data = await response.json();
+
+    if (data.success) {
+      return data.data;
+    } else {
+      throw new Error(data.error || "Invalid response format");
+    }
+  } catch (error) {
+    console.error("Error fetching room:", error);
+    return null;
+  }
+}
+
 export async function getTotalRooms(): Promise<number> {
   try {
     const rooms = await getRooms();
@@ -35,5 +64,19 @@ export async function getTotalRooms(): Promise<number> {
     return 0;
   }
 }
+
+export const checkRoomExists = async (roomId: number): Promise<boolean> => {
+  try {
+    const response = await fetch(`/api/room/${roomId}`);
+    if (!response.ok) {
+      return false;
+    }
+    const data = await response.json();
+    return data.success;
+  } catch (error) {
+    console.error('Error checking room existence:', error);
+    return false;
+  }
+};
 
 export default getRooms;
