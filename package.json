@@ -11,7 +11,7 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "@prisma/client": "^6.16.3",
+    "@prisma/client": "^6.17.1",
     "@prisma/extension-accelerate": "^2.0.2",
     "@types/socket.io": "^3.0.1",
     "dotenv": "^17.2.3",
@@ -19,7 +19,6 @@
     "lucide-react": "^0.545.0",
     "next": "15.5.2",
     "next-auth": "^5.0.0-beta.29",
-    "prisma": "^6.16.3",
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "react-spinners": "^0.17.0",
@@ -34,6 +33,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "15.5.2",
+    "prisma": "^6.17.1",
     "prisma-json-types-generator": "^3.6.2",
     "tailwindcss": "^4",
     "tsx": "^4.20.6",
