@@ -3,6 +3,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import socket from "@/socket"
+import {Cell, Field} from "@/services/game_logic"
 
 type RevealMap = Record<number, 'hit' | 'miss'>;
 type Winner = { id: string; score: number };
