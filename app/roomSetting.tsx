@@ -99,8 +99,35 @@ export default function RoomSettings() {
       player_limit: playerLimit,
       chat_enabled: chatState,
     });
+
+    socket.emit("room:settings-updated", {
+      name: roomname,
+      size: mapSize,
+      bomb_density: bombCount,
+      bomb_count: bombs,
+      turn_limit: turnLimit,
+      player_limit: playerLimit,
+      chat_enabled: chatState,
+    });
   };
   //TODO: generate placement
+
+  useEffect(() => {
+    const onSettingsUpdated = (newSettings: any) => {
+      setRoomname(newSettings.name);
+      setMapSize(newSettings.size);
+      setTurnLimit(newSettings.turn_limit);
+      setPlayerLimit(newSettings.player_limit);
+      setBombCount(newSettings.bomb_density);
+      setChatState(newSettings.chat_enabled);
+    };
+
+    socket.on("room:settings-updated", onSettingsUpdated);
+
+    return () => {
+      socket.off("room:settings-updated", onSettingsUpdated);
+    };
+  }, []);
 
   useEffect(() => {
     const checkIfHost = async () => {
