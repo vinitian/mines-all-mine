@@ -99,7 +99,7 @@ export default function Home() {
 
         <div className="flex justify-center">
           {showError && (
-            <div className="w-[60%] mt-2 p-2 text-red-700 rounded-lg text-center">
+            <div className="w-[60%] mt-2 p-2 text-red rounded-lg text-center">
               Please enter your nickname first!
             </div>
           )}

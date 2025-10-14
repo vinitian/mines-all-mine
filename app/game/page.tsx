@@ -30,7 +30,7 @@ export default function GamePage() {
 
   // REMOVED duplicate return - fixed syntax error
   return (
-    <div className="game-div-container">
+    <div className="game-div-container  bg-gradient-to-b from-[#fffff5] from-30% via-[#ddf7ff] via-71% to-[#dde4ff] to-100% flex items-center justify-center p-4">
       {started && <WelcomeMessage/>}
       {/* later {started && <WelcomeMessage text={`Welcome to Mines all Mine, ${nickname}!`} />} */}
 

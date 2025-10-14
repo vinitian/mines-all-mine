@@ -1,19 +1,70 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
+import { Room } from "@/interface";
+import { getRoom } from "@/services/client/roomService";
 import RoomSettings from "@/components/roomSetting";
 import Chat from "@/components/Chat";
 import RoomName from "@/components/RoomName";
+import LoadingModal from "@/components/LoadingModal";
+import socket from "@/socket";
 
-export default function Page() {
+export default function LobbyPage() {
+  const [room, setRoom] = useState<Room | null>(null);
+  const [loading, setLoading] = useState(true);
+  const params = useParams();
+  const roomId = params.id as string;
+
+  useEffect(() => {
+    const fetchRoom = async () => {
+      try {
+        setLoading(true);
+        const roomData = await getRoom(parseInt(roomId));
+        setRoom(roomData);
+      } catch (error) {
+        console.error("Error fetching room:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (roomId) {
+      fetchRoom();
+    }
+  }, [roomId]);
+
+  if (!room) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div>Room not found</div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col px-[25px]">
       <div className="flex flex-col gap-[25px] py-[25px] md:h-dvh">
-        <RoomName roomName="Vinitian's Room" roomCode={1234} />
+        {/* TODO: change from socket.id to socket.auth.userID */}
+        <RoomName
+          roomName={room.name}
+          roomCode={room.id}
+          trashVisible={room.host_id == socket.id}
+        />
         <div className="flex flex-col md:flex-row gap-[20px] h-10/12 md:h-9/12">
           <div className="flex flex-col gap-[20px] md:h-full md:w-1/2 md:max-w-[315px]">
-            <div className="bg-gray-dark">
-              Player 6/8 sadfasf asddads asdfasdf
+            <div className="bg-gray">
+              <p>
+                Player {room.player_id_list.length}/{room.player_limit} sadfasf
+              </p>
+              <ul>
+                {room.player_id_list.map((playerId: string) => {
+                  return <li key={playerId}>- {playerId}</li>;
+                  // todo: convert id to username
+                })}
+              </ul>
             </div>
+
             <div className="hidden md:block w-full h-full">
               <Chat />
             </div>
@@ -45,6 +96,7 @@ export default function Page() {
           <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
         </svg>
       </div>
+      {loading && <LoadingModal text={"Loading room information"} />}
     </div>
   );
 }

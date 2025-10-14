@@ -35,7 +35,8 @@ model Room {
   player_limit   Int     @default(5)
   bomb_count     Int     @default(10)
   chat_enabled   Boolean @default(true)
-  timer          Int     @default(0)
+  timer          Int     @default(0)   
+  game_started   Boolean @default(false)
   /// [PlacementType]
   placement      Json[]   @default([])
 }
