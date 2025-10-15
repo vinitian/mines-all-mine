@@ -109,6 +109,7 @@ export default function RoomSettings() {
     const field = new Field;
     field.generate_field([mapSize,mapSize],bombCount);
     const placement = field.export()[0]
+    await
     setShowCountdown(true);
   };
 

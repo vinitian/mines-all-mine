@@ -11,8 +11,8 @@ export default async function createField(apiRequest: CreateFieldRequest) {
       ? process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3000"
       : "";
 
-  const response = await fetch(`${baseUrl}/api/field`, {
-    method: "POST",
+  const response = await fetch(`${baseUrl}/api/field/create`, {
+    method: "PATCH",
     body: JSON.stringify(apiRequest),
     headers: {
       "Content-Type": "application/json",
