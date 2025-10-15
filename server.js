@@ -77,6 +77,7 @@ app.prepare().then(() => {
 
     if (!state.players.includes(socket.id)) {
       state.players.push(socket.id);
+    }
 
     socket.emit("session", {
       sessionID: socket.data.sessionID,
@@ -172,7 +173,7 @@ app.prepare().then(() => {
 
     socket.on("message", (msg, id) => {
       socket.to(id).emit("message", msg);
-
+    });
     socket.on("message", (msg) => {
       socket.rooms.forEach(room => {
         if (room !== socket.id) {
