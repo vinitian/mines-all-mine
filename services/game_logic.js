@@ -1,4 +1,4 @@
-class Cell{
+export class Cell{
     constructor(x,y){
         this.is_open=false;
         this.posx=x;
@@ -8,7 +8,7 @@ class Cell{
     }
 }
 
-class Field{
+export class Field{
     constructor(){
         this.field=[];
         this.bombs=0;
@@ -22,20 +22,17 @@ class Field{
             }
         }
     }
-    load(field, properties){
+    load(field, size, bombs){
         this.field=field;
-        this.size=properties.size;
-        this.bombs=properties.bombs;
+        this.size=size;
+        this.bombs=bombs;
     }
     export(){
-        return(
-        [
-            this.field,
-            {
-                size:this.size,
-                bombs:this.bombs,
-            }
-        ]);
+        return({
+            field: this.field,
+            size: this.size,
+            bombs: this.bombs,
+        });
     }
     coordinate_to_index(x,y){
         //x rows y columns like 2D array
@@ -180,41 +177,42 @@ class Field{
     }
 }
 
-// Import the 'readline' module for easier input handling
-//const readline = require('readline');
-import readline from 'readline';
+// // Code for testing
+// // Import the 'readline' module for easier input handling
+// //const readline = require('readline');
+// import readline from 'readline';
 
-// Create an interface for reading input and writing output
-const rl = readline.createInterface({
-  input: process.stdin,
-  output: process.stdout
-});
+// // Create an interface for reading input and writing output
+// const rl = readline.createInterface({
+//   input: process.stdin,
+//   output: process.stdout
+// });
 
-let field=new Field()
-let result;
-field.generate_field([10,10],20)
+// let field=new Field()
+// let result;
+// field.generate_field([10,10],20)
 
-// Function to handle user commands
-function handleCommand(position) {
-    if(position=="x"){
-        rl.close();
-        return;
-    }else{
-        let coordinate=position.split(",")
-        result=field.open_cell(Number(coordinate[0]),Number(coordinate[1]))
-        console.log(result)
-    }  
-    field.print_field()
-    console.log(field.bombs+ " bombs remaining")
-    askForCommand();
-}
+// // Function to handle user commands
+// function handleCommand(position) {
+//     if(position=="x"){
+//         rl.close();
+//         return;
+//     }else{
+//         let coordinate=position.split(",")
+//         result=field.open_cell(Number(coordinate[0]),Number(coordinate[1]))
+//         console.log(result)
+//     }  
+//     field.print_field()
+//     console.log(field.bombs+ " bombs remaining")
+//     askForCommand();
+// }
 
-// Function to prompt user repeatedly
-function askForCommand() {
-  rl.question("\nPosition: ", handleCommand);
-}
+// // Function to prompt user repeatedly
+// function askForCommand() {
+//   rl.question("\nPosition: ", handleCommand);
+// }
 
-// Start the loop
-console.log("=== Welcome to the Game ===");
-field.print_field()
-askForCommand();
+// // Start the loop
+// console.log("=== Welcome to the Game ===");
+// field.print_field()
+// askForCommand();
