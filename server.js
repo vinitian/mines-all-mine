@@ -1,7 +1,7 @@
 import { createServer } from "node:http";
 import next from "next";
 import { Server } from "socket.io";
-import InMemorySessionStore from "./sessionStore.js";
+import InMemoryUserStore from "./userStore.js";
 import { randomBytes } from "node:crypto";
 import { Field } from "./services/game_logic.js";
 
@@ -14,37 +14,34 @@ const handler = app.getRequestHandler();
 
 app.prepare().then(() => {
   const randomId = () => randomBytes(8).toString("hex");
-  const sessionStore = new InMemorySessionStore();
+  const userStore = new InMemoryUserStore(); // it's a Map of (userID) => {username: string, connected: boolean}
 
   const httpServer = createServer(handler);
   const io = new Server(httpServer);
 
   io.use((socket, next) => {
     console.log("handshake AUTH", socket.handshake.auth);
-    const sessionID = socket.handshake.auth.sessionID;
-    let session;
+    const userID = socket.handshake.auth.userID;
+    let user;
 
-    if (sessionID && sessionID.trim()) {
-      session = sessionStore.findSession(sessionID);
-      if (session && session.connected) {
-        socket.emit("duplicateConnectedSession");
+    if (userID && userID.trim()) {
+      user = userStore.findUser(userID);
+      if (user && user.connected) {
+        socket.emit("duplicateConnectedUser");
       }
     }
 
     const auth = socket.handshake.auth;
-    // prioritise the data that the client sends first, then session from `sessionStore`, else randomise new ID.
-    socket.data.sessionID =
-      sessionID && sessionID.trim() ? sessionID : randomId();
+    // prioritise the data that the client sends first, then session from `userStore`, else randomise new ID.
     socket.data.userID =
       auth.userID && auth.userID.trim()
         ? auth.userID
-        : session && session.userID
-        ? session.userID
+        : user && user.userID
+        ? user.userID
         : randomId();
     socket.data.username =
-      auth.username && auth.username.trim() ? auth.username : session.username;
-    sessionStore.saveSession(socket.data.sessionID, {
-      userID: socket.data.userID,
+      auth.username && auth.username.trim() ? auth.username : user.username;
+    userStore.saveUser(socket.data.userID, {
       username: socket.data.username,
       connected: false,
     });
@@ -55,11 +52,9 @@ app.prepare().then(() => {
   });
 
   io.on("connection", (socket) => {
-    console.log("User connected", socket.id);
-    console.log("User connected", socket.data.sessionID);
+    console.log("User connected", socket.data.userID);
 
-    sessionStore.saveSession(socket.data.sessionID, {
-      userID: socket.data.userID,
+    userStore.saveUser(socket.data.userID, {
       username: socket.data.username,
       connected: true,
     });
@@ -74,60 +69,26 @@ app.prepare().then(() => {
       `Connection from: ${socket.handshake.headers.origin}, isLocalhost: ${isLocalhost}`
     );
 
-    // check if reconnect
-    // TODO: why use socket.id
-    const oldSocketId = state.sessionToSocket[socket.data.sessionID];
-    const isReconnection = oldSocketId && oldSocketId !== socket.id;
-
-    if (isReconnection) {
-      console.log(`🔄 Reconnection detected: ${socket.data.sessionID}`);
-      console.log(`   Old socket: ${oldSocketId} → New socket: ${socket.id}`);
-
-      if (state.scores[oldSocketId]) {
-        state.scores[socket.id] = state.scores[oldSocketId];
-        delete state.scores[oldSocketId];
-        console.log(`   Restored score: ${state.scores[socket.id]}`);
-      }
-
-      const playerIndex = state.players.indexOf(oldSocketId);
-      if (playerIndex !== -1) {
-        state.players[playerIndex] = socket.id;
-        console.log(`   Replaced player in list at index ${playerIndex}`);
-
-        if (state.currentTurnIndex === playerIndex && state.started) {
-          console.log(`   Was their turn - restarting turn timer`);
-          startTurnTimer();
-        }
-      }
-
-      delete state.socketToSession[oldSocketId];
-    } else {
-      if (!state.players.includes(socket.id)) {
-        state.players.push(socket.id);
-        console.log(`New player joined: ${socket.id}`);
-      }
+    if (!state.players.includes(socket.data.userID)) {
+      state.players.push(socket.data.userID);
+      console.log(`New player joined: ${socket.data.userID}`);
     }
 
-    // update mappings
-    state.sessionToSocket[socket.data.sessionID] = socket.id;
-    state.socketToSession[socket.id] = socket.data.sessionID;
-
     socket.emit("session", {
-      sessionID: socket.data.sessionID,
       userID: socket.data.userID,
       username: socket.data.username,
     });
 
-    if (!state.players.includes(socket.data.sessionID)) {
-      state.players.push(socket.data.sessionID);
+    if (!state.players.includes(socket.data.userID)) {
+      state.players.push(socket.data.userID);
       console.log(
-        `Player ${socket.data.sessionID} joined. Total players: ${state.players.length}`
+        `Player ${socket.data.userID} joined. Total players: ${state.players.length}`
       );
     }
 
     socket.on("getOnlineCount", () => {
       console.log(
-        `getOnlineCount requested by ${socket.id}, current players: ${state.players.length}`
+        `getOnlineCount requested by ${socket.data.userID}, current players: ${state.players.length}`
       );
 
       socket.emit("onlineCountUpdate", {
@@ -226,6 +187,7 @@ app.prepare().then(() => {
 
     socket.on("message", (msg) => {
       socket.rooms.forEach((room) => {
+        // TODO: why check room and socket.id??????
         if (room !== socket.id) {
           socket.to(room).emit("message", msg);
         }
@@ -312,6 +274,7 @@ app.prepare().then(() => {
 
     socket.on("joinRoom", (room_id) => {
       socket.rooms.forEach((room) => {
+        // TODO
         if (room !== socket.id) {
           socket.leave(room);
         }
@@ -321,6 +284,7 @@ app.prepare().then(() => {
 
     socket.on("leaveRoom", () => {
       socket.rooms.forEach((room) => {
+        // TODO
         if (room !== socket.id) {
           socket.leave(room);
         }
@@ -333,7 +297,7 @@ app.prepare().then(() => {
         return;
       }
 
-      if (state.players[state.currentTurnIndex] !== socket.id) {
+      if (state.players[state.currentTurnIndex] !== socket.data.userID) {
         socket.emit("error", { message: "It's not your turn!" });
         return;
       }
@@ -368,7 +332,8 @@ app.prepare().then(() => {
       }
 
       if (hit) {
-        state.scores[socket.id] = (state.scores[socket.id] || 0) + 1;
+        state.scores[socket.data.userID] =
+          (state.scores[socket.data.userID] || 0) + 1;
       }
 
       const hits = [...state.found].filter((i) => state.bombs.has(i)).length;
@@ -378,7 +343,7 @@ app.prepare().then(() => {
           index: cellData.index,
           hit: cellData.hit,
           hintNumber: cellData.hintNumber,
-          by: cellData.index === index ? socket.id : "auto-reveal",
+          by: cellData.index === index ? socket.data.userID : "auto-reveal",
           bombsFound: hits,
           bombsTotal: state.bombCount,
           scores: state.scores,
@@ -410,18 +375,15 @@ app.prepare().then(() => {
       }
     });
 
-    // TODO: why use socket.id
     socket.on("disconnect", () => {
-      console.log("User disconnected", socket.data.sessionID);
+      console.log("User disconnected", socket.data.userID);
 
-      sessionStore.saveSession(socket.data.sessionID, {
-        userID: socket.data.userID,
+      userStore.saveUser(socket.data.userID, {
         username: socket.data.username,
         connected: false,
       });
 
-      delete state.socketToSession[socket.id];
-
+      // TODO: review logic & somehow fix this..
       const sessionID = socket.data.sessionID;
       const disconnectedSocketId = socket.id;
 
@@ -555,7 +517,7 @@ app.prepare().then(() => {
       });
 
       if (state.turnTimeRemaining <= 0) {
-        nextTurn("times up");
+        nextTurn("times up"); // TODO: reason should be same format -> timesUp
       }
     }, 1000);
   }
