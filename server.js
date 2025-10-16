@@ -134,7 +134,7 @@ app.prepare().then(() => {
 
       socket.emit("turnChanged", {
         currentPlayer: state.players[state.currentTurnIndex],
-        reason: isReconnection ? "reconnect" : "joined",
+        reason: "joined",
       });
 
       if (state.turnLimit > 0) {
@@ -382,7 +382,7 @@ app.prepare().then(() => {
       }
     });
 
-    socket.on("disconnet", () =>  {
+    socket.on("disconnect", () =>  {
       console.log("User disconnected", socket.data.sessionID);
       sessionStore.saveSession(socket.data.sessionID, {
         userID: socket.data.userID,
