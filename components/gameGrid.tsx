@@ -2,12 +2,15 @@
 import React from "react";
 import { Bomb} from "lucide-react";
 
-
+type CellStatus = {
+  type: 'hit' | 'miss';
+  hintNumber?: number;
+};
 
 type GameGridProps = {
   size: number;
   onPick: (i: number) => void;
-  revealed: Record<number, "hit" | "miss">; 
+  revealed: Record<number, CellStatus>; 
 };
 
 export default function GameGrid({ size, onPick, revealed }: GameGridProps) {
@@ -33,14 +36,24 @@ export default function GameGrid({ size, onPick, revealed }: GameGridProps) {
         const isRevealed = status !== undefined;
 
         const bg =
-          status === "hit" ? "#8499FF" :           
-          status === "miss" ? "#FFFFFF" :        
+          status && status.type === "hit" ? "#8499FF" :           
+          status && status.type === "miss" ? "#FFFFFF" :        
           "#D4D4D4";                              
 
-        const label =
-          status === "hit" ? <Bomb size={cellSize * 0.5} color="white" />:
-          status === "miss" ? " " :
-          "";
+          const label =
+          status?.type === "hit" ? (
+            <Bomb size={cellSize * 0.5} color="white" />
+          ) : status?.type === "miss" && status.hintNumber && status.hintNumber > 0 ? (
+            <span style={{ 
+              fontSize: `${cellSize * 0.4}px`, 
+              fontWeight: 700,
+              color: getHintColor(status.hintNumber)
+            }}>
+              {status.hintNumber}
+            </span>
+          ) : (
+            ""
+          );
           
 
         return (
@@ -69,4 +82,18 @@ export default function GameGrid({ size, onPick, revealed }: GameGridProps) {
       })}
     </div>
   );
+}
+
+function getHintColor(num: number): string {
+  const colors: Record<number, string> = {
+    1: "#8499FF",  
+    2: "#2DDB81", 
+    3: "#F26690", 
+    4: "#E496F5",
+    5: "#FEB943", 
+    6: "#52C2D8",  
+    7: "#9AC71F", 
+    8: "#D88928",  
+  };
+  return colors[num] || "#000000";
 }

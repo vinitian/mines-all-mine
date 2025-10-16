@@ -3,8 +3,13 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import socket from "@/socket"
+import {Cell, Field} from "@/services/game_logic"
 
-type RevealMap = Record<number, 'hit' | 'miss'>;
+type RevealMap = Record<number, {
+    type: 'hit' | 'miss';
+    hintNumber?: number;
+}>;
+
 type Winner = { id: string; score: number };
 
 export function mineGameLogic() {
@@ -104,12 +109,22 @@ export function mineGameLogic() {
         };
 
         const onCell = (p: {
-            index: number; hit: boolean; by: string;
-            bombsFound: number; bombsTotal: number;
+            index: number; 
+            hit: boolean; 
+            hintNumber: number;
+            by: string;
+            bombsFound: number; 
+            bombsTotal: number;
             scores: Record<string, number>;
         }) => {
             setBombsInfo({ total: p.bombsTotal, found: p.bombsFound });
-            setRevealed(prev => ({ ...prev, [p.index]: p.hit ? 'hit' : 'miss' }));
+            setRevealed(prev => ({ 
+                ...prev, 
+                [p.index]: {
+                  type: p.hit ? 'hit' : 'miss',
+                  hintNumber: p.hintNumber  
+                }
+              }));
         };
 
         const onOver = (p: {
