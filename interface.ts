@@ -29,4 +29,5 @@ export interface Room {
   chat_enabled: boolean;
   timer: number;
   placement: Placement[];
+  game_started: boolean;
 }

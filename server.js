@@ -39,8 +39,8 @@ app.prepare().then(() => {
       auth.userID && auth.userID.trim()
         ? auth.userID
         : session && session.userID
-        ? session.userID
-        : randomId();
+          ? session.userID
+          : randomId();
     socket.data.username =
       auth.username && auth.username.trim() ? auth.username : session.username;
     sessionStore.saveSession(socket.data.sessionID, {
@@ -325,6 +325,11 @@ app.prepare().then(() => {
           socket.leave(room);
         }
       });
+    });
+
+    socket.on("resetNotice", () => {
+      console.log("Reset Complete!");
+      io.emit("serverRestarts");
     });
 
     socket.on("pickCell", (index) => {

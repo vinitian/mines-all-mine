@@ -56,6 +56,7 @@ export default function StatisticsButton() {
       setResetMessage("Failed to reset data");
     } finally {
       setResetLoading(false);
+      socket.emit("resetNotice");
 
       // Clear the message after 5 seconds
       setTimeout(() => {
@@ -73,11 +74,18 @@ export default function StatisticsButton() {
       setIsHost(data.isHost);
     };
 
+    const handleServerRestarts = () => {
+      alert("Server restarted!");
+    };
+
     socket.on('onlineCountUpdate', handleOnlineCountUpdate);
     socket.emit('getOnlineCount');
 
+    socket.on('serverRestarts', handleServerRestarts);
+
     return () => {
       socket.off('onlineCountUpdate', handleOnlineCountUpdate);
+      socket.off('serverRestarts', handleServerRestarts);
     };
   }, []);
 
