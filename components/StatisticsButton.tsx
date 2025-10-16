@@ -16,7 +16,7 @@ export default function StatisticsButton() {
 
   const fetchServerInfo = async () => {
     try {
-      const response = await fetch('/api/server-info');
+      const response = await fetch("/api/server-info");
       const data = await response.json();
       setServerInfo(data.serverAddress);
     } catch (error) {
@@ -29,13 +29,17 @@ export default function StatisticsButton() {
       const count = await getTotalRooms();
       setTotalRooms(count);
     } catch (error) {
-      console.error('Failed to fetch total rooms:', error);
+      console.error("Failed to fetch total rooms:", error);
       setTotalRooms(0);
     }
   };
 
   const handleResetEverything = async () => {
-    if (!confirm("Are you sure you want to reset everything? This will delete all rooms and reset all user win counts.")) {
+    if (
+      !confirm(
+        "Are you sure you want to reset everything? This will delete all rooms and reset all user win counts."
+      )
+    ) {
       return;
     }
 
@@ -68,8 +72,11 @@ export default function StatisticsButton() {
   useEffect(() => {
     if (!socket) return;
 
-    const handleOnlineCountUpdate = (data: { count: number; isHost: boolean }) => {
-      console.log('Received onlineCountUpdate:', data);
+    const handleOnlineCountUpdate = (data: {
+      count: number;
+      isHost: boolean;
+    }) => {
+      console.log("Received onlineCountUpdate:", data);
       setOnlineCount(data.count);
       setIsHost(data.isHost);
     };
@@ -78,14 +85,13 @@ export default function StatisticsButton() {
       alert("Server restarted!");
     };
 
-    socket.on('onlineCountUpdate', handleOnlineCountUpdate);
-    socket.emit('getOnlineCount');
+    socket.on("onlineCountUpdate", handleOnlineCountUpdate);
+    socket.emit("getOnlineCount");
 
-    socket.on('serverRestarts', handleServerRestarts);
+    socket.on("serverRestarts", handleServerRestarts);
 
     return () => {
-      socket.off('onlineCountUpdate', handleOnlineCountUpdate);
-      socket.off('serverRestarts', handleServerRestarts);
+      socket.off("onlineCountUpdate", handleOnlineCountUpdate);
     };
   }, []);
 
@@ -95,8 +101,8 @@ export default function StatisticsButton() {
     fetchTotalRooms();
 
     if (socket) {
-      console.log('Requesting fresh online count...');
-      socket.emit('getOnlineCount');
+      console.log("Requesting fresh online count...");
+      socket.emit("getOnlineCount");
     }
   };
 
@@ -136,21 +142,27 @@ export default function StatisticsButton() {
             </div>
 
             <div className="flex justify-between items-center py-2">
-              <span className="text-body font-medium">Server IP address & port</span>
+              <span className="text-body font-medium">
+                Server IP address & port
+              </span>
               <span className="text-body text-gray-600">{serverInfo}</span>
             </div>
 
             {isHost && (
               <div className="flex justify-between items-center py-2">
                 <span className="text-body font-medium">Currently online</span>
-                <span className="text-body text-gray-600">{onlineCount} Players</span>
+                <span className="text-body text-gray-600">
+                  {onlineCount} Players
+                </span>
               </div>
             )}
 
             {isHost && (
               <div className="flex justify-between items-center py-2">
                 <span className="text-body font-medium">Total rooms</span>
-                <span className="text-body text-gray-600">{totalRooms} Rooms</span>
+                <span className="text-body text-gray-600">
+                  {totalRooms} Rooms
+                </span>
               </div>
             )}
 
@@ -159,36 +171,53 @@ export default function StatisticsButton() {
                 <button
                   onClick={handleResetEverything}
                   disabled={resetLoading}
-                  className={`w-full text-body font-medium border-2 rounded-2xl py-3 transition-colors duration-200 flex justify-center items-center gap-2 ${resetLoading
-                    ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                    : "bg-blue text-white text-h3 border-2 border-border rounded-2xl py-2 hover:bg-[#7388ee] transition-colors duration-200 cursor-pointer"
-                    }`}
+                  className={`w-full text-body font-medium border-2 rounded-2xl py-3 transition-colors duration-200 flex justify-center items-center gap-2 ${
+                    resetLoading
+                      ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                      : "bg-blue text-white text-h3 border-2 border-border rounded-2xl py-2 hover:bg-[#7388ee] transition-colors duration-200 cursor-pointer"
+                  }`}
                 >
                   {resetLoading ? (
                     <>
-                      <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      <svg
+                        className="animate-spin h-5 w-5 text-white"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        ></circle>
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                        ></path>
                       </svg>
                       Resetting...
                     </>
                   ) : (
-                    <>
-                      Reset Everything
-                    </>
+                    <>Reset Everything</>
                   )}
                 </button>
 
                 {/* Reset status message */}
                 {resetMessage && (
-                  <div className={`mt-2 p-2 rounded-lg text-center text-body-small ${resetMessage.includes("Error")
-                    ? "bg-red-100 text-red-700 border border-red-200"
-                    : "bg-green-100 text-green-700 border border-green-200"
-                    }`}>
+                  <div
+                    className={`mt-2 p-2 rounded-lg text-center text-body-small ${
+                      resetMessage.includes("Error")
+                        ? "bg-red-100 text-red-700 border border-red-200"
+                        : "bg-green-100 text-green-700 border border-green-200"
+                    }`}
+                  >
                     {resetMessage}
                   </div>
                 )}
-
               </div>
             )}
           </div>
