@@ -3,7 +3,7 @@
 import GameGrid from "@/components/gameGrid";
 import { mineGameLogic } from "../shared/mineGameLogic";
 import "./page.css";
-import socket from "@/socket";
+//import socket from "@/socket";
 import Link from "next/link";
 import WelcomeMessage from "@/components/WelcomeMessage";
 

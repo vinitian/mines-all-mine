@@ -14,7 +14,7 @@ export async function PATCH(request: NextRequest) {
   try {
     const newField = await prisma.room.update({
       where: {
-        host_id: id,
+        id: id,
       },
       data: {
         placement: placement,

@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
   try {
     toLoad = await prisma.room.findUnique({
       where: {
-        host_id: id,
+        id: id,
       },
     });
   } catch (error: any) {

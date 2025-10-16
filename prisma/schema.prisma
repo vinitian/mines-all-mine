@@ -27,16 +27,18 @@ model User {
 }
 
 model Room {
-  id             Int     @id @default(autoincrement())
+  id             Int      @id @default(autoincrement())
   name           String
-  host_id        String     @unique
+  host_id        String   @unique
   player_id_list String[]
-  size           Int     @default(8)
-  player_limit   Int     @default(5)
-  bomb_count     Int     @default(10)
-  chat_enabled   Boolean @default(true)
-  timer          Int     @default(0)   
-  game_started   Boolean @default(false)
+  size           Int      @default(8)
+  player_limit   Int      @default(5)
+  bomb_count     Int      @default(10)
+  chat_enabled   Boolean  @default(true)
+  timer          Int      @default(0)
+  game_started   Boolean  @default(false)
   /// [PlacementType]
   placement      Json[]   @default([])
+  score_list     Int[]    @default([])
+  current_turn   Int      @default(0)
 }

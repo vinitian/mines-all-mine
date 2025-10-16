@@ -32,9 +32,9 @@ export default function RoomSettings() {
   const router = useRouter();
   const [showCountdown, setShowCountdown] = useState(false);
 
-  const handleStartClick = () => {
-    setShowCountdown(true);
-  };
+  // const handleStartClick = () => {
+  //   setShowCountdown(true);
+  // };
 
   useEffect(() => {
     // Check if already connected
@@ -276,7 +276,8 @@ export default function RoomSettings() {
               playerLimit,
               chatEnabled: chatState,
             });
-
+            
+            //remove redundant server state edit?
             socket.emit(
               "settings:update",
               {

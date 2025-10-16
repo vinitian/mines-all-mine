@@ -2,10 +2,21 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import socket from "@/socket"
-import {Cell, Field} from "@/services/game_logic"
+import socket from "@/socket";
+import {Cell, Field} from "@/services/game_logic";
+import "@/services/client/createField";
+import "@/services/client/revealCell";
+import "@/services/client/getField";
 
-type RevealMap = Record<number, 'hit' | 'miss'>;
+type CellDisplayData = {
+  is_open : boolean;
+  index : number;
+  number : number;
+  bomb : boolean;
+}
+
+type RevealMap = Record<number, CellDisplayData>;
+
 type Winner = { id: string; score: number };
 
 export function mineGameLogic() {
@@ -26,6 +37,8 @@ export function mineGameLogic() {
     const [players, setPlayers] = useState<string[]>([]);
     const [timeRemaining, setTimeRemaining] = useState<number>(10);
     const [myId, setMyId] = useState<string | null>(null);
+
+    const [initBombCount, setInitBombCount] = useState();
 
     const pickCell = useCallback((i: number) => {
         if (!started || gameOver || revealed[i]) return;
@@ -68,13 +81,15 @@ export function mineGameLogic() {
     useEffect(() => {
         if (socket.connected) {
         setIsConnected(true);
-        setTransport(socket.io.engine.transport.name);
+        //setTransport(socket.io.engine.transport.name);
+        // is this correct?
         setMyId(socket.id || null);
         }
 
         const onConnect = () => {
         setIsConnected(true);
-        setTransport(socket.io.engine.transport.name);
+        //setTransport(socket.io.engine.transport.name);
+        // this too
         setMyId(socket.id||null);
         socket.io.engine.on('upgrade', (t) => setTransport(t.name));
         socket.emit('requestState'); 
@@ -85,7 +100,8 @@ export function mineGameLogic() {
         setIsConnected(false);
         setTransport('N/A');
         };
-
+        
+        // write initial state
         const onReady = (data: { 
             size: number; 
             bombsTotal: number; 
@@ -105,12 +121,13 @@ export function mineGameLogic() {
         };
 
         const onCell = (p: {
-            index: number; hit: boolean; by: string;
-            bombsFound: number; bombsTotal: number;
-            scores: Record<string, number>;
+            revealMap: RevealMap;
+            bombsFound: number;
+            bombsTotal: number;
+            scores: number[];
         }) => {
             setBombsInfo({ total: p.bombsTotal, found: p.bombsFound });
-            setRevealed(prev => ({ ...prev, [p.index]: p.hit ? 'hit' : 'miss' }));
+            setRevealed(p.revealMap);
         };
 
         const onOver = (p: {
@@ -153,6 +170,7 @@ export function mineGameLogic() {
 
         socket.on('connect', onConnect);
         socket.on('disconnect', onDisconnect);
+        //initial state is fetched
         socket.on('map:ready', onReady);
         socket.on('cellResult', onCell);
         socket.on('gameOver', onOver);
@@ -169,7 +187,7 @@ export function mineGameLogic() {
             socket.off('connect', onConnect);
             socket.off('disconnect', onDisconnect);
             socket.off('map:ready', onReady);
-            socket.off('cellResult', onCell);
+            socket.off('pickCellResult', onCell);
             socket.off('gameOver', onOver);
             socket.off('turnChanged', onTurnChanged);
             socket.off('turnTime', onTurnTime);

@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "Room" ADD COLUMN     "current_turn" INTEGER NOT NULL DEFAULT 0,
+ADD COLUMN     "score_list" INTEGER[] DEFAULT ARRAY[]::INTEGER[];

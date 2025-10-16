@@ -2,12 +2,23 @@
 import React from "react";
 import { Bomb} from "lucide-react";
 
+type CellDisplayData = {
+  is_open : boolean;
+  index : number;
+  number : number;
+  bomb : boolean;
+}
 
+// type GameGridProps = {
+//   size: number;
+//   onPick: (i: number) => void;
+//   revealed: Record<number, "hit" | "miss">; 
+// };
 
 type GameGridProps = {
   size: number;
   onPick: (i: number) => void;
-  revealed: Record<number, "hit" | "miss">; 
+  revealed : Record<number, CellDisplayData>;
 };
 
 export default function GameGrid({ size, onPick, revealed }: GameGridProps) {
@@ -29,17 +40,27 @@ export default function GameGrid({ size, onPick, revealed }: GameGridProps) {
       }}
     >
       {cells.map((i) => {
-        const status = revealed[i];                
-        const isRevealed = status !== undefined;
+        const cellInfo = revealed[i];                
+        const isRevealed = cellInfo.is_open;
+        const isBomb = cellInfo.bomb;
+        const number = cellInfo.number;
 
         const bg =
-          status === "hit" ? "#8499FF" :           
-          status === "miss" ? "#FFFFFF" :        
+          isRevealed&&isBomb ? "#8499FF" :           
+          isRevealed&&(!isBomb) ? "#FFFFFF" :        
           "#D4D4D4";                              
 
         const label =
-          status === "hit" ? <Bomb size={cellSize * 0.5} color="white" />:
-          status === "miss" ? " " :
+          isRevealed&&isBomb ? 
+          <Bomb size={cellSize * 0.5} color="white" />:
+          isRevealed&&(!isBomb)&&(number!=0) ? 
+          <span style={{ 
+              fontSize: `${cellSize * 0.4}px`, 
+              fontWeight: 700,
+              color: getHintColor(number)
+            }}>
+              {number}
+            </span> :
           "";
           
 
@@ -69,4 +90,18 @@ export default function GameGrid({ size, onPick, revealed }: GameGridProps) {
       })}
     </div>
   );
+}
+
+function getHintColor(num: number): string {
+  const colors: Record<number, string> = {
+    1: "#8499FF",  
+    2: "#2DDB81", 
+    3: "#F26690", 
+    4: "#E496F5",
+    5: "#FEB943", 
+    6: "#52C2D8",  
+    7: "#9AC71F", 
+    8: "#D88928",  
+  };
+  return colors[num] || "#000000";
 }

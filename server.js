@@ -3,6 +3,12 @@ import next from "next";
 import { Server } from "socket.io";
 import InMemorySessionStore from "./sessionStore.js";
 import { randomBytes } from "node:crypto";
+import {Cell, Field} from "./services/game_logic.js";
+import getGameState from "@/services/client/getGameState";
+import createField from "@/services/client/createField";
+import getField from "@/services/client/getField";
+// import revealCell from "@/services/client/revealCell";
+import updateGameState from "@/services/client/updateGameState"
 
 const dev = process.env.NODE_ENV !== "production";
 const hostname = "localhost";
@@ -17,6 +23,40 @@ app.prepare().then(() => {
 
   const httpServer = createServer(handler);
   const io = new Server(httpServer);
+
+  // Server data (frequently updated)
+  // time data
+  const timeStates = new {}
+
+  //stores "timer"
+  // "room_id": {
+  //   time_remaining:10,
+  //   max_time:10,
+  // } 
+  function addTimer(room_id,max_time){
+    if(room_id in timeStates){
+      return(timeStates[room_id]);
+    }else{
+      timeStates[room_id]={
+        time_remaining:max_time,
+        max_time:max_time,
+      };
+      return(timeStates[room_id]);
+    }
+  }
+  function getTimer(room_id){
+    return(timeStates[room_id])
+  }
+  function resetTimer(room_id){
+    const timer=timeStates[room_id];
+    timer.time_remaining=timer.max_time;
+    return(timer)
+  }
+  function incrementTimer(room_id, amount){
+    const timer=timeStates[room_id];
+    timer.time_remaining=timer.time_remaining+amount;
+    return(timer)
+  }
 
   io.use((socket, next) => {
     console.log("handshake AUTH", socket.handshake.auth);
@@ -119,7 +159,8 @@ app.prepare().then(() => {
         ? state.players[state.currentTurnIndex]
         : null,
     });
-
+    
+    //Request state
     socket.on("requestState", () => {
       socket.emit("playersUpdated", {
         players: state.players,
@@ -252,6 +293,8 @@ app.prepare().then(() => {
           resetGame();
         }
 
+
+
         if (size) state.size = Number(size);
         if (typeof bombCount === "number") state.bombCount = bombCount;
         if (typeof turnLimit === "number") state.turnLimit = turnLimit;
@@ -297,6 +340,7 @@ app.prepare().then(() => {
         `Game started: ${state.size}x${state.size}, ${state.bombCount} bombs, ${state.turnLimit}s turns`
       );
 
+      //this is ack
       io.emit("map:ready", {
         size: state.size,
         bombsTotal: state.bombCount,
@@ -313,6 +357,9 @@ app.prepare().then(() => {
       startTurnTimer();
     });
 
+    // room management
+    const currentRoom=undefined;
+
     socket.on("joinRoom", (room_id) => {
       socket.rooms.forEach((room) => {
         if (room !== socket.id) {
@@ -320,6 +367,7 @@ app.prepare().then(() => {
         }
       });
       socket.join(room_id);
+      currentRoom=room_id;
     });
 
     socket.on("leaveRoom", () => {
@@ -328,45 +376,78 @@ app.prepare().then(() => {
           socket.leave(room);
         }
       });
+      currentRoom=undefined;
     });
 
+    socket.on("getRoom", () => {
+      socket.emit("currentRoom",currentRoom)
+    })
+
+    function findCurrentPlayer(players, current_turn){
+      const index=current_turn%players.length;
+      return({
+        id:players[index],
+        index: index}
+      );
+    }
+
+    // game
     socket.on("pickCell", (index) => {
-      if (!state.started) return;
-
-      if (!state.started) {
-        socket.emit("error", { message: "Game hasn't started yet" });
+      const state=getGameState({room_id:currentRoom});
+      
+      if (!state.game_started) {
+        socket.to(currentRoom).emit("error", { message: "Game hasn't started yet" });
         return;
       }
 
-      if (state.players[state.currentTurnIndex] !== socket.id) {
-        socket.emit("error", { message: "It's not your turn!" });
+      const {currentPlayer, currentIndex} =findCurrentPlayer(state.player_id_list,state.current_turn);
+
+      if (currentPlayer !== socket.id) {
+        socket.to(currentRoom).emit("error", { message: "It's not your turn!" });
         return;
       }
 
-      if (state.found.has(index)) {
-        socket.emit("error", { message: "Cell already revealed" });
+      if (state.placement.is_open==true) {
+        socket.to(currentRoom).emit("error", { message: "Cell already revealed" });
         return;
       }
 
-      const hit = state.bombs.has(index);
-      state.found.add(index);
+      const field = new Field();
+      field.load(state.placement,state.size,state,bomb_count);
+      const [message, success] = field.open_cell(index);
 
-      if (hit) {
-        state.scores[socket.id] = (state.scores[socket.id] || 0) + 1;
+      if (success==true) {
+        state.score_list[currentIndex] = (state.score_list[currentIndex]|| 0) + 1;
+        console.log("hit : "+message);
+      }else{
+        console.log("miss : "+message);
       }
 
-      const hits = [...state.found].filter((i) => state.bombs.has(i)).length;
+      const { new_placement, new_size, new_bombs }=field.export()
 
-      io.emit("cellResult", {
-        index,
-        hit,
-        by: socket.id,
+      updateGameState(
+        {
+          id: currentRoom,
+          size: new_size,
+          bomb_count: new_bombs,
+          placement:new_placement,
+          score_list:state.score_list,
+          current_turn:undefined,
+        }
+      );
+
+      const hits=field.get_hit_count()
+
+      io.to(currentRoom).emit("pickCellResult", {
+        revealMap: field.export_display_data(),
         bombsFound: hits,
-        bombsTotal: state.bombCount,
-        scores: state.scores,
+        bombsTotal: state.bomb_count,
+        scores: state.score_list,
       });
 
-      if (hits >= state.bombCount) {
+
+      if (hits >= state.bomb_count) {
+        // to here
         if (state.turnTimer) {
           clearInterval(state.turnTimer);
           state.turnTimer = null;
@@ -384,7 +465,7 @@ app.prepare().then(() => {
         return;
       }
 
-      if (!hit) {
+      if (!success) {
         nextTurn("miss");
       } else {
         startTurnTimer();

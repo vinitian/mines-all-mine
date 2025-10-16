@@ -175,6 +175,22 @@ export class Field{
         }
         console.log(output.join("\n"));
     }
+    get_hit_count(){
+        return(this.placement.map((cell)=>{cell.is_open&&cell.bomb}).filter(value => value === true).length);
+    }
+    export_display_data(){
+        return(Object.fromEntries(this.placement.map((cell)=>{
+            [
+                cell.number,
+                {
+                    is_open:cell.is_open,
+                    index:this.coordinate_to_index(cell.posx,cell.posy),
+                    number:cell.number,
+                    bomb:cell.bomb
+                }
+            ]
+        })))
+    }
 }
 
 // // Code for testing

@@ -5,7 +5,7 @@ interface RevealCellRequest {
   index: number;
 }
 
-export default async function editField(apiRequest: RevealCellRequest) {
+export default async function revealCell(apiRequest: RevealCellRequest) {
   const baseUrl =
     typeof window === "undefined"
       ? process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3000"
@@ -22,4 +22,5 @@ export default async function editField(apiRequest: RevealCellRequest) {
   if (!response.ok) {
     return new Error("Cell already revealed");
   }
+  return response.json();
 }
