@@ -71,11 +71,12 @@ export default function Home() {
     }
     setErrorMessage(undefined);
     connectSocket();
-    await createRoom({
-      id: socket.id!,
+    const response = await createRoom({
+      id: socket.auth.userID!,
       username: username,
     });
-    router.push("/room-settings");
+    console.log(response);
+    router.push(`/lobby/${response.data.id}`);
   };
 
   // Hide error when user starts typing
