@@ -74,43 +74,9 @@ app.prepare().then(() => {
       `Connection from: ${socket.handshake.headers.origin}, isLocalhost: ${isLocalhost}`
     );
 
-    // check if reconnect
-    // TODO: why use socket.id
-    const oldSocketId = state.sessionToSocket[socket.data.sessionID];
-    const isReconnection = oldSocketId && oldSocketId !== socket.id;
-
-    if (isReconnection) {
-      console.log(`🔄 Reconnection detected: ${socket.data.sessionID}`);
-      console.log(`   Old socket: ${oldSocketId} → New socket: ${socket.id}`);
-
-      if (state.scores[oldSocketId]) {
-        state.scores[socket.id] = state.scores[oldSocketId];
-        delete state.scores[oldSocketId];
-        console.log(`   Restored score: ${state.scores[socket.id]}`);
-      }
-
-      const playerIndex = state.players.indexOf(oldSocketId);
-      if (playerIndex !== -1) {
-        state.players[playerIndex] = socket.id;
-        console.log(`   Replaced player in list at index ${playerIndex}`);
-
-        if (state.currentTurnIndex === playerIndex && state.started) {
-          console.log(`   Was their turn - restarting turn timer`);
-          startTurnTimer();
-        }
-      }
-
-      delete state.socketToSession[oldSocketId];
-    } else {
-      if (!state.players.includes(socket.id)) {
-        state.players.push(socket.id);
-        console.log(`New player joined: ${socket.id}`);
-      }
+    if (!state.players.includes(socket.id)) {
+      state.players.push(socket.id)
     }
-
-    // update mappings
-    state.sessionToSocket[socket.data.sessionID] = socket.id;
-    state.socketToSession[socket.id] = socket.data.sessionID;
 
     socket.emit("session", {
       sessionID: socket.data.sessionID,
@@ -129,6 +95,12 @@ app.prepare().then(() => {
       console.log(
         `getOnlineCount requested by ${socket.id}, current players: ${state.players.length}`
       );
+
+      const isLocalhost =
+        socket.handshake.headers.origin === "http://localhost:3000" ||
+        socket.handshake.headers.host === "localhost:3000" ||
+        socket.handshake.address === "::1" ||
+        socket.handshake.address === "127.0.0.1";
 
       socket.emit("onlineCountUpdate", {
         count: state.players.length,
@@ -410,72 +382,65 @@ app.prepare().then(() => {
       }
     });
 
-    // TODO: why use socket.id
-    socket.on("disconnect", () => {
+    socket.on("disconnet", () =>  {
       console.log("User disconnected", socket.data.sessionID);
-
       sessionStore.saveSession(socket.data.sessionID, {
         userID: socket.data.userID,
         username: socket.data.username,
         connected: false,
       });
 
-      delete state.socketToSession[socket.id];
+      // remove player
+      const playerIndex = state.players.indexOf(socket.id);
+      if (playerIndex != -1) {
+        state.players.splice(playerIndex,1);
 
-      const sessionID = socket.data.sessionID;
-      const disconnectedSocketId = socket.id;
+        io.emit("onlineCountUpdate", {
+          count: state.players.length,
+          isHost: false,
+        });
 
-      // 30 seconds
-      setTimeout(() => {
-        const currentSocketId = state.sessionToSocket[sessionID];
-
-        if (!currentSocketId || currentSocketId === disconnectedSocketId) {
-          console.log(
-            `Player ${sessionID} didn't reconnect - removing permanently`
-          );
-
-          const playerIndex = state.players.indexOf(disconnectedSocketId);
-
-          if (playerIndex !== -1) {
-            // if player is found in state.players
-            state.players.splice(playerIndex, 1);
-
-            delete state.sessionToSocket[sessionID];
-            delete state.scores[disconnectedSocketId];
-
-            io.emit("onlineCountUpdate", {
-              count: state.players.length,
-              isHost: false,
-            });
-
-            if (
-              state.currentTurnIndex >= state.players.length &&
-              state.players.length > 0
-            ) {
-              state.currentTurnIndex = 0;
-            }
-
-            io.emit("playersUpdated", {
-              players: state.players,
-              currentPlayer:
-                state.started && state.players.length > 0
-                  ? state.players[state.currentTurnIndex]
-                  : null,
-            });
-
-            if (
-              playerIndex === state.currentTurnIndex &&
-              state.started &&
-              state.players.length > 0
-            ) {
-              nextTurn("playerLeft");
-            }
-          }
-        } else {
-          console.log(`✅ Player ${sessionID} reconnected successfully`);
+        if (
+          state.currentTurnIndex >= state.players.length &&
+          state.players.length > 0
+        ) {
+          state.currentTurnIndex = 0;
         }
-      }, 30000);
+        io.emit("playersUpdated", {
+          players: state.players,
+          currentPlayer:
+            state.started && state.players.length > 0
+            ? state.players[state.currentTurnIndex]
+            : null,
+        });
+
+        if (
+          playerIndex === state.currentTurnIndex && state.started && state.players.length > 0
+        ) {
+          nextTurn("playerLeft");
+        }
+      }
     });
+
+    if (state.started) {
+      const hits = [...state.found].filter((i) => state.bombs.has(i)).length;
+      socket.emit("map:ready", {
+        size: state.size,
+        bombsTotal: state.bombCount,
+        bombsFound: hits,
+        turnLimit: state.turnLimit ?? 10,
+      });
+      socket.emit("turnChanged", {
+        currentPlayer: state.players[state.currentTurnIndex],
+        reason: "reconnect",
+      });
+      if (state.turnLimit > 0) {
+        socket.emit("turnTime", {
+          currentPlayer: state.players[state.currentTurnIndex],
+          timeRemaining: state.turnTimeRemaining,
+        });
+      }
+    }
   });
 
   function computeWinners(scores) {
@@ -529,8 +494,6 @@ app.prepare().then(() => {
     currentTurnIndex: 0,
     turnTimer: null,
     turnTimeRemaining: 10,
-    sessionToSocket: {},
-    socketToSession: {},
     field: null,
   };
 
@@ -579,7 +542,7 @@ app.prepare().then(() => {
     }
   }
 
-  httpServer
+  httpServer 
     .once("error", (err) => {
       console.error(err);
       process.exit(1);
