@@ -123,7 +123,7 @@ app.prepare().then(() => {
 
       socket.emit("turnChanged", {
         currentPlayer: state.players[state.currentTurnIndex],
-        reason: isReconnection ? "reconnect" : "joined",
+        reason: "joined",
       });
 
       if (state.turnLimit > 0) {
@@ -383,61 +383,59 @@ app.prepare().then(() => {
         connected: false,
       });
 
-      // TODO: review logic & somehow fix this..
-      const sessionID = socket.data.sessionID;
-      const disconnectedSocketId = socket.id;
+      // remove player
+      const playerIndex = state.players.indexOf(socket.id);
+      if (playerIndex != -1) {
+        state.players.splice(playerIndex, 1);
 
-      // 30 seconds
-      setTimeout(() => {
-        const currentSocketId = state.sessionToSocket[sessionID];
+        io.emit("onlineCountUpdate", {
+          count: state.players.length,
+          isHost: false,
+        });
 
-        if (!currentSocketId || currentSocketId === disconnectedSocketId) {
-          console.log(
-            `Player ${sessionID} didn't reconnect - removing permanently`
-          );
-
-          const playerIndex = state.players.indexOf(disconnectedSocketId);
-
-          if (playerIndex !== -1) {
-            // if player is found in state.players
-            state.players.splice(playerIndex, 1);
-
-            delete state.sessionToSocket[sessionID];
-            delete state.scores[disconnectedSocketId];
-
-            io.emit("onlineCountUpdate", {
-              count: state.players.length,
-              isHost: false,
-            });
-
-            if (
-              state.currentTurnIndex >= state.players.length &&
-              state.players.length > 0
-            ) {
-              state.currentTurnIndex = 0;
-            }
-
-            io.emit("playersUpdated", {
-              players: state.players,
-              currentPlayer:
-                state.started && state.players.length > 0
-                  ? state.players[state.currentTurnIndex]
-                  : null,
-            });
-
-            if (
-              playerIndex === state.currentTurnIndex &&
-              state.started &&
-              state.players.length > 0
-            ) {
-              nextTurn("playerLeft");
-            }
-          }
-        } else {
-          console.log(`✅ Player ${sessionID} reconnected successfully`);
+        if (
+          state.currentTurnIndex >= state.players.length &&
+          state.players.length > 0
+        ) {
+          state.currentTurnIndex = 0;
         }
-      }, 30000);
+        io.emit("playersUpdated", {
+          players: state.players,
+          currentPlayer:
+            state.started && state.players.length > 0
+              ? state.players[state.currentTurnIndex]
+              : null,
+        });
+
+        if (
+          playerIndex === state.currentTurnIndex &&
+          state.started &&
+          state.players.length > 0
+        ) {
+          nextTurn("playerLeft");
+        }
+      }
     });
+
+    if (state.started) {
+      const hits = [...state.found].filter((i) => state.bombs.has(i)).length;
+      socket.emit("map:ready", {
+        size: state.size,
+        bombsTotal: state.bombCount,
+        bombsFound: hits,
+        turnLimit: state.turnLimit ?? 10,
+      });
+      socket.emit("turnChanged", {
+        currentPlayer: state.players[state.currentTurnIndex],
+        reason: "reconnect",
+      });
+      if (state.turnLimit > 0) {
+        socket.emit("turnTime", {
+          currentPlayer: state.players[state.currentTurnIndex],
+          timeRemaining: state.turnTimeRemaining,
+        });
+      }
+    }
   });
 
   function computeWinners(scores) {
@@ -491,8 +489,6 @@ app.prepare().then(() => {
     currentTurnIndex: 0,
     turnTimer: null,
     turnTimeRemaining: 10,
-    sessionToSocket: {},
-    socketToSession: {},
     field: null,
   };
 
