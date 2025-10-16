@@ -87,12 +87,12 @@ export default function RoomSettings() {
   }, [roomname, mapSize, bombCount, turnLimit, playerLimit, chatState]);
 
   const handleEditRoom = async () => {
-    if (!socket.id) {
+    if (!socket.auth.userID!) {
       return;
     }
     const bombs = densityToCount(bombCount, mapSize);
     const response = await editRoom({
-      user_id: socket.id,
+      user_id: socket.auth.userID!,
       name: roomname,
       size: mapSize,
       bomb_count: bombs,
@@ -132,10 +132,12 @@ export default function RoomSettings() {
 
   useEffect(() => {
     const checkIfHost = async () => {
-      if (!socket.id) return;
+      if (!socket.auth.userID!) return;
 
       try {
-        const response = await fetch(`/api/room?host_id=${socket.id}`);
+        const response = await fetch(
+          `/api/room?host_id=${socket.auth.userID!}`
+        );
         const result = await response.json();
 
         if (result.success && result.data) {
@@ -151,7 +153,7 @@ export default function RoomSettings() {
     };
 
     checkIfHost();
-  }, [socket.id]);
+  }, [socket.auth.userID!]);
 
   const handleStartGame = async () => {
     if (!mapSize) return;
