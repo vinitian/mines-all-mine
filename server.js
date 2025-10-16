@@ -313,15 +313,30 @@ app.prepare().then(() => {
       socket.rooms.forEach((room) => {
         if (room !== socket.id) {
           socket.leave(room);
+          // triggers when user join other room
+          io.to(room).emit("playerLeft", {
+            userID: socket.data.userID,
+            username: socket.data.username,
+          });
         }
       });
+
       socket.join(room_id);
+      io.to(room_id).emit("playerJoined", {
+        userID: socket.data.userID,
+        username: socket.data.username,
+      });
     });
 
     socket.on("leaveRoom", () => {
       socket.rooms.forEach((room) => {
         if (room !== socket.id) {
           socket.leave(room);
+
+          io.to(room).emit("playerLeft", {
+            userID: socket.data.userID,
+            username: socket.data.username,
+          });
         }
       });
     });

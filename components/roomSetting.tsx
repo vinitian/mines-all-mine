@@ -82,9 +82,9 @@ export default function RoomSettings() {
     };
   }, [router]);
 
-  useEffect(() => {
-    handleEditRoom();
-  }, [roomname, mapSize, bombCount, turnLimit, playerLimit, chatState]);
+  // useEffect(() => {
+  //   handleEditRoom();
+  // }, [roomname, mapSize, bombCount, turnLimit, playerLimit, chatState]);
 
   const handleEditRoom = async () => {
     if (!socket.id) {
@@ -175,7 +175,7 @@ export default function RoomSettings() {
             onChange={(e) => setRoomname(e.target.value)}
           />
         ) : (
-          <div className="text-xl -mt-2.5">{roomname || "Unnamed"}</div>
+          <div className="text-xl">{roomname || "Unnamed"}</div>
         )}
       </div>
 

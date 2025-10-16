@@ -37,7 +37,6 @@ export default function Room() {
 
   const handleJoinRoom = (roomId: number) => {
     console.log(`Joining room ${roomId}`);
-    socket.emit("joinRoom", roomId);
     router.push(`/lobby/${roomId}`);
   };
 

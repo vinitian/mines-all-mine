@@ -4,6 +4,11 @@ export interface Message {
   timestamp: string;
 }
 
+export interface Player {
+  userID: string;
+  username: string;
+}
+
 export interface User {
   id: number;
   email: string;

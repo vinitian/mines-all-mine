@@ -9,12 +9,64 @@ import Chat from "@/components/Chat";
 import RoomName from "@/components/RoomName";
 import LoadingModal from "@/components/LoadingModal";
 import socket from "@/socket";
+import updatePlayerList from "@/services/client/updatePlayerList";
+import PlayerList from "@/components/PlayerList";
+import { Player } from "@/interface";
 
 export default function LobbyPage() {
   const [room, setRoom] = useState<Room | null>(null);
   const [loading, setLoading] = useState(true);
   const params = useParams();
   const roomId = params.id as string;
+  const [players, setPlayers] = useState<Player[]>([]);
+
+  // add players into array when they join
+  useEffect(() => {
+    socket.on("playerJoined", ({ userID, username }) => {
+      setPlayers((prev: Player[]) => {
+        const playerExists = prev.some((player) => player.userID === userID);
+
+        if (playerExists) {
+          return prev;
+        }
+
+        return [
+          ...prev,
+          {
+            userID: userID,
+            username: username,
+          },
+        ];
+      });
+      console.log(username);
+    });
+
+    socket.on("playerLeft", ({ userID, username }) => {
+      setPlayers((prev) => prev.filter((id) => id.userID !== userID));
+    });
+
+    return () => {
+      socket.off("playerJoined");
+      socket.off("playerLeft");
+    };
+  }, []);
+
+  // update player list in database
+  useEffect(() => {
+    socket.emit("joinRoom", roomId);
+    const updatePlayer = async () => {
+      try {
+        const roomData = await updatePlayerList({
+          userId: socket.auth.userID,
+          roomId: parseInt(roomId),
+          addPlayer: true,
+        });
+      } catch (error) {
+        console.error("Error updating room:", error);
+      }
+    };
+    updatePlayer();
+  }, []);
 
   useEffect(() => {
     const fetchRoom = async () => {
@@ -53,16 +105,8 @@ export default function LobbyPage() {
         />
         <div className="flex flex-col md:flex-row gap-[20px] h-10/12 md:h-9/12">
           <div className="flex flex-col gap-[20px] md:h-full md:w-1/2 md:max-w-[315px]">
-            <div className="bg-gray">
-              <p>
-                Player {room.player_id_list.length}/{room.player_limit} sadfasf
-              </p>
-              <ul>
-                {room.player_id_list.map((playerId: string) => {
-                  return <li key={playerId}>- {playerId}</li>;
-                  // todo: convert id to username
-                })}
-              </ul>
+            <div>
+              <PlayerList playerLimit={room.player_limit} players={players} />
             </div>
 
             <div className="hidden md:block w-full h-full">
