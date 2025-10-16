@@ -73,7 +73,7 @@ app.prepare().then(() => {
       `Connection from: ${socket.handshake.headers.origin}, isLocalhost: ${isLocalhost}`
     );
   
-    // ✅ CHECK IF THIS IS A RECONNECTION
+    // check if reconnect
     const oldSocketId = state.sessionToSocket[socket.data.sessionID];
     const isReconnection = oldSocketId && oldSocketId !== socket.id;
   
