@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import socket from "@/socket";
 import StatisticsButton from "@/components/StatisticsButton";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { getRooms, checkRoomExists } from "@/services/client/roomService";
 import { Room as RoomType } from "@/interface";
 
@@ -13,7 +13,6 @@ export default function Room() {
   const [roomCode, setRoomCode] = useState("");
   const [error, setError] = useState("");
   const [checkingRoom, setCheckingRoom] = useState(false);
-  const searchParams = useSearchParams();
   const router = useRouter();
 
   useEffect(() => {
@@ -38,6 +37,7 @@ export default function Room() {
 
   const handleJoinRoom = (roomId: number) => {
     console.log(`Joining room ${roomId}`);
+    socket.emit("joinRoom", roomId);
     router.push(`/lobby/${roomId}`);
   };
 
@@ -60,6 +60,7 @@ export default function Room() {
       const roomExists = await checkRoomExists(roomId);
 
       if (roomExists) {
+        socket.emit("joinRoom", roomId);
         router.push(`/lobby/${roomId}`);
       } else {
         setError(`Room with ID: ${roomId} not found!`);
@@ -123,6 +124,9 @@ export default function Room() {
               type="text"
               placeholder="Enter 3-digit code"
               className="w-full border-2 bg-white border-border rounded-2xl px-4 py-3 placeholder-gray-400 text-h4 focus:outline-none focus:border-[#3728BE]"
+              onChange={(e) => {
+                setRoomCode(e.target.value);
+              }}
             />
 
             <button
@@ -169,7 +173,15 @@ export default function Room() {
                   <div className="text-h4 flex flex-col -space-y-1">
                     <div>
                       <span className="font-regular">Status:</span>{" "}
-                      <span className="font-bold text-red">REDACTED</span>
+                      {room.game_started ? (
+                        <span className="text-red font-bold">
+                          Game ongoing
+                        </span>
+                      ) : (
+                        <span className="text-green font-bold">
+                          In lobby
+                        </span>
+                      )}
                     </div>
                     <div>
                       <span className="font-regular">Map Size:</span>{" "}

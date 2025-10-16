@@ -31,6 +31,9 @@ export default function RoomSettings() {
   const [chatState, setChatState] = useState<boolean>(true);
   const router = useRouter();
   const [showCountdown, setShowCountdown] = useState(false);
+  const [isHost, setIsHost] = useState(false);
+  const [roomData, setRoomData] = useState<any>(null); //???
+  const bombs = densityToCount(bombCount, mapSize);
 
   // const handleStartClick = () => {
   //   setShowCountdown(true);
@@ -97,8 +100,58 @@ export default function RoomSettings() {
       player_limit: playerLimit,
       chat_enabled: chatState,
     });
+
+    socket.emit("room:settings-updated", {
+      name: roomname,
+      size: mapSize,
+      bomb_density: bombCount,
+      bomb_count: bombs,
+      turn_limit: turnLimit,
+      player_limit: playerLimit,
+      chat_enabled: chatState,
+    });
   };
   //TODO: generate placement
+
+  useEffect(() => {
+    const onSettingsUpdated = (newSettings: any) => {
+      setRoomname(newSettings.name);
+      setMapSize(newSettings.size);
+      setTurnLimit(newSettings.turn_limit);
+      setPlayerLimit(newSettings.player_limit);
+      setBombCount(newSettings.bomb_density);
+      setChatState(newSettings.chat_enabled);
+    };
+
+    socket.on("room:settings-updated", onSettingsUpdated);
+
+    return () => {
+      socket.off("room:settings-updated", onSettingsUpdated);
+    };
+  }, []);
+
+  useEffect(() => {
+    const checkIfHost = async () => {
+      if (!socket.id) return;
+
+      try {
+        const response = await fetch(`/api/room?host_id=${socket.id}`);
+        const result = await response.json();
+
+        if (result.success && result.data) {
+          setRoomData(result.data);
+          setIsHost(true);
+        } else {
+          setIsHost(false);
+        }
+      } catch (error) {
+        console.error("Failed to check host status:", error);
+        setIsHost(false);
+      }
+    };
+
+    checkIfHost();
+  }, [socket.id]);
 
   const handleStartGame = async () => {
     if (!mapSize) return;
@@ -116,153 +169,205 @@ export default function RoomSettings() {
     >
       <div className="flex flex-col">
         <div className="text-h3">Room name</div>
-        <Input value={roomname} onChange={(e) => setRoomname(e.target.value)} />
+        {isHost ? (
+          <Input
+            value={roomname}
+            onChange={(e) => setRoomname(e.target.value)}
+          />
+        ) : (
+          <div className="text-xl -mt-2.5">{roomname || "Unnamed"}</div>
+        )}
       </div>
 
       <div className="flex flex-col">
         <div className="text-h3">Map size</div>
-        <div className="flex flex-wrap gap-[6px]">
-          <Button
-            onClick={() => setMapSize(6)}
-            textColor={mapSize === 6 ? "" : "text-black"}
-            className={`w-min ${mapSize === 6 ? "" : "bg-white"}`}
-          >
-            6×6
-          </Button>
-          <Button
-            onClick={() => setMapSize(8)}
-            textColor={mapSize === 8 ? "" : "text-black"}
-            className={`w-min ${mapSize === 8 ? "" : "bg-white"}`}
-          >
-            8×8
-          </Button>
-          <Button
-            onClick={() => setMapSize(10)}
-            textColor={mapSize === 10 ? "" : "text-black"}
-            className={`w-min ${mapSize === 10 ? "" : "bg-white"}`}
-          >
-            10×10
-          </Button>
-          <Button
-            onClick={() => setMapSize(20)}
-            textColor={mapSize === 20 ? "" : "text-black"}
-            className={`w-min ${mapSize === 20 ? "" : "bg-white"}`}
-          >
-            20×20
-          </Button>
-          <Button
-            onClick={() => setMapSize(30)}
-            textColor={mapSize === 30 ? "" : "text-black"}
-            className={`w-min ${mapSize === 30 ? "" : "bg-white"}`}
-          >
-            30×30
-          </Button>
-        </div>
+        {isHost ? (
+          <div className="flex flex-wrap gap-[6px]">
+            <Button
+              onClick={() => setMapSize(6)}
+              textColor={mapSize === 6 ? "" : "text-black"}
+              className={`w-min ${mapSize === 6 ? "" : "bg-white"}`}
+            >
+              6×6
+            </Button>
+            <Button
+              onClick={() => setMapSize(8)}
+              textColor={mapSize === 8 ? "" : "text-black"}
+              className={`w-min ${mapSize === 8 ? "" : "bg-white"}`}
+            >
+              8×8
+            </Button>
+            <Button
+              onClick={() => setMapSize(10)}
+              textColor={mapSize === 10 ? "" : "text-black"}
+              className={`w-min ${mapSize === 10 ? "" : "bg-white"}`}
+            >
+              10×10
+            </Button>
+            <Button
+              onClick={() => setMapSize(20)}
+              textColor={mapSize === 20 ? "" : "text-black"}
+              className={`w-min ${mapSize === 20 ? "" : "bg-white"}`}
+            >
+              20×20
+            </Button>
+            <Button
+              onClick={() => setMapSize(30)}
+              textColor={mapSize === 30 ? "" : "text-black"}
+              className={`w-min ${mapSize === 30 ? "" : "bg-white"}`}
+            >
+              30×30
+            </Button>
+          </div>
+        ) : (
+          <div className="text-xl -mt-2.5">
+            {mapSize}×{mapSize}
+          </div>
+        )}
       </div>
 
       <div className="flex flex-col">
         <div className="text-h3">Player limit</div>
-        <div
-          className="w-full border-2 border-border rounded-2xl px-4 py-2 placeholder-gray-400 text-h4 focus:outline-none focus:border-[#3728BE]
+        {isHost ? (
+          <div
+            className="w-full border-2 border-border rounded-2xl px-4 py-2 placeholder-gray-400 text-h4 focus:outline-none focus:border-[#3728BE]
         max-w-[250px]"
-        >
-          <select
-            value={playerLimit}
-            onChange={(e) =>
-              setPlayerLimit(Number(e.target.value) as PlayerLimit)
-            }
-            aria-label="Set the maximum number of players for the game."
-            className="w-full"
           >
-            <option value={2}>2</option>
-            <option value={3}>3</option>
-            <option value={4}>4</option>
-            <option value={5}>5</option>
-            <option value={6}>6</option>
-            <option value={7}>7</option>
-            <option value={8}>8</option>
-            <option value={9}>9</option>
-            <option value={10}>10</option>
-          </select>
-        </div>
+            <select
+              value={playerLimit}
+              onChange={(e) =>
+                setPlayerLimit(Number(e.target.value) as PlayerLimit)
+              }
+              aria-label="Set the maximum number of players for the game."
+              className="w-full"
+            >
+              <option value={2}>2</option>
+              <option value={3}>3</option>
+              <option value={4}>4</option>
+              <option value={5}>5</option>
+              <option value={6}>6</option>
+              <option value={7}>7</option>
+              <option value={8}>8</option>
+              <option value={9}>9</option>
+              <option value={10}>10</option>
+            </select>
+          </div>
+        ) : (
+          <div className="text-xl -mt-2.5">{playerLimit}</div>
+        )}
       </div>
 
       <div className="flex flex-col">
         <div className="text-h3">Number of mines</div>
-        <div
-          className="w-full border-2 border-border rounded-2xl px-4 py-2 placeholder-gray-400 text-h4 focus:outline-none focus:border-[#3728BE]
+        {isHost ? (
+          <div
+            className="w-full border-2 border-border rounded-2xl px-4 py-2 placeholder-gray-400 text-h4 focus:outline-none focus:border-[#3728BE]
         max-w-[250px]"
-        >
-          <select
-            id="num-bombs"
-            value={bombCount}
-            onChange={(e) => setBombCount(e.target.value as bombDensity)}
-            aria-label="Set the amount of bomb density you want for the game."
-            className="w-full"
           >
-            <option value="low">low</option>
-            <option value="medium">medium</option>
-            <option value="high">high</option>
-          </select>
-        </div>
+            <select
+              id="num-bombs"
+              value={bombCount}
+              onChange={(e) => setBombCount(e.target.value as bombDensity)}
+              aria-label="Set the amount of bomb density you want for the game."
+              className="w-full"
+            >
+              <option value="low">low</option>
+              <option value="medium">medium</option>
+              <option value="high">high</option>
+            </select>
+          </div>
+        ) : (
+          <div className="text-xl -mt-2.5">{bombs}</div>
+        )}
       </div>
 
       <div className="flex flex-col">
         <div className="text-h3">Chat</div>
-        <div
-          className="w-full border-2 border-border rounded-2xl px-4 py-2 placeholder-gray-400 text-h4 focus:outline-none focus:border-[#3728BE]
+        {isHost ? (
+          <div
+            className="w-full border-2 border-border rounded-2xl px-4 py-2 placeholder-gray-400 text-h4 focus:outline-none focus:border-[#3728BE]
         max-w-[250px]"
-        >
-          <select
-            id="chat"
-            value={chatState ? "enable" : "disable"}
-            onChange={(e) => setChatState(e.target.value === "enable")}
-            aria-label="Set to enable/disable chat"
-            className="w-full"
           >
-            <option value="enable">Enable</option>
-            <option value="disable">Disable</option>
-          </select>
-        </div>
+            <select
+              id="chat"
+              value={chatState ? "enable" : "disable"}
+              onChange={(e) => setChatState(e.target.value === "enable")}
+              aria-label="Set to enable/disable chat"
+              className="w-full"
+            >
+              <option value="enable">Enable</option>
+              <option value="disable">Disable</option>
+            </select>
+          </div>
+        ) : (
+          <div className="text-xl -mt-2.5">
+            {chatState === true ? "Enabled" : "Disabled"}
+          </div>
+        )}
       </div>
 
       <div className="flex flex-col mb-[10px] ">
         <div className="text-h3">Timer</div>
-        <div
-          className="w-full border-2 border-border rounded-2xl px-4 py-2 placeholder-gray-400 text-h4 focus:outline-none focus:border-[#3728BE]
+        {isHost ? (
+          <div
+            className="w-full border-2 border-border rounded-2xl px-4 py-2 placeholder-gray-400 text-h4 focus:outline-none focus:border-[#3728BE]
         max-w-[250px]"
-        >
-          <select
-            value={turnLimit}
-            onChange={(e) =>
-              setTurnLimit(Number(e.target.value) as 0 | 10 | 20 | 30)
-            }
-            aria-label="Timer"
-            className="w-full"
           >
-            <option value={0}>Unlimited</option>
-            <option value={10}>10 seconds</option>
-            <option value={20}>20 seconds</option>
-            <option value={30}>30 seconds</option>
-          </select>
-        </div>
+            <select
+              value={turnLimit}
+              onChange={(e) =>
+                setTurnLimit(Number(e.target.value) as 0 | 10 | 20 | 30)
+              }
+              aria-label="Timer"
+              className="w-full"
+            >
+              <option value={0}>Unlimited</option>
+              <option value={10}>10 seconds</option>
+              <option value={20}>20 seconds</option>
+              <option value={30}>30 seconds</option>
+            </select>
+          </div>
+        ) : (
+          <div className="text-xl -mt-2.5">
+            {turnLimit === 0 ? "Unlimited" : `${turnLimit} seconds`}
+          </div>
+        )}
       </div>
 
-      <div className="flex gap-5">
-        <Button
-          onClick={() => {
-            if (!socket.connected) {
-              console.error("Socket not connected!");
-              return;
-            }
-            router.push("/");
-          }}
-          className="bg-red"
-        >
-          Leave Room
-        </Button>
+      <div
+        className={`flex gap-5 ${!isHost ? "justify-end" : "justify-between"}`}
+      >
+        {isHost ? (
+          <>
+            <Button
+              onClick={() => {
+                if (!socket.connected) {
+                  console.error("Socket not connected!");
+                  return;
+                }
+                router.push("/");
+              }}
+              className="bg-red"
+            >
+              Leave Room
+            </Button>
 
-        <Button onClick={handleStartGame}>Start Game</Button>
+            <Button onClick={handleStartGame}>Start Game</Button>
+          </>
+        ) : (
+          <Button
+            onClick={() => {
+              if (!socket.connected) {
+                console.error("Socket not connected!");
+                return;
+              }
+              router.push("/");
+            }}
+            className="bg-red"
+          >
+            Leave Room
+          </Button>
+        )}
 
         <CountdownModal
           open={showCountdown}

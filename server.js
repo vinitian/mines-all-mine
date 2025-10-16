@@ -1,7 +1,7 @@
 import { createServer } from "node:http";
 import next from "next";
 import { Server } from "socket.io";
-import InMemorySessionStore from "./sessionStore.js";
+import InMemoryUserStore from "./userStore.js";
 import { randomBytes } from "node:crypto";
 import {Cell, Field} from "./services/game_logic.js";
 import getGameState from "@/services/client/getGameState";
@@ -19,7 +19,7 @@ const handler = app.getRequestHandler();
 
 app.prepare().then(() => {
   const randomId = () => randomBytes(8).toString("hex");
-  const sessionStore = new InMemorySessionStore();
+  const userStore = new InMemoryUserStore(); // it's a Map of (userID) => {username: string, connected: boolean}
 
   const httpServer = createServer(handler);
   const io = new Server(httpServer);
@@ -60,30 +60,27 @@ app.prepare().then(() => {
 
   io.use((socket, next) => {
     console.log("handshake AUTH", socket.handshake.auth);
-    const sessionID = socket.handshake.auth.sessionID;
-    let session;
+    const userID = socket.handshake.auth.userID;
+    let user;
 
-    if (sessionID && sessionID.trim()) {
-      session = sessionStore.findSession(sessionID); // find existing session
-      if (session && session.connected) {
-        socket.emit("duplicateConnectedSession");
+    if (userID && userID.trim()) {
+      user = userStore.findUser(userID);
+      if (user && user.connected) {
+        socket.emit("duplicateConnectedUser");
       }
     }
 
     const auth = socket.handshake.auth;
-    // prioritise the data that the client sends first, then session from `sessionStore`, else randomise new ID.
-    socket.data.sessionID =
-      sessionID && sessionID.trim() ? sessionID : randomId();
+    // prioritise the data that the client sends first, then session from `userStore`, else randomise new ID.
     socket.data.userID =
       auth.userID && auth.userID.trim()
         ? auth.userID
-        : session && session.userID
-        ? session.userID
+        : user && user.userID
+        ? user.userID
         : randomId();
     socket.data.username =
-      auth.username && auth.username.trim() ? auth.username : session.username;
-    sessionStore.saveSession(socket.data.sessionID, {
-      userID: socket.data.userID,
+      auth.username && auth.username.trim() ? auth.username : user.username;
+    userStore.saveUser(socket.data.userID, {
       username: socket.data.username,
       connected: false,
     });
@@ -94,12 +91,9 @@ app.prepare().then(() => {
   });
 
   io.on("connection", (socket) => {
-    console.log("User connected", socket.id);
+    console.log("User connected", socket.data.userID);
 
-    console.log("User connected", socket.data.sessionID);
-
-    sessionStore.saveSession(socket.data.sessionID, {
-      userID: socket.data.userID,
+    userStore.saveUser(socket.data.userID, {
       username: socket.data.username,
       connected: true,
     });
@@ -110,44 +104,39 @@ app.prepare().then(() => {
       socket.handshake.address === "::1" ||
       socket.handshake.address === "127.0.0.1";
 
-
     console.log(
       `Connection from: ${socket.handshake.headers.origin}, isLocalhost: ${isLocalhost}`
     );
 
-    if (!state.players.includes(socket.id)) {
-      state.players.push(socket.id);
+    if (!state.players.includes(socket.data.userID)) {
+      state.players.push(socket.data.userID);
+      console.log(`New player joined: ${socket.data.userID}`);
     }
 
     socket.emit("session", {
-      sessionID: socket.data.sessionID,
       userID: socket.data.userID,
       username: socket.data.username,
     });
 
-    if (!state.players.includes(socket.data.sessionID)) {
-      state.players.push(socket.data.sessionID);
+    if (!state.players.includes(socket.data.userID)) {
+      state.players.push(socket.data.userID);
       console.log(
-        `Player ${socket.data.sessionID} joined. Total players: ${state.players.length}`
+        `Player ${socket.data.userID} joined. Total players: ${state.players.length}`
       );
     }
 
+    socket.on("getOnlineCount", () => {
+      console.log(
+        `getOnlineCount requested by ${socket.data.userID}, current players: ${state.players.length}`
+      );
 
-    socket.on('getOnlineCount', () => {
-      console.log(`getOnlineCount requested by ${socket.id}, current players: ${state.players.length}`);
-
-      const isLocalhost =
-        socket.handshake.headers.origin === "http://localhost:3000" ||
-        socket.handshake.headers.host === "localhost:3000" ||
-        socket.handshake.address === "::1" ||
-        socket.handshake.address === "127.0.0.1";
-
-      socket.emit('onlineCountUpdate', {
+      socket.emit("onlineCountUpdate", {
         count: state.players.length,
         isHost: isLocalhost,
       });
     });
 
+    // Broadcast to all clients
     io.emit("onlineCountUpdate", {
       count: state.players.length,
       isHost: isLocalhost,
@@ -161,6 +150,31 @@ app.prepare().then(() => {
     });
     
     //Request state
+
+    // If game is in progress, send current state to the connecting player
+    if (state.started) {
+      const hits = [...state.found].filter((i) => state.bombs.has(i)).length;
+      socket.emit("map:ready", {
+        size: state.size,
+        bombsTotal: state.bombCount,
+        bombsFound: hits,
+        turnLimit: state.turnLimit ?? 10,
+        currentPlayer: state.players[state.currentTurnIndex] || null,
+      });
+
+      socket.emit("turnChanged", {
+        currentPlayer: state.players[state.currentTurnIndex],
+        reason: "joined",
+      });
+
+      if (state.turnLimit > 0) {
+        socket.emit("turnTime", {
+          currentPlayer: state.players[state.currentTurnIndex],
+          timeRemaining: state.turnTimeRemaining,
+        });
+      }
+    }
+
     socket.on("requestState", () => {
       socket.emit("playersUpdated", {
         players: state.players,
@@ -212,77 +226,14 @@ app.prepare().then(() => {
       }
     }
 
-    socket.on("message", (msg, id) => {
-      socket.to(id).emit("message", msg);
-    });
     socket.on("message", (msg) => {
-      socket.rooms.forEach(room => {
+      socket.rooms.forEach((room) => {
+        // TODO: why check room and socket.id??????
         if (room !== socket.id) {
           socket.to(room).emit("message", msg);
         }
       });
     });
-
-    socket.on("disconnect", () => {
-      console.log("User disconnected", socket.data.sessionID);
-      sessionStore.saveSession(socket.data.sessionID, {
-        userID: socket.data.userID,
-        username: socket.data.username,
-        connected: false,
-      });
-
-      // remove player
-      const playerIndex = state.players.indexOf(socket.id);
-      if (playerIndex !== -1) {
-        state.players.splice(playerIndex, 1);
-
-        io.emit("onlineCountUpdate", {
-          count: state.players.length,
-          isHost: false,
-        });
-
-        if (
-          state.currentTurnIndex >= state.players.length &&
-          state.players.length > 0
-        ) {
-          state.currentTurnIndex = 0;
-        }
-        io.emit("playersUpdated", {
-          players: state.players,
-          currentPlayer:
-            state.started && state.players.length > 0
-              ? state.players[state.currentTurnIndex]
-              : null,
-        });
-        if (
-          playerIndex === state.currentTurnIndex &&
-          state.started &&
-          state.players.length > 0
-        ) {
-          nextTurn("playerLeft");
-        }
-      }
-    });
-
-    if (state.started) {
-      const hits = [...state.found].filter((i) => state.bombs.has(i)).length;
-      socket.emit("map:ready", {
-        size: state.size,
-        bombsTotal: state.bombCount,
-        bombsFound: hits,
-        turnLimit: state.turnLimit ?? 10,
-      });
-      socket.emit("turnChanged", {
-        currentPlayer: state.players[state.currentTurnIndex],
-        reason: "reconnect",
-      });
-      if (state.turnLimit > 0) {
-        socket.emit("turnTime", {
-          currentPlayer: state.players[state.currentTurnIndex],
-          timeRemaining: state.turnTimeRemaining,
-        });
-      }
-    }
 
     socket.on("settings:update", (payload, cb) => {
       try {
@@ -322,7 +273,6 @@ app.prepare().then(() => {
       if (typeof bombCount === "number") state.bombCount = bombCount;
       if (typeof turnLimit === "number") state.turnLimit = turnLimit;
 
-      // ensure defaults
       if (typeof state.size !== "number") state.size = 6;
       if (!Number.isFinite(state.bombCount)) {
         state.bombCount =
@@ -330,7 +280,16 @@ app.prepare().then(() => {
       }
       if (typeof state.turnLimit !== "number") state.turnLimit = 10;
 
-      state.bombs = randomize(state.size, state.bombCount);
+      state.field = new Field();
+      state.field.generate_field([state.size, state.size], state.bombCount);
+
+      state.bombs = new Set();
+      for (let i = 0; i < state.field.field.length; i++) {
+        if (state.field.field[i].bomb) {
+          state.bombs.add(i);
+        }
+      }
+
       state.found = new Set();
       state.scores = {};
       state.started = true;
@@ -362,6 +321,7 @@ app.prepare().then(() => {
 
     socket.on("joinRoom", (room_id) => {
       socket.rooms.forEach((room) => {
+        // TODO
         if (room !== socket.id) {
           socket.leave(room);
         }
@@ -372,6 +332,7 @@ app.prepare().then(() => {
 
     socket.on("leaveRoom", () => {
       socket.rooms.forEach((room) => {
+        // TODO
         if (room !== socket.id) {
           socket.leave(room);
         }
@@ -390,6 +351,11 @@ app.prepare().then(() => {
         index: index}
       );
     }
+
+    socket.on("resetNotice", () => {
+      console.log("Reset Complete!");
+      io.emit("serverRestarts");
+    });
 
     // game
     socket.on("pickCell", (index) => {
@@ -471,6 +437,68 @@ app.prepare().then(() => {
         startTurnTimer();
       }
     });
+
+    socket.on("disconnect", () => {
+      console.log("User disconnected", socket.data.userID);
+
+      userStore.saveUser(socket.data.userID, {
+        username: socket.data.username,
+        connected: false,
+      });
+
+      // remove player
+      const playerIndex = state.players.indexOf(socket.id);
+      if (playerIndex != -1) {
+        state.players.splice(playerIndex, 1);
+
+        io.emit("onlineCountUpdate", {
+          count: state.players.length,
+          isHost: false,
+        });
+
+        if (
+          state.currentTurnIndex >= state.players.length &&
+          state.players.length > 0
+        ) {
+          state.currentTurnIndex = 0;
+        }
+        io.emit("playersUpdated", {
+          players: state.players,
+          currentPlayer:
+            state.started && state.players.length > 0
+              ? state.players[state.currentTurnIndex]
+              : null,
+        });
+
+        if (
+          playerIndex === state.currentTurnIndex &&
+          state.started &&
+          state.players.length > 0
+        ) {
+          nextTurn("playerLeft");
+        }
+      }
+    });
+
+    if (state.started) {
+      const hits = [...state.found].filter((i) => state.bombs.has(i)).length;
+      socket.emit("map:ready", {
+        size: state.size,
+        bombsTotal: state.bombCount,
+        bombsFound: hits,
+        turnLimit: state.turnLimit ?? 10,
+      });
+      socket.emit("turnChanged", {
+        currentPlayer: state.players[state.currentTurnIndex],
+        reason: "reconnect",
+      });
+      if (state.turnLimit > 0) {
+        socket.emit("turnTime", {
+          currentPlayer: state.players[state.currentTurnIndex],
+          timeRemaining: state.turnTimeRemaining,
+        });
+      }
+    }
   });
 
   function computeWinners(scores) {
@@ -503,6 +531,8 @@ app.prepare().then(() => {
     state.started = false;
     state.currentTurnIndex = 0;
     state.turnTimeRemaining = state.turnLimit || 10;
+    state.field = null;
+
     if (state.turnTimer) {
       clearInterval(state.turnTimer);
       state.turnTimer = null;
@@ -522,6 +552,7 @@ app.prepare().then(() => {
     currentTurnIndex: 0,
     turnTimer: null,
     turnTimeRemaining: 10,
+    field: null,
   };
 
   function startTurnTimer() {
@@ -545,7 +576,7 @@ app.prepare().then(() => {
       });
 
       if (state.turnTimeRemaining <= 0) {
-        nextTurn("times up");
+        nextTurn("times up"); // TODO: reason should be same format -> timesUp
       }
     }, 1000);
   }

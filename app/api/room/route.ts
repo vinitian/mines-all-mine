@@ -1,12 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/prisma/prisma";
 
-// get all rooms
-export async function GET() {
-  try {
-    const rooms = await prisma.room.findMany();
+// get all rooms/ get host_id?
+export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  const host_id = searchParams.get("host_id");
 
-    return NextResponse.json({ success: true, data: rooms });
+  try {
+    if (host_id) {
+      const room = await prisma.room.findFirst({
+        where: { host_id },
+      });
+      return NextResponse.json({ success: true, data: room });
+    } else {
+      const rooms = await prisma.room.findMany();
+
+      return NextResponse.json({ success: true, data: rooms });
+    }
   } catch (error: any) {
     return NextResponse.json(
       { success: false, error: error.message },
