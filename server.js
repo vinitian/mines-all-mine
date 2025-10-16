@@ -291,6 +291,11 @@ app.prepare().then(() => {
       });
     });
 
+    socket.on("resetNotice", () => {
+      console.log("Reset Complete!");
+      io.emit("serverRestarts");
+    });
+
     socket.on("pickCell", (index) => {
       if (!state.started) {
         socket.emit("error", { message: "Game hasn't started yet" });
