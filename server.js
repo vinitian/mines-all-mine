@@ -3,6 +3,7 @@ import next from "next";
 import { Server } from "socket.io";
 import InMemorySessionStore from "./sessionStore.js";
 import { randomBytes } from "node:crypto";
+import {Field} from "./services/game_logic.js";
 
 const dev = process.env.NODE_ENV !== "production";
 const hostname = "localhost";
@@ -231,33 +232,41 @@ app.prepare().then(() => {
   
     socket.on("startGame", (payload = {}) => {
       const { size, bombCount, turnLimit } = payload;
-  
+    
       if (state.started) {
         resetGame();
       }
-  
+    
       if (typeof size === "number") state.size = size;
       if (typeof bombCount === "number") state.bombCount = bombCount;
       if (typeof turnLimit === "number") state.turnLimit = turnLimit;
-  
-      // ensure defaults
+    
       if (typeof state.size !== "number") state.size = 6;
       if (!Number.isFinite(state.bombCount)) {
         state.bombCount =
           state.size === 6 ? 11 : Math.floor(state.size * state.size * 0.3);
       }
       if (typeof state.turnLimit !== "number") state.turnLimit = 10;
-  
-      state.bombs = randomize(state.size, state.bombCount);
+    
+      state.field = new Field();
+      state.field.generate_field([state.size, state.size], state.bombCount);
+      
+      state.bombs = new Set();
+      for (let i = 0; i < state.field.field.length; i++) {
+        if (state.field.field[i].bomb) {
+          state.bombs.add(i);
+        }
+      }
+    
       state.found = new Set();
       state.scores = {};
       state.started = true;
       state.currentTurnIndex = Math.floor(Math.random() * state.players.length);
-  
+    
       console.log(
         `Game started: ${state.size}x${state.size}, ${state.bombCount} bombs, ${state.turnLimit}s turns`
       );
-  
+    
       io.emit("map:ready", {
         size: state.size,
         bombsTotal: state.bombCount,
@@ -265,12 +274,12 @@ app.prepare().then(() => {
         turnLimit: state.turnLimit,
         currentPlayer: state.players[state.currentTurnIndex],
       });
-  
+    
       io.emit("turnChanged", {
         currentPlayer: state.players[state.currentTurnIndex],
         reason: "gameStart",
       });
-  
+    
       startTurnTimer();
     });
   
@@ -296,44 +305,68 @@ app.prepare().then(() => {
         socket.emit("error", { message: "Game hasn't started yet" });
         return;
       }
-  
+    
       if (state.players[state.currentTurnIndex] !== socket.id) {
         socket.emit("error", { message: "It's not your turn!" });
         return;
       }
-  
+    
       if (state.found.has(index)) {
         socket.emit("error", { message: "Cell already revealed" });
         return;
       }
-  
-      const hit = state.bombs.has(index);
-      state.found.add(index);
-  
+    
+      const cell = state.field.field[index];
+      const hit = cell.bomb;
+      const hintNumber = cell.number;  
+    
+      const [x, y] = state.field.index_to_coordinate(index);
+      const [flag, success] = state.field.open_cell(x, y);
+    
+      if (!success) {
+        socket.emit("error", { message: "Failed to reveal cell" });
+        return;
+      }
+    
+      const revealedCells = [];
+      for (let i = 0; i < state.field.field.length; i++) {
+        if (state.field.field[i].is_open && !state.found.has(i)) {
+          revealedCells.push({
+            index: i,
+            hit: state.field.field[i].bomb,
+            hintNumber: state.field.field[i].number,
+          });
+          state.found.add(i);
+        }
+      }
+    
       if (hit) {
         state.scores[socket.id] = (state.scores[socket.id] || 0) + 1;
       }
-  
+    
       const hits = [...state.found].filter((i) => state.bombs.has(i)).length;
-  
-      io.emit("cellResult", {
-        index,
-        hit,
-        by: socket.id,
-        bombsFound: hits,
-        bombsTotal: state.bombCount,
-        scores: state.scores,
+    
+      revealedCells.forEach((cellData) => {
+        io.emit("cellResult", {
+          index: cellData.index,
+          hit: cellData.hit,
+          hintNumber: cellData.hintNumber,  
+          by: cellData.index === index ? socket.id : "auto-reveal",
+          bombsFound: hits,
+          bombsTotal: state.bombCount,
+          scores: state.scores,
+        });
       });
-  
+    
       if (hits >= state.bombCount) {
         if (state.turnTimer) {
           clearInterval(state.turnTimer);
           state.turnTimer = null;
         }
-  
+    
         state.started = false;
         const winners = computeWinners(state.scores);
-  
+    
         io.emit("gameOver", {
           winners,
           scores: state.scores,
@@ -342,7 +375,7 @@ app.prepare().then(() => {
         });
         return;
       }
-  
+    
       if (!hit) {
         nextTurn("miss");
       } else {
@@ -435,6 +468,8 @@ app.prepare().then(() => {
     state.started = false;
     state.currentTurnIndex = 0;
     state.turnTimeRemaining = state.turnLimit || 10;
+    state.field = null;
+
     if (state.turnTimer) {
       clearInterval(state.turnTimer);
       state.turnTimer = null;
@@ -456,6 +491,7 @@ app.prepare().then(() => {
     turnTimeRemaining: 10,
     sessionToSocket: {},
     socketToSession:{},
+    field:null,
   };
 
   function startTurnTimer() {
