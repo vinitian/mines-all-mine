@@ -7,6 +7,7 @@ import editRoom from "@/services/client/editRoom";
 import CountdownModal from "@/components/CountDownModal";
 import Input from "@/components/Input";
 import Button from "@/components/Button";
+import { Room } from "@/interface";
 
 const sizes = [6, 8, 10, 20, 30] as const;
 const sizes2 = [2, 3, 4, 5, 6, 7, 8, 9, 10];
@@ -32,7 +33,7 @@ export default function RoomSettings() {
   const router = useRouter();
   const [showCountdown, setShowCountdown] = useState(false);
   const [isHost, setIsHost] = useState(false);
-  const [roomData, setRoomData] = useState<any>(null); //???
+  const [roomData, setRoomData] = useState<Room | null>(null); //???
   const bombs = densityToCount(bombCount, mapSize);
 
   const handleStartClick = () => {
@@ -87,12 +88,12 @@ export default function RoomSettings() {
   }, [roomname, mapSize, bombCount, turnLimit, playerLimit, chatState]);
 
   const handleEditRoom = async () => {
-    if (!socket.id) {
+    if (!socket.auth.userID) {
       return;
     }
     const bombs = densityToCount(bombCount, mapSize);
     const response = await editRoom({
-      user_id: socket.id,
+      user_id: socket.auth.userID,
       name: roomname,
       size: mapSize,
       bomb_count: bombs,
@@ -132,17 +133,25 @@ export default function RoomSettings() {
 
   useEffect(() => {
     const checkIfHost = async () => {
-      if (!socket.id) return;
+      if (!socket.auth.userID) return;
 
       try {
-        const response = await fetch(`/api/room?host_id=${socket.id}`);
+        const response = await fetch(`/api/room?host_id=${socket.auth.userID}`);
         const result = await response.json();
+        console.log("DATA", result.data);
 
         if (result.success && result.data) {
           setRoomData(result.data);
-          setIsHost(true);
-        } else {
-          setIsHost(false);
+          console.log(
+            "my userID:",
+            socket.auth.userID,
+            "| host id:",
+            result.data.host_id
+          );
+
+          if (result.data.host_id == socket.auth.userID) {
+            setIsHost(true);
+          }
         }
       } catch (error) {
         console.error("Failed to check host status:", error);
@@ -151,7 +160,7 @@ export default function RoomSettings() {
     };
 
     checkIfHost();
-  }, [socket.id]);
+  }, [socket.auth.userID]);
 
   const handleStartGame = async () => {
     if (!mapSize) return;
