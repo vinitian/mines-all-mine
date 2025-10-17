@@ -31,7 +31,7 @@ export default function Chat() {
 
   const sendMessage = () => {
     const newMessageObj = {
-      userID: socket.id!,
+      userID: socket.auth.username!,
       text: message,
       timestamp: Date(),
     };
