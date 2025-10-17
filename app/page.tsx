@@ -42,6 +42,7 @@ export default function Home() {
       };
       localStorage.setItem("userID", userID);
       console.log("39-connectSocket auth", socket.auth);
+      socket.emit("setAuthSuccessful");
     });
   };
 
@@ -72,12 +73,13 @@ export default function Home() {
     }
     setErrorMessage(undefined);
     connectSocket();
-    const response = await createRoom({
-      id: socket.auth.userID!,
-      username: username,
+    socket.on("setAuthSuccessfulAck", async () => {
+      const response = await createRoom({
+        id: socket.auth.userID!,
+        username: username,
+      });
+      router.push(`/lobby/${response.data.id}`);
     });
-    console.log(response);
-    router.push(`/lobby/${response.data.id}`);
   };
 
   // Hide error when user starts typing
