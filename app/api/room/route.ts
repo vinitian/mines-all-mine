@@ -4,11 +4,11 @@ import prisma from "@/prisma/prisma";
 // get all rooms/ get host_id?
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
-  const room_id = searchParams.get("room_id");
+  const room_id = Number(searchParams.get("room_id"));
 
   try {
     if (room_id) {
-      const room = await prisma.room.findUnique({
+      const room = await prisma.room.findUniqueOrThrow({
         where: { id: room_id },
       });
       return NextResponse.json({ success: true, data: room });

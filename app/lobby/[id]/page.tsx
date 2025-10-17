@@ -69,7 +69,7 @@ export default function LobbyPage() {
               <Chat />
             </div>
           </div>
-          <RoomSettings />
+          <RoomSettings roomId={roomId} />
         </div>
       </div>
       <div className="md:hidden w-full h-[60dvh]">

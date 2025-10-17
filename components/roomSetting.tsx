@@ -22,7 +22,7 @@ function densityToCount(density: bombDensity, size: number) {
 }
 // single global room for testing
 
-export default function RoomSettings() {
+export default function RoomSettings({ roomId }: { roomId: number }) {
   const [roomname, setRoomname] = useState("");
   const [mapSize, setMapSize] = useState<MapSize>(8);
   const [bombCount, setBombCount] = useState<bombDensity>("medium");
@@ -136,7 +136,7 @@ export default function RoomSettings() {
       if (!socket.auth.userID) return;
 
       try {
-        const response = await fetch(`/api/room?host_id=${socket.auth.userID}`);
+        const response = await fetch(`/api/room?room_id=${roomId}`);
         const result = await response.json();
         console.log("DATA", result.data);
 
