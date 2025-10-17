@@ -153,7 +153,7 @@ export function mineGameLogic() {
             console.log(`Turn changed to ${data.currentPlayer} (${data.reason})`);
             setCurrentPlayer(data.currentPlayer);
         };
-        const onTurnTime = (data: { currentPlayer: string; timeRemaining: number }) => {
+        const onTurnTime = (data: { timeRemaining: number }) => {
             setTimeRemaining(data.timeRemaining);
         };
         const onPlayersUpdated = (data: { players: string[]; currentPlayer: string | null }) => {

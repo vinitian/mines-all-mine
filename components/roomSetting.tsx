@@ -383,6 +383,7 @@ export default function RoomSettings() {
             });
             
             //remove redundant server state edit?
+            //
             socket.emit(
               "settings:update",
               {
@@ -404,6 +405,7 @@ export default function RoomSettings() {
                   bombCount: densityToCount(bombCount, mapSize),
                   turnLimit,
                 });
+                
               }
             );
           }}

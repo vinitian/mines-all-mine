@@ -28,8 +28,8 @@ export default function Home() {
       userID: userIdInLocal
         ? userIdInLocal
         : session && session.user
-        ? session.user.email
-        : "",
+          ? session.user.email
+          : "",
       username: username,
     };
 
@@ -76,7 +76,7 @@ export default function Home() {
       id: socket.auth.userID!,
       username: username,
     });
-    console.log(response);
+    console.log(response + "999");
     router.push(`/lobby/${response.data.id}`);
   };
 
