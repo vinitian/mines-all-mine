@@ -79,6 +79,10 @@ app.prepare().then(() => {
       username: socket.data.username,
     });
 
+    socket.on("setAuthSuccessful", () => {
+      socket.emit("setAuthSuccessfulAck");
+    });
+
     if (!state.players.includes(socket.data.userID)) {
       state.players.push(socket.data.userID);
       console.log(
