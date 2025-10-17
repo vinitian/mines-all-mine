@@ -8,7 +8,7 @@ import StatisticsButton from "@/components/StatisticsButton";
 import { useRouter } from "next/navigation";
 import createRoom from "@/services/client/createRoom";
 import handleSignOut from "@/services/client/handleSignOut";
-import DuplicateSessionPopup from "@/components/DuplicateConnectedSessionPopup";
+import DuplicateUserPopup from "@/components/DuplicateConnectedUserPopup";
 
 export default function Home() {
   const { data: session } = useSession(); // Auth.js session
@@ -19,28 +19,30 @@ export default function Home() {
   const [errorMessage, setErrorMessage] = useState<string | undefined>(
     undefined
   );
-  const [showDuplicateSessionPopup, setShowDuplicateSessionPopup] =
-    useState(false);
+  const [showDuplicateUserPopup, setShowDuplicateUserPopup] = useState(false);
   const router = useRouter();
 
   const connectSocket = () => {
+    const userIdInLocal = localStorage.getItem("userID");
     socket.auth = {
-      sessionID: localStorage.getItem("sessionID") ?? "",
-      userID: session && session.user ? session.user.email : "",
+      userID: userIdInLocal
+        ? userIdInLocal
+        : session && session.user
+        ? session.user.email
+        : "",
       username: username,
     };
 
     socket.disconnect().connect();
-    socket.on("session", ({ sessionID, userID, username }) => {
-      // attach the session ID to the next reconnection attempts
-      // set auth for client
+    socket.on("session", ({ userID, username }) => {
+      // set auth for client for the next reconnection attempts
       socket.auth = {
-        sessionID: sessionID,
         userID: userID,
         username: username,
       };
-      localStorage.setItem("sessionID", sessionID);
+      localStorage.setItem("userID", userID);
       console.log("39-connectSocket auth", socket.auth);
+      socket.emit("setAuthSuccessful");
     });
   };
 
@@ -71,12 +73,13 @@ export default function Home() {
     }
     setErrorMessage(undefined);
     connectSocket();
-    const response = await createRoom({
-      id: socket.auth.userID!,
-      username: username,
+    socket.on("setAuthSuccessfulAck", async () => {
+      const response = await createRoom({
+        id: socket.auth.userID!,
+        username: username,
+      });
+      router.push(`/lobby/${response.data.id}`);
     });
-    console.log(response);
-    router.push(`/lobby/${response.data.id}`);
   };
 
   // Hide error when user starts typing
@@ -88,16 +91,16 @@ export default function Home() {
   };
 
   useEffect(() => {
-    const sessionID = localStorage.getItem("sessionID");
-    console.log("localstorage sessionID:", sessionID);
-    if (sessionID) {
-      socket.auth = { sessionID };
+    const userID = localStorage.getItem("userID");
+    console.log("localstorage userID:", userID);
+    if (userID) {
+      socket.auth = { userID };
       socket.connect();
-      socket.on("duplicateConnectedSession", () => {
-        setShowDuplicateSessionPopup(true);
+      socket.on("duplicateConnectedUser", () => {
+        setShowDuplicateUserPopup(true);
       });
-      socket.on("session", ({ sessionID, userID, username }) => {
-        socket.auth = { sessionID, userID, username }; // set auth for client
+      socket.on("session", ({ userID, username }) => {
+        socket.auth = { userID, username }; // set auth for client
         setUsername(username);
       });
     }
@@ -183,7 +186,7 @@ export default function Home() {
           </button>
         )}
       </div>
-      {showDuplicateSessionPopup && <DuplicateSessionPopup />}
+      {showDuplicateUserPopup && <DuplicateUserPopup />}
     </div>
   );
 }

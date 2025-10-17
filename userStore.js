@@ -1,17 +1,17 @@
-export default class InMemorySessionStore {
+export default class InMemoryUserStore {
   constructor() {
     this.sessions = new Map();
   }
 
-  findSession(id) {
+  findUser(id) {
     return this.sessions.get(id);
   }
 
-  saveSession(id, session) {
+  saveUser(id, session) {
     this.sessions.set(id, session);
   }
 
-  findAllSessions() {
+  findAllUsers() {
     return [...this.sessions.values()];
   }
 }
