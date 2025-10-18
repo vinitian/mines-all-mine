@@ -18,6 +18,7 @@ export default function Chat() {
         ...prev,
         {
           userID: msg.userID,
+          username: msg.username,
           text: msg.text,
           timestamp: msg.timestamp,
         },
@@ -31,7 +32,8 @@ export default function Chat() {
 
   const sendMessage = () => {
     const newMessageObj = {
-      userID: socket.id!,
+      userID: socket.auth.userID,
+      username: socket.auth.username,
       text: message,
       timestamp: Date(),
     };
@@ -55,7 +57,7 @@ export default function Chat() {
           <div key={index} className="wrap-anywhere">
             {msg.timestamp.split(" ")[4].slice(0, 5)}{" "}
             <span className="font-semibold text-gray-blue wrap-anywhere">
-              {msg.userID}
+              {msg.username}
             </span>
             : {msg.text}
           </div>
