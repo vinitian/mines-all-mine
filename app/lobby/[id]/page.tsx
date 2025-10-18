@@ -65,6 +65,9 @@ export default function LobbyPage() {
     }
   }, [roomId]);
 
+  if (loading) {
+    return <LoadingModal text={"Loading room information"} />;
+  }
   if (!room) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -101,7 +104,7 @@ export default function LobbyPage() {
               <Chat />
             </div>
           </div>
-          <RoomSettings roomId={roomId} />
+          <RoomSettings roomId={parseInt(roomId)} />
         </div>
       </div>
       <div className="md:hidden w-full h-[60dvh]">
@@ -130,7 +133,6 @@ export default function LobbyPage() {
           </svg>
         )}
       </div>
-      {loading && <LoadingModal text={"Loading room information"} />}
       {deletedRoomPopup && <LoadingModal text={"The host deleted the room"} />}
     </div>
   );
