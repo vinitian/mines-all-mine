@@ -78,6 +78,7 @@ export default function Home() {
         id: socket.auth.userID!,
         username: username,
       });
+      socket.emit("joinRoom", response.data.id);
       router.push(`/lobby/${response.data.id}`);
     });
   };
