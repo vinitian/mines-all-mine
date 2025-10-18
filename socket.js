@@ -10,6 +10,10 @@ const socket = io({
   // reconnectionAttempts: 5,
   autoConnect: false,
   reconnection: false,
+  auth: {
+    userID: "",
+    username: "",
+  },
 });
 
 export default socket;

@@ -101,7 +101,7 @@ export default function LobbyPage() {
         <RoomName
           roomName={room.name}
           roomCode={room.id}
-          trashVisible={room.host_id == socket.id}
+          trashVisible={room.host_id == socket.auth.userID}
         />
         <div className="flex flex-col md:flex-row gap-[20px] h-10/12 md:h-9/12">
           <div className="flex flex-col gap-[20px] md:h-full md:w-1/2 md:max-w-[315px]">
@@ -113,7 +113,7 @@ export default function LobbyPage() {
               <Chat />
             </div>
           </div>
-          <RoomSettings />
+          <RoomSettings roomId={roomId} />
         </div>
       </div>
       <div className="md:hidden w-full h-[60dvh]">

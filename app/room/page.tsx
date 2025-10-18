@@ -172,7 +172,15 @@ export default function Room() {
                   <div className="text-h4 flex flex-col -space-y-1">
                     <div>
                       <span className="font-regular">Status:</span>{" "}
-                      <span className="font-bold text-red">REDACTED</span>
+                      {room.game_started ? (
+                        <span className="text-red font-bold">
+                          Game ongoing
+                        </span>
+                      ) : (
+                        <span className="text-green font-bold">
+                          In lobby
+                        </span>
+                      )}
                     </div>
                     <div>
                       <span className="font-regular">Map Size:</span>{" "}
