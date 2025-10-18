@@ -198,6 +198,10 @@ app.prepare().then(() => {
       });
     });
 
+    socket.on("kickAllPlayersInRoom", (room_id, user_id) => {
+      io.to(room_id).emit("kickAllPlayersInRoom");
+    });
+
     socket.on("settings:update", (payload, cb) => {
       try {
         const { size, bombCount, turnLimit } = payload || {};
