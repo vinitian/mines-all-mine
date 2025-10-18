@@ -9,7 +9,7 @@ interface RouteParams {
 
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
-    const roomId = parseInt(params.id);
+    const roomId = parseInt((await params).id);
 
     if (isNaN(roomId)) {
       return NextResponse.json(
@@ -44,7 +44,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 // Delete room from roomId
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
-    const roomId = parseInt(params.id);
+    const roomId = parseInt((await params).id);
 
     if (isNaN(roomId)) {
       return NextResponse.json(
