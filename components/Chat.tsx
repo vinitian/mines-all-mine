@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useContext, useEffect, useState } from "react";
+import React, { useContext, useEffect, useRef, useState } from "react";
 import socket from "@/socket";
 import { Message } from "@/interface";
 import Input from "@/components/Input";
@@ -10,25 +10,7 @@ import { ChatContext } from "@/components/ChatContext";
 export default function Chat() {
   const [message, setMessage] = useState("");
   const { messages, setMessages } = useContext(ChatContext);
-
-  useEffect(() => {
-    // Listen for messages from the server
-    socket.on("message", (msg: Message) => {
-      setMessages((prev: Message[]) => [
-        ...prev,
-        {
-          userID: msg.userID,
-          username: msg.username,
-          text: msg.text,
-          timestamp: msg.timestamp,
-        },
-      ]);
-    });
-
-    return () => {
-      socket.off("message");
-    };
-  }, []);
+  const scrollContainerRef = useRef(null);
 
   const sendMessage = () => {
     const newMessageObj = {
@@ -49,10 +31,26 @@ export default function Chat() {
     }
   };
 
+  useEffect(() => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTop =
+        scrollContainerRef.current.scrollHeight;
+    }
+  }, [messages]);
+
   return (
     <div className="rounded-lg border bg-white flex flex-col p-[10px] gap-[8px] w-full h-full">
       <div className="text-h1/tight">Chat</div>
-      <div className="rounded-lg bg-[#efefef] p-2 grow">
+      <div
+        ref={scrollContainerRef}
+        className="rounded-lg bg-[#efefef] p-2 grow 
+      overflow-y-scroll
+      [&::-webkit-scrollbar]:w-2
+      [&::-webkit-scrollbar-track]:rounded-full
+    [&::-webkit-scrollbar-track]:bg-[#efefef]
+      [&::-webkit-scrollbar-thumb]:rounded-full
+    [&::-webkit-scrollbar-thumb]:bg-gray"
+      >
         {messages.map((msg, index) => (
           <div key={index} className="wrap-anywhere">
             {msg.timestamp.split(" ")[4].slice(0, 5)}{" "}

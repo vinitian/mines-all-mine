@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Room } from "@/interface";
+import { Message, Room } from "@/interface";
 import { getRoom } from "@/services/client/roomService";
 import RoomSettings from "@/components/roomSetting";
 import Chat from "@/components/Chat";
@@ -10,9 +10,11 @@ import RoomName from "@/components/RoomName";
 import LoadingModal from "@/components/LoadingModal";
 import socket from "@/socket";
 import deleteRoom from "@/services/client/deleteRoom";
+import { ChatContext } from "@/components/ChatContext";
 
 export default function LobbyPage() {
   const [room, setRoom] = useState<Room | null>(null);
+  const { messages, setMessages } = useContext(ChatContext);
   const [loading, setLoading] = useState(true);
   const params = useParams();
   const roomId = params.id as string;
@@ -34,6 +36,19 @@ export default function LobbyPage() {
   };
 
   useEffect(() => {
+    // Listen for messages from the server
+    socket.on("message", (msg: Message) => {
+      setMessages((prev: Message[]) => [
+        ...prev,
+        {
+          userID: msg.userID,
+          username: msg.username,
+          text: msg.text,
+          timestamp: msg.timestamp,
+        },
+      ]);
+    });
+
     socket.on("kickAllPlayersInRoom", () => {
       socket.emit("leaveRoom");
       setDeletedRoomPopup(true);
@@ -43,6 +58,7 @@ export default function LobbyPage() {
       }, 3000);
     });
     return () => {
+      socket.off("message");
       socket.off("kickAllPlayersInRoom");
     };
   }, []);
