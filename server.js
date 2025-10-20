@@ -199,6 +199,10 @@ app.prepare().then(() => {
       });
     });
 
+    socket.on("kickAllPlayersInRoom", (room_id, user_id) => {
+      io.to(room_id).emit("kickAllPlayersInRoom");
+    });
+
     socket.on("room:settings-updated", (data) => {
       socket.to(data.roomID).emit("room_settings-updated", data.settings);
     });
