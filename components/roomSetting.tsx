@@ -8,6 +8,7 @@ import CountdownModal from "@/components/CountDownModal";
 import Input from "@/components/Input";
 import Button from "@/components/Button";
 import { Room } from "@/interface";
+import { Settings } from "@/interface";
 
 const sizes = [6, 8, 10, 20, 30] as const;
 const sizes2 = [2, 3, 4, 5, 6, 7, 8, 9, 10];
@@ -83,9 +84,9 @@ export default function RoomSettings({ roomId }: { roomId: number }) {
     };
   }, [router]);
 
-  // useEffect(() => {
-  //   handleEditRoom();
-  // }, [roomname, mapSize, bombCount, turnLimit, playerLimit, chatState]);
+  useEffect(() => {
+    handleEditRoom();
+  }, [roomname, mapSize, bombCount, turnLimit, playerLimit, chatState]);
 
   const handleEditRoom = async () => {
     if (!socket.auth.userID) {
@@ -102,32 +103,35 @@ export default function RoomSettings({ roomId }: { roomId: number }) {
       chat_enabled: chatState,
     });
 
-    socket.emit("room:settings-updated", {
+    const newRoomSettings = {
       name: roomname,
       size: mapSize,
       bomb_density: bombCount,
-      bomb_count: bombs,
-      turn_limit: turnLimit,
+      timer: turnLimit,
       player_limit: playerLimit,
       chat_enabled: chatState,
+    };
+    // emit setting update to server
+    socket.emit("room:settings-updated", {
+      roomID: roomId,
+      settings: newRoomSettings,
     });
   };
   //TODO: generate placement
 
   useEffect(() => {
-    const onSettingsUpdated = (newSettings: any) => {
-      setRoomname(newSettings.name);
-      setMapSize(newSettings.size);
-      setTurnLimit(newSettings.turn_limit);
-      setPlayerLimit(newSettings.player_limit);
-      setBombCount(newSettings.bomb_density);
-      setChatState(newSettings.chat_enabled);
-    };
-
-    socket.on("room:settings-updated", onSettingsUpdated);
+    // listen setting update from server
+    socket.on("room:settings-updated", (settings: Settings) => {
+      setRoomname(settings.name);
+      setMapSize(settings.size);
+      setTurnLimit(settings.timer);
+      setPlayerLimit(settings.player_limit);
+      setBombCount(settings.bomb_density);
+      setChatState(settings.chat_enabled);
+    });
 
     return () => {
-      socket.off("room:settings-updated", onSettingsUpdated);
+      socket.off("room:settings-updated");
     };
   }, []);
 
@@ -354,6 +358,7 @@ export default function RoomSettings({ roomId }: { roomId: number }) {
                   console.error("Socket not connected!");
                   return;
                 }
+                socket.emit("leaveRoom");
                 router.push("/");
               }}
               className="bg-red"
@@ -370,6 +375,7 @@ export default function RoomSettings({ roomId }: { roomId: number }) {
                 console.error("Socket not connected!");
                 return;
               }
+              socket.emit("leaveRoom");
               router.push("/");
             }}
             className="bg-red"

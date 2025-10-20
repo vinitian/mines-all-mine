@@ -9,6 +9,15 @@ export interface Player {
   username: string;
 }
 
+export interface Settings {
+  name: string;
+  size: number;
+  bomb_density: bombDensity; //type??
+  timer: number;
+  player_limit: number;
+  chat_enabled: boolean;
+}
+
 export interface User {
   id: number;
   email: string;
