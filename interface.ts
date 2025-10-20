@@ -10,12 +10,21 @@ export interface Player {
   username: string;
 }
 
+const sizes = [6, 8, 10, 20, 30] as const;
+const sizes2 = [2, 3, 4, 5, 6, 7, 8, 9, 10];
+const sizes3 = [0, 10, 20, 30];
+
+export type MapSize = (typeof sizes)[number];
+export type bombDensity = "low" | "medium" | "high";
+export type PlayerLimit = (typeof sizes2)[number];
+export type TurnLimit = (typeof sizes3)[number];
+
 export interface Settings {
   name: string;
-  size: number;
-  bomb_density: bombDensity; //type??
-  timer: number;
-  player_limit: number;
+  size: MapSize;
+  bomb_density: bombDensity;
+  timer: TurnLimit;
+  player_limit: PlayerLimit;
   chat_enabled: boolean;
 }
 

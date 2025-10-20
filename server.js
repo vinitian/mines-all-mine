@@ -204,7 +204,15 @@ app.prepare().then(() => {
     });
 
     socket.on("room:settings-updated", (data) => {
-      socket.to(data.roomID).emit("room_settings-updated", data.settings);
+      console.log(data.settings.bomb_density);
+      io.to(data.roomID).emit("RSU", {
+        name: data.settings.name,
+        size: data.settings.size,
+        bomb_density: data.settings.bomb_density,
+        timer: data.settings.timer,
+        player_limit: data.settings.player_limit,
+        chat_enabled: data.settings.chat_enabled,
+      });
     });
 
     socket.on("settings:update", (payload, cb) => {
@@ -295,7 +303,7 @@ app.prepare().then(() => {
           // leave room
           if (roomPlayers[room]) {
             roomPlayers[room] = roomPlayers[room].filter(
-              (p) => p.userID !== socket.auth.userID
+              (p) => p.userID !== socket.data.userID
             );
 
             io.to(room).emit("currentPlayers", roomPlayers[room]);
@@ -330,7 +338,6 @@ app.prepare().then(() => {
 
     socket.on("leaveRoom", () => {
       socket.rooms.forEach((room) => {
-        // TODO
         if (room !== socket.id) {
           socket.leave(room);
           if (roomPlayers[room]) {
