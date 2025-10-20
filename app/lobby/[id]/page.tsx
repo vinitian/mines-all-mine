@@ -95,7 +95,6 @@ export default function LobbyPage() {
   return (
     <div className="flex flex-col px-[25px]">
       <div className="flex flex-col gap-[25px] py-[25px] md:h-dvh">
-        {/* TODO: change from socket.id to socket.auth.userID */}
         <RoomName
           roomName={room.name}
           roomCode={room.id}
@@ -111,7 +110,6 @@ export default function LobbyPage() {
               <ul>
                 {room.player_id_list.map((playerId: string) => {
                   return <li key={playerId}>- {playerId}</li>;
-                  // todo: convert id to username
                 })}
               </ul>
             </div>
@@ -120,7 +118,7 @@ export default function LobbyPage() {
               <Chat />
             </div>
           </div>
-          <RoomSettings roomId={parseInt(roomId)} />
+          <RoomSettings roomId={parseInt(roomId)} roomName={room.name} />
         </div>
       </div>
       <div className="md:hidden w-full h-[60dvh]">
@@ -149,7 +147,13 @@ export default function LobbyPage() {
           </svg>
         )}
       </div>
-      {deletedRoomPopup && <LoadingModal text={"The host deleted the room"} />}
+      {deletedRoomPopup && (
+        <LoadingModal
+          text={
+            "The host has deleted the room.\n\nRedirecting you to home page"
+          }
+        />
+      )}
     </div>
   );
 }
