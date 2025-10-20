@@ -1,11 +1,16 @@
 "use client";
 
 import { Message } from "@/interface";
-import React, { createContext, useState } from "react";
+import React, {
+  createContext,
+  Dispatch,
+  SetStateAction,
+  useState,
+} from "react";
 
 export const ChatContext = createContext<{
   messages: Message[];
-  setMessages: Function;
+  setMessages: Dispatch<SetStateAction<Message[]>>;
 }>({
   messages: [],
   setMessages: () => {},

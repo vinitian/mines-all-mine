@@ -22,8 +22,14 @@ function densityToCount(density: bombDensity, size: number) {
 }
 // single global room for testing
 
-export default function RoomSettings({ roomId }: { roomId: number }) {
-  const [roomname, setRoomname] = useState("");
+export default function RoomSettings({
+  roomId,
+  roomName,
+}: {
+  roomId: number;
+  roomName: string;
+}) {
+  const [roomname, setRoomname] = useState(roomName);
   const [mapSize, setMapSize] = useState<MapSize>(8);
   const [bombCount, setBombCount] = useState<bombDensity>("medium");
   const [turnLimit, setTurnLimit] = useState<0 | 10 | 20 | 30>(10);
