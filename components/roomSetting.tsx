@@ -89,14 +89,7 @@ export default function RoomSettings({
     };
   }, [router]);
 
-  useEffect(() => {
-    handleEditRoom();
-  }, [roomname, mapSize, bombCount, turnLimit, playerLimit, chatState]);
-
   const handleEditRoom = async () => {
-    if (!socket.auth.userID) {
-      return;
-    }
     const bombs = densityToCount(bombCount, mapSize);
     const response = await editRoom({
       user_id: socket.auth.userID,
@@ -187,7 +180,10 @@ export default function RoomSettings({
         {isHost ? (
           <Input
             value={roomname}
-            onChange={(e) => setRoomname(e.target.value)}
+            onChange={(e) => {
+              setRoomname(e.target.value);
+              handleEditRoom();
+            }}
           />
         ) : (
           <div className="text-xl -mt-2.5">{roomname || "Unnamed"}</div>
@@ -199,35 +195,50 @@ export default function RoomSettings({
         {isHost ? (
           <div className="flex flex-wrap gap-[6px]">
             <Button
-              onClick={() => setMapSize(6)}
+              onClick={() => {
+                setMapSize(6);
+                handleEditRoom();
+              }}
               textColor={mapSize === 6 ? "" : "text-black"}
               className={`w-min ${mapSize === 6 ? "" : "bg-white"}`}
             >
               6×6
             </Button>
             <Button
-              onClick={() => setMapSize(8)}
+              onClick={() => {
+                setMapSize(8);
+                handleEditRoom();
+              }}
               textColor={mapSize === 8 ? "" : "text-black"}
               className={`w-min ${mapSize === 8 ? "" : "bg-white"}`}
             >
               8×8
             </Button>
             <Button
-              onClick={() => setMapSize(10)}
+              onClick={() => {
+                setMapSize(10);
+                handleEditRoom();
+              }}
               textColor={mapSize === 10 ? "" : "text-black"}
               className={`w-min ${mapSize === 10 ? "" : "bg-white"}`}
             >
               10×10
             </Button>
             <Button
-              onClick={() => setMapSize(20)}
+              onClick={() => {
+                setMapSize(20);
+                handleEditRoom();
+              }}
               textColor={mapSize === 20 ? "" : "text-black"}
               className={`w-min ${mapSize === 20 ? "" : "bg-white"}`}
             >
               20×20
             </Button>
             <Button
-              onClick={() => setMapSize(30)}
+              onClick={() => {
+                setMapSize(30);
+                handleEditRoom();
+              }}
               textColor={mapSize === 30 ? "" : "text-black"}
               className={`w-min ${mapSize === 30 ? "" : "bg-white"}`}
             >
@@ -250,9 +261,10 @@ export default function RoomSettings({
           >
             <select
               value={playerLimit}
-              onChange={(e) =>
-                setPlayerLimit(Number(e.target.value) as PlayerLimit)
-              }
+              onChange={(e) => {
+                setPlayerLimit(Number(e.target.value) as PlayerLimit);
+                handleEditRoom();
+              }}
               aria-label="Set the maximum number of players for the game."
               className="w-full"
             >
@@ -282,7 +294,10 @@ export default function RoomSettings({
             <select
               id="num-bombs"
               value={bombCount}
-              onChange={(e) => setBombCount(e.target.value as bombDensity)}
+              onChange={(e) => {
+                setBombCount(e.target.value as BombDensity);
+                handleEditRoom();
+              }}
               aria-label="Set the amount of bomb density you want for the game."
               className="w-full"
             >
@@ -306,7 +321,10 @@ export default function RoomSettings({
             <select
               id="chat"
               value={chatState ? "enable" : "disable"}
-              onChange={(e) => setChatState(e.target.value === "enable")}
+              onChange={(e) => {
+                setChatState(e.target.value === "enable");
+                handleEditRoom();
+              }}
               aria-label="Set to enable/disable chat"
               className="w-full"
             >
@@ -330,9 +348,10 @@ export default function RoomSettings({
           >
             <select
               value={turnLimit}
-              onChange={(e) =>
-                setTurnLimit(Number(e.target.value) as 0 | 10 | 20 | 30)
-              }
+              onChange={(e) => {
+                setTurnLimit(Number(e.target.value) as 0 | 10 | 20 | 30);
+                handleEditRoom();
+              }}
               aria-label="Timer"
               className="w-full"
             >
