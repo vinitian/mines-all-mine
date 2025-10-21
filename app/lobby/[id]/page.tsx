@@ -4,7 +4,7 @@ import { useContext, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Message, Room } from "@/interface";
 import { getRoom } from "@/services/client/roomService";
-import RoomSettings from "@/components/roomSetting";
+import RoomSettings from "@/components/RoomSetting";
 import Chat from "@/components/Chat";
 import RoomName from "@/components/RoomName";
 import LoadingModal from "@/components/LoadingModal";
