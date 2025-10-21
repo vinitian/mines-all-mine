@@ -205,7 +205,7 @@ app.prepare().then(() => {
 
     socket.on("room:settings-updated", (data) => {
       console.log(data.settings.bomb_density);
-      io.to(data.roomID).emit("RSU", {
+      io.to(data.roomID).emit("roomSettingsUpdate", {
         name: data.settings.name,
         size: data.settings.size,
         bomb_density: data.settings.bomb_density,

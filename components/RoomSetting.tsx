@@ -129,7 +129,7 @@ export default function RoomSettings({
   useEffect(() => {
     // listen setting update from server
     socket.on(
-      "RSU",
+      "roomSettingsUpdate",
       ({ name, size, bomb_density, timer, player_limit, chat_enabled }) => {
         console.log("receive", name);
         setRoomname(name);
@@ -142,7 +142,7 @@ export default function RoomSettings({
     );
 
     return () => {
-      socket.off("RSU");
+      socket.off("roomSettingsUpdate");
     };
   }, []);
 
