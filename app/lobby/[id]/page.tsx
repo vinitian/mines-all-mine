@@ -118,7 +118,10 @@ export default function LobbyPage() {
               <Chat />
             </div>
           </div>
-          <RoomSettings roomId={parseInt(roomId)} roomName={room.name} />
+          <RoomSettings
+            room={room}
+            isHost={room.host_id == socket.auth.userID}
+          />
         </div>
       </div>
       <div className="md:hidden w-full h-[60dvh]">

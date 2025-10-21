@@ -12,10 +12,10 @@ import { Room } from "@/interface";
 const sizes = [6, 8, 10, 20, 30] as const;
 const sizes2 = [2, 3, 4, 5, 6, 7, 8, 9, 10];
 type MapSize = (typeof sizes)[number];
-type bombDensity = "low" | "medium" | "high";
+type BombDensity = "low" | "medium" | "high";
 type PlayerLimit = (typeof sizes2)[number];
 
-function densityToCount(density: bombDensity, size: number) {
+function densityToCount(density: BombDensity, size: number) {
   const cells = size * size;
   const ratio = density === "low" ? 0.18 : density === "high" ? 0.42 : 0.3;
   return Math.max(1, Math.floor(cells * ratio));
@@ -23,58 +23,21 @@ function densityToCount(density: bombDensity, size: number) {
 // single global room for testing
 
 export default function RoomSettings({
-  roomId,
-  roomName,
+  room,
+  isHost,
 }: {
-  roomId: number;
-  roomName: string;
+  room: Room;
+  isHost: boolean;
 }) {
-  const [roomname, setRoomname] = useState(roomName);
+  const [roomname, setRoomname] = useState(room.name);
   const [mapSize, setMapSize] = useState<MapSize>(8);
-  const [bombCount, setBombCount] = useState<bombDensity>("medium");
+  const [bombCount, setBombCount] = useState<BombDensity>("medium");
   const [turnLimit, setTurnLimit] = useState<0 | 10 | 20 | 30>(10);
   const [playerLimit, setPlayerLimit] = useState<PlayerLimit>(2);
-  const [isConnected, setIsConnected] = useState(false);
   const [chatState, setChatState] = useState<boolean>(true);
   const router = useRouter();
   const [showCountdown, setShowCountdown] = useState(false);
-  const [isHost, setIsHost] = useState(false);
-  const [roomData, setRoomData] = useState<Room | null>(null); //???
   const bombs = densityToCount(bombCount, mapSize);
-
-  const handleStartClick = () => {
-    setShowCountdown(true);
-  };
-
-  useEffect(() => {
-    // Check if already connected
-    if (socket.connected) {
-      setIsConnected(true);
-    }
-
-    // Connect if not connected
-    if (!socket.connected) {
-      socket.connect();
-    }
-
-    const onConnect = () => {
-      console.log("Socket connected!");
-      setIsConnected(true);
-    };
-
-    const onDisconnect = () => {
-      console.log("Socket disconnected!");
-      setIsConnected(false);
-    };
-
-    socket.on("connect", onConnect);
-    socket.on("disconnect", onDisconnect);
-
-    return () => {
-      socket.off("connect", onConnect);
-      socket.off("disconnect", onDisconnect);
-    };
-  }, []);
 
   useEffect(() => {
     const onReady = (data: any) => {
@@ -111,7 +74,6 @@ export default function RoomSettings({
       chat_enabled: chatState,
     });
   };
-  //TODO: generate placement
 
   useEffect(() => {
     const onSettingsUpdated = (newSettings: any) => {
@@ -129,37 +91,6 @@ export default function RoomSettings({
       socket.off("room:settings-updated", onSettingsUpdated);
     };
   }, []);
-
-  useEffect(() => {
-    const checkIfHost = async () => {
-      if (!socket.auth.userID) return;
-
-      try {
-        const response = await fetch(`/api/room?room_id=${roomId}`);
-        const result = await response.json();
-        console.log("DATA", result.data);
-
-        if (result.success && result.data) {
-          setRoomData(result.data);
-          console.log(
-            "my userID:",
-            socket.auth.userID,
-            "| host id:",
-            result.data.host_id
-          );
-
-          if (result.data.host_id == socket.auth.userID) {
-            setIsHost(true);
-          }
-        }
-      } catch (error) {
-        console.error("Failed to check host status:", error);
-        setIsHost(false);
-      }
-    };
-
-    checkIfHost();
-  }, [socket.auth.userID]);
 
   const handleStartGame = async () => {
     if (!mapSize) return;
