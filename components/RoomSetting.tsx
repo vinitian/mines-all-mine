@@ -7,15 +7,16 @@ import editRoom from "@/services/client/editRoom";
 import CountdownModal from "@/components/CountDownModal";
 import Input from "@/components/Input";
 import Button from "@/components/Button";
-import { Room } from "@/interface";
+import {
+  Room,
+  Settings,
+  BombDensity,
+  MapSize,
+  PlayerLimit,
+  TurnLimit,
+} from "@/interface";
 
-const sizes = [6, 8, 10, 20, 30] as const;
-const sizes2 = [2, 3, 4, 5, 6, 7, 8, 9, 10];
-type MapSize = (typeof sizes)[number];
-type bombDensity = "low" | "medium" | "high";
-type PlayerLimit = (typeof sizes2)[number];
-
-function densityToCount(density: bombDensity, size: number) {
+function densityToCount(density: BombDensity, size: number) {
   const cells = size * size;
   const ratio = density === "low" ? 0.18 : density === "high" ? 0.42 : 0.3;
   return Math.max(1, Math.floor(cells * ratio));
@@ -31,8 +32,8 @@ export default function RoomSettings({
 }) {
   const [roomname, setRoomname] = useState(roomName);
   const [mapSize, setMapSize] = useState<MapSize>(8);
-  const [bombCount, setBombCount] = useState<bombDensity>("medium");
-  const [turnLimit, setTurnLimit] = useState<0 | 10 | 20 | 30>(10);
+  const [bombCount, setBombCount] = useState<BombDensity>("medium");
+  const [turnLimit, setTurnLimit] = useState<TurnLimit>(10);
   const [playerLimit, setPlayerLimit] = useState<PlayerLimit>(2);
   const [isConnected, setIsConnected] = useState(false);
   const [chatState, setChatState] = useState<boolean>(true);
@@ -91,13 +92,14 @@ export default function RoomSettings({
 
   useEffect(() => {
     handleEditRoom();
-  }, [roomname, mapSize, bombCount, turnLimit, playerLimit, chatState]);
+  }, [mapSize, bombCount, turnLimit, playerLimit, chatState]);
 
   const handleEditRoom = async () => {
     if (!socket.auth.userID) {
       return;
     }
     const bombs = densityToCount(bombCount, mapSize);
+    // update room settings in database
     const response = await editRoom({
       user_id: socket.auth.userID,
       name: roomname,
@@ -108,32 +110,39 @@ export default function RoomSettings({
       chat_enabled: chatState,
     });
 
-    socket.emit("room:settings-updated", {
+    const newRoomSettings = {
       name: roomname,
       size: mapSize,
       bomb_density: bombCount,
-      bomb_count: bombs,
-      turn_limit: turnLimit,
+      timer: turnLimit,
       player_limit: playerLimit,
       chat_enabled: chatState,
+    };
+    // emit setting update to server
+    socket.emit("room:settings-updated", {
+      roomID: roomId,
+      settings: newRoomSettings,
     });
   };
   //TODO: generate placement
 
   useEffect(() => {
-    const onSettingsUpdated = (newSettings: any) => {
-      setRoomname(newSettings.name);
-      setMapSize(newSettings.size);
-      setTurnLimit(newSettings.turn_limit);
-      setPlayerLimit(newSettings.player_limit);
-      setBombCount(newSettings.bomb_density);
-      setChatState(newSettings.chat_enabled);
-    };
-
-    socket.on("room:settings-updated", onSettingsUpdated);
+    // listen setting update from server
+    socket.on(
+      "roomSettingsUpdate",
+      ({ name, size, bomb_density, timer, player_limit, chat_enabled }) => {
+        console.log("receive", name);
+        setRoomname(name);
+        setMapSize(size);
+        setTurnLimit(timer);
+        setPlayerLimit(player_limit);
+        setBombCount(bomb_density);
+        setChatState(chat_enabled);
+      }
+    );
 
     return () => {
-      socket.off("room:settings-updated", onSettingsUpdated);
+      socket.off("roomSettingsUpdate");
     };
   }, []);
 
@@ -188,9 +197,10 @@ export default function RoomSettings({
           <Input
             value={roomname}
             onChange={(e) => setRoomname(e.target.value)}
+            onBlur={handleEditRoom}
           />
         ) : (
-          <div className="text-xl -mt-2.5">{roomname || "Unnamed"}</div>
+          <div className="text-xl">{roomname || "Unnamed"}</div>
         )}
       </div>
 
@@ -282,7 +292,7 @@ export default function RoomSettings({
             <select
               id="num-bombs"
               value={bombCount}
-              onChange={(e) => setBombCount(e.target.value as bombDensity)}
+              onChange={(e) => setBombCount(e.target.value as BombDensity)}
               aria-label="Set the amount of bomb density you want for the game."
               className="w-full"
             >
@@ -360,6 +370,7 @@ export default function RoomSettings({
                   console.error("Socket not connected!");
                   return;
                 }
+                socket.emit("leaveRoom");
                 router.push("/");
               }}
               className="bg-red"
@@ -376,6 +387,7 @@ export default function RoomSettings({
                 console.error("Socket not connected!");
                 return;
               }
+              socket.emit("leaveRoom");
               router.push("/");
             }}
             className="bg-red"

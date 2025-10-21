@@ -4,13 +4,16 @@ import { useContext, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Message, Room } from "@/interface";
 import { getRoom } from "@/services/client/roomService";
-import RoomSettings from "@/components/roomSetting";
+import RoomSettings from "@/components/RoomSetting";
 import Chat from "@/components/Chat";
 import RoomName from "@/components/RoomName";
 import LoadingModal from "@/components/LoadingModal";
 import socket from "@/socket";
 import deleteRoom from "@/services/client/deleteRoom";
 import { ChatContext } from "@/components/ChatContext";
+import updatePlayerList from "@/services/client/updatePlayerList";
+import PlayerList from "@/components/PlayerList";
+import { Player } from "@/interface";
 
 export default function LobbyPage() {
   const [room, setRoom] = useState<Room | null>(null);
@@ -20,6 +23,7 @@ export default function LobbyPage() {
   const roomId = params.id as string;
   const [deletedRoomPopup, setDeletedRoomPopup] = useState(false);
   const router = useRouter();
+  const [players, setPlayers] = useState<Player[]>([]);
 
   const handleDeleteRoom = async () => {
     if (!socket.auth.userID) {
@@ -57,9 +61,32 @@ export default function LobbyPage() {
         router.replace("/");
       }, 3000);
     });
+    // add players into array when they join
+    // may need to leave when socket disconnect
+    socket.on("currentPlayers", (currentPlayers: Player[]) => {
+      console.log("Received players:", currentPlayers);
+      setPlayers(currentPlayers);
+    });
+
+    // update player list in database
+    socket.emit("joinRoom", parseInt(roomId));
+    const updatePlayer = async () => {
+      try {
+        const roomData = await updatePlayerList({
+          userId: socket.auth.userID,
+          roomId: parseInt(roomId),
+          addPlayer: true,
+        });
+      } catch (error) {
+        console.error("Error updating room:", error);
+      }
+    };
+    updatePlayer();
+
     return () => {
       socket.off("message");
       socket.off("kickAllPlayersInRoom");
+      socket.off("currentPlayers");
     };
   }, []);
 
@@ -103,15 +130,12 @@ export default function LobbyPage() {
         />
         <div className="flex flex-col md:flex-row gap-[20px] h-10/12 md:h-9/12">
           <div className="flex flex-col gap-[20px] md:h-full md:w-1/2 md:max-w-[315px]">
-            <div className="bg-gray">
-              <p>
-                Player {room.player_id_list.length}/{room.player_limit} sadfasf
-              </p>
-              <ul>
-                {room.player_id_list.map((playerId: string) => {
-                  return <li key={playerId}>- {playerId}</li>;
-                })}
-              </ul>
+            <div>
+              <PlayerList
+                playerLimit={room.player_limit}
+                players={players}
+                hostID={room.host_id}
+              />
             </div>
 
             <div className="hidden md:block w-full h-full">
