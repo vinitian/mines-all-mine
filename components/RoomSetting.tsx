@@ -10,13 +10,13 @@ import Button from "@/components/Button";
 import {
   Room,
   Settings,
-  bombDensity,
+  BombDensity,
   MapSize,
   PlayerLimit,
   TurnLimit,
 } from "@/interface";
 
-function densityToCount(density: bombDensity, size: number) {
+function densityToCount(density: BombDensity, size: number) {
   const cells = size * size;
   const ratio = density === "low" ? 0.18 : density === "high" ? 0.42 : 0.3;
   return Math.max(1, Math.floor(cells * ratio));
@@ -32,7 +32,7 @@ export default function RoomSettings({
 }) {
   const [roomname, setRoomname] = useState(roomName);
   const [mapSize, setMapSize] = useState<MapSize>(8);
-  const [bombCount, setBombCount] = useState<bombDensity>("medium");
+  const [bombCount, setBombCount] = useState<BombDensity>("medium");
   const [turnLimit, setTurnLimit] = useState<TurnLimit>(10);
   const [playerLimit, setPlayerLimit] = useState<PlayerLimit>(2);
   const [isConnected, setIsConnected] = useState(false);
@@ -292,7 +292,7 @@ export default function RoomSettings({
             <select
               id="num-bombs"
               value={bombCount}
-              onChange={(e) => setBombCount(e.target.value as bombDensity)}
+              onChange={(e) => setBombCount(e.target.value as BombDensity)}
               aria-label="Set the amount of bomb density you want for the game."
               className="w-full"
             >
