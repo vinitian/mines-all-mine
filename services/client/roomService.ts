@@ -35,13 +35,6 @@ export async function getRoom(id: number): Promise<Room | null> {
       },
     });
 
-    if (!response.ok) {
-      if (response.status === 404) {
-        return null;
-      }
-      throw new Error("Failed to fetch room");
-    }
-
     const data = await response.json();
 
     if (data.success) {
@@ -61,7 +54,7 @@ export async function getTotalRooms(): Promise<number> {
     return rooms.length;
   } catch (error) {
     console.error("Error fetching room count:", error);
-    return 0;
+    throw new Error("Error fetching room count");
   }
 }
 
@@ -74,7 +67,7 @@ export const checkRoomExists = async (roomId: number): Promise<boolean> => {
     const data = await response.json();
     return data.success;
   } catch (error) {
-    console.error('Error checking room existence:', error);
+    console.error("Error checking room existence:", error);
     return false;
   }
 };

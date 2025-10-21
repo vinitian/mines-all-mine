@@ -81,6 +81,12 @@ export default function LobbyPage() {
     }
   }, [roomId]);
 
+  if (!socket.auth || !socket.connected) {
+    router.push("/");
+    return (
+      <LoadingModal text={"No socket auth. Redirecting you to home page"} />
+    );
+  }
   if (loading) {
     return <LoadingModal text={"Loading room information"} />;
   }
