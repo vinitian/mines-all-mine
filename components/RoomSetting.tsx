@@ -7,13 +7,14 @@ import editRoom from "@/services/client/editRoom";
 import CountdownModal from "@/components/CountDownModal";
 import Input from "@/components/Input";
 import Button from "@/components/Button";
-import { Room } from "@/interface";
-
-const sizes = [6, 8, 10, 20, 30] as const;
-const sizes2 = [2, 3, 4, 5, 6, 7, 8, 9, 10];
-type MapSize = (typeof sizes)[number];
-type BombDensity = "low" | "medium" | "high";
-type PlayerLimit = (typeof sizes2)[number];
+import {
+  Room,
+  Settings,
+  BombDensity,
+  MapSize,
+  PlayerLimit,
+  TurnLimit,
+} from "@/interface";
 
 function densityToCount(density: BombDensity, size: number) {
   const cells = size * size;
@@ -32,7 +33,7 @@ export default function RoomSettings({
   const [roomname, setRoomname] = useState(room.name);
   const [mapSize, setMapSize] = useState<MapSize>(8);
   const [bombCount, setBombCount] = useState<BombDensity>("medium");
-  const [turnLimit, setTurnLimit] = useState<0 | 10 | 20 | 30>(10);
+  const [turnLimit, setTurnLimit] = useState<TurnLimit>(10);
   const [playerLimit, setPlayerLimit] = useState<PlayerLimit>(2);
   const [chatState, setChatState] = useState<boolean>(true);
   const router = useRouter();
@@ -54,6 +55,7 @@ export default function RoomSettings({
 
   const handleEditRoom = async () => {
     const bombs = densityToCount(bombCount, mapSize);
+    // update room settings in database
     const response = await editRoom({
       user_id: socket.auth.userID,
       name: roomname,
@@ -64,31 +66,46 @@ export default function RoomSettings({
       chat_enabled: chatState,
     });
 
-    socket.emit("room:settings-updated", {
+    const newRoomSettings = {
       name: roomname,
       size: mapSize,
       bomb_density: bombCount,
-      bomb_count: bombs,
-      turn_limit: turnLimit,
+      timer: turnLimit,
       player_limit: playerLimit,
       chat_enabled: chatState,
+    };
+    // emit setting update to server
+    socket.emit("room:settings-updated", {
+      roomID: room.id,
+      settings: newRoomSettings,
     });
   };
 
   useEffect(() => {
-    const onSettingsUpdated = (newSettings: any) => {
-      setRoomname(newSettings.name);
-      setMapSize(newSettings.size);
-      setTurnLimit(newSettings.turn_limit);
-      setPlayerLimit(newSettings.player_limit);
-      setBombCount(newSettings.bomb_density);
-      setChatState(newSettings.chat_enabled);
-    };
-
-    socket.on("room:settings-updated", onSettingsUpdated);
+    // listen setting update from server
+    socket.on(
+      "roomSettingsUpdate",
+      ({ name, size, bomb_density, timer, player_limit, chat_enabled }) => {
+        console.log(
+          "receive",
+          name,
+          size,
+          bomb_density,
+          timer,
+          player_limit,
+          chat_enabled
+        );
+        setRoomname(name);
+        setMapSize(size);
+        setTurnLimit(timer);
+        setPlayerLimit(player_limit);
+        setBombCount(bomb_density);
+        setChatState(chat_enabled);
+      }
+    );
 
     return () => {
-      socket.off("room:settings-updated", onSettingsUpdated);
+      socket.off("roomSettingsUpdate");
     };
   }, []);
 
@@ -113,11 +130,11 @@ export default function RoomSettings({
             value={roomname}
             onChange={(e) => {
               setRoomname(e.target.value);
-              handleEditRoom();
             }}
+            onBlur={handleEditRoom}
           />
         ) : (
-          <div className="text-xl -mt-2.5">{roomname || "Unnamed"}</div>
+          <div className="text-xl">{roomname || "Unnamed"}</div>
         )}
       </div>
 
@@ -310,6 +327,7 @@ export default function RoomSettings({
                   console.error("Socket not connected!");
                   return;
                 }
+                socket.emit("leaveRoom");
                 router.push("/");
               }}
               className="bg-red"
@@ -326,6 +344,7 @@ export default function RoomSettings({
                 console.error("Socket not connected!");
                 return;
               }
+              socket.emit("leaveRoom");
               router.push("/");
             }}
             className="bg-red"

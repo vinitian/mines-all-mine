@@ -5,6 +5,25 @@ export interface Message {
   timestamp: string;
 }
 
+export interface Player {
+  userID: string;
+  username: string;
+}
+
+export type MapSize = 6 | 8 | 10 | 20 | 30;
+export type BombDensity = "low" | "medium" | "high";
+export type PlayerLimit = 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
+export type TurnLimit = 0 | 10 | 20 | 30;
+
+export interface Settings {
+  name: string;
+  size: MapSize;
+  bomb_density: BombDensity;
+  timer: TurnLimit;
+  player_limit: PlayerLimit;
+  chat_enabled: boolean;
+}
+
 export interface User {
   id: number;
   email: string;

@@ -1,4 +1,4 @@
-import RoomSetting from "../../components/roomSetting";
+import RoomSetting from "../../components/RoomSetting";
 
 export default function Page() {
   return <RoomSetting />;

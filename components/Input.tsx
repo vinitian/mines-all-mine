@@ -5,11 +5,13 @@ export default function Input({
   placeholder,
   onChange,
   onKeyDown,
+  onBlur,
 }: {
   value: string;
   placeholder?: string;
   onChange?: React.ChangeEventHandler<HTMLInputElement>;
   onKeyDown?: React.KeyboardEventHandler<HTMLInputElement>;
+  onBlur?: React.FocusEventHandler<HTMLInputElement>;
 }) {
   return (
     <input
@@ -19,6 +21,7 @@ export default function Input({
       value={value}
       onChange={onChange}
       onKeyDown={onKeyDown}
+      onBlur={onBlur}
     />
   );
 }

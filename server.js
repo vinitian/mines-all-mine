@@ -11,6 +11,7 @@ const port = 3000;
 // when using middleware `hostname` and `port` must be provided below
 const app = next({ dev, hostname, port });
 const handler = app.getRequestHandler();
+const roomPlayers = {};
 
 app.prepare().then(() => {
   const randomId = () => randomBytes(8).toString("hex");
@@ -202,6 +203,18 @@ app.prepare().then(() => {
       io.to(room_id).emit("kickAllPlayersInRoom");
     });
 
+    socket.on("room:settings-updated", (data) => {
+      console.log(data.settings.bomb_density);
+      io.to(data.roomID).emit("roomSettingsUpdate", {
+        name: data.settings.name,
+        size: data.settings.size,
+        bomb_density: data.settings.bomb_density,
+        timer: data.settings.timer,
+        player_limit: data.settings.player_limit,
+        chat_enabled: data.settings.chat_enabled,
+      });
+    });
+
     socket.on("settings:update", (payload, cb) => {
       try {
         const { size, bombCount, turnLimit } = payload || {};
@@ -281,20 +294,59 @@ app.prepare().then(() => {
     });
 
     socket.on("joinRoom", (room_id) => {
+      console.log("Player joinnnnnnn");
       socket.rooms.forEach((room) => {
         // TODO
         if (room !== socket.id) {
           socket.leave(room);
+
+          // leave room
+          if (roomPlayers[room]) {
+            roomPlayers[room] = roomPlayers[room].filter(
+              (p) => p.userID !== socket.data.userID
+            );
+
+            io.to(room).emit("currentPlayers", roomPlayers[room]);
+          }
         }
       });
+
+      console.log("hello");
+
       socket.join(room_id);
+      // if room doesn't exist
+      if (!roomPlayers[room_id]) {
+        roomPlayers[room_id] = [];
+      }
+
+      const newPlayer = {
+        userID: socket.data.userID,
+        username: socket.data.username,
+      };
+
+      // check if player id is already in the room
+      if (!roomPlayers[room_id].some((p) => p.userID === newPlayer.userID)) {
+        roomPlayers[room_id].push(newPlayer);
+      }
+
+      io.to(room_id).emit("currentPlayers", roomPlayers[room_id]);
+
+      console.log(newPlayer.userID);
+      console.log("BBB");
+      console.log(roomPlayers[room_id]);
     });
 
     socket.on("leaveRoom", () => {
       socket.rooms.forEach((room) => {
-        // TODO
         if (room !== socket.id) {
           socket.leave(room);
+          if (roomPlayers[room]) {
+            roomPlayers[room] = roomPlayers[room].filter(
+              (p) => p.userID !== socket.data.userID
+            );
+
+            io.to(room).emit("currentPlayers", roomPlayers[room]);
+          }
         }
       });
     });
