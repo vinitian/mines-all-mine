@@ -22,12 +22,73 @@ app.prepare().then(() => {
   const httpServer = createServer(handler);
   const io = new Server(httpServer);
 
-
-  let currentRoom = undefined; // from room management section
   // Server data (frequently updated)
+
+  /*
+  roomData={
+    room_id:{
+      "timer": Timer,
+      "state": Room,
+    },
+  }   
+  */
 
   const roomData = {};
   const sockets = new Map();
+  // some emit still looks wrong?!??
+  class Room {
+    constructor(id, name, host_id) {
+      this.id = id;
+      this.name = name;
+      this.host_id = host_id;
+      this.player_id_list = [host_id];
+      this.size = undefined; // for both x and y
+      this.player_limit = undefined;
+      this.bomb_count = undefined; //init bombs count
+      this.chat_enabled = undefined;
+      this.timer = undefined; //init time amount
+      this.game_started = undefined;
+      this.placement = undefined;
+      this.score_list = undefined; // list of integers score, index same as player id list
+      this.current_turn = undefined; //count by player (to find amout of cycles through all players use division)
+      console.log(`player id ${host_id} created room id ${room_id}`);
+    }
+    updateDatabase(reason = "unspecified") {
+      //TODO link to database.
+      console.log(`updating database for ${reason} reason`);
+      return;
+    }
+    loadDatabase() {
+      //TODO link to database.
+    }
+  }
+
+  // Getter (get object reference, can edit, do not forget to update database!) 
+
+  function getGameState(room_id, reason = "unspecified") {
+    console.log(`getting data of room id ${room_id} for ${reason} reason`);
+    return (roomData(room_id));
+  }
+
+  // function createRoom(room_id, max_time) {
+  //   //TODO
+  //   let data = roomData[room_id];
+  //   if (data === undefined) {
+  //     roomData[room_id] = new {};
+  //     data = roomData[room_id]
+  //   }
+  //   let timer = data["timer"];
+  //   if (timer === undefined) {
+  //     data["timer"] = new Timer(
+  //       room_id,
+  //       max_time,
+  //       io.to(room_id).emit("turnTime", {
+  //         timeRemaining: this.timeRemaining,
+  //       }),
+  //       nextTurn("timesUp"),
+  //     );
+  //   }
+  // }
 
   // Timer data
 
@@ -135,6 +196,8 @@ app.prepare().then(() => {
     console.log(
       `Connection from: ${socket.handshake.headers.origin}, isLocalhost: ${isLocalhost}`
     );
+
+    let currentRoom = undefined; // from room management section
 
     // if (!state.players.includes(socket.data.userID)) {
     //   state.players.push(socket.data.userID);
@@ -270,11 +333,12 @@ app.prepare().then(() => {
         if (typeof bombCount === "number") state.bombCount = bombCount;
         if (typeof turnLimit === "number") state.turnLimit = turnLimit;
 
-        io.emit("settings:updated", {
-          size: state.size,
-          bombCount: state.bombCount,
-          turnLimit: state.turnLimit ?? 10,
-        });
+        //goes nowhere and does nothing
+        // io.emit("settings:updated", {
+        //   size: state.size,
+        //   bombCount: state.bombCount,
+        //   turnLimit: state.turnLimit ?? 10,
+        // });
 
         cb?.({ ok: true });
       } catch (err) {

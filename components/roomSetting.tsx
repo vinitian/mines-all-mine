@@ -69,12 +69,13 @@ export default function RoomSettings() {
     };
   }, []);
 
+  //once server finishes preparing map navigate
   useEffect(() => {
     const onReady = (data: any) => {
       console.log("navigating", data);
       router.push("/game");
     };
-
+    //activates only once
     socket.once("map:ready", onReady);
 
     return () => {
@@ -153,6 +154,7 @@ export default function RoomSettings() {
     checkIfHost();
   }, [socket.id]);
 
+  //this starts countdown which then sends data
   const handleStartGame = async () => {
     if (!mapSize) return;
     if (!socket.connected) {
@@ -381,7 +383,7 @@ export default function RoomSettings() {
               playerLimit,
               chatEnabled: chatState,
             });
-            
+
             //remove redundant server state edit?
             //
             socket.emit(
@@ -405,7 +407,7 @@ export default function RoomSettings() {
                   bombCount: densityToCount(bombCount, mapSize),
                   turnLimit,
                 });
-                
+
               }
             );
           }}
@@ -414,3 +416,26 @@ export default function RoomSettings() {
     </div>
   );
 }
+
+/*
+summary of sockets calls
+socket.on
+"connect"
+"disconnect"
+// "room:settings-updated" check for incoming room setting updates (from hosts if not host?) (Server has no listener and clien cant broadcast? need to add "repeater"?)
+
+socket.once
+"map:ready" once server finishes preparing map replies to here, navigate upon reply, if the player joined later also navigate them straight to the game
+also inits states for mineGameLogic
+
+socket.off //turns off listeners
+"connect"
+"disconnect"
+"room:settings-updated" 
+"map:ready"
+
+socket.emit
+"room:settings-updated" send when room setting has been updated 
+"settings:update" goes to server to update settings and reset game
+"startGame" calls server to init game
+*/
