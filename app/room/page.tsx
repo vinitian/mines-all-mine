@@ -59,7 +59,6 @@ export default function Room() {
       const roomExists = await checkRoomExists(roomId);
 
       if (roomExists) {
-        socket.emit("joinRoom", roomId);
         router.push(`/lobby/${roomId}`);
       } else {
         setError(`Room with ID: ${roomId} not found!`);
@@ -173,13 +172,9 @@ export default function Room() {
                     <div>
                       <span className="font-regular">Status:</span>{" "}
                       {room.game_started ? (
-                        <span className="text-red font-bold">
-                          Game ongoing
-                        </span>
+                        <span className="text-red font-bold">Game ongoing</span>
                       ) : (
-                        <span className="text-green font-bold">
-                          In lobby
-                        </span>
+                        <span className="text-green font-bold">In lobby</span>
                       )}
                     </div>
                     <div>
