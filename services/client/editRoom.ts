@@ -23,6 +23,7 @@ export default async function editRoom(apiRequest: EditRoomRequest) {
   });
 
   if (!response.ok) {
-    return new Error("Failed to open room");
+    throw new Error("Failed to open room");
   }
+  return await response.json();
 }
