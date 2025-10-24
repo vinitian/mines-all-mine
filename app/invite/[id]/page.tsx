@@ -77,7 +77,6 @@ export default function InvitePage() {
 
   useEffect(() => {
     const userID = localStorage.getItem("userID");
-    console.log("localstorage userID:", userID);
     if (userID) {
       socket.auth = { userID };
       socket.connect();
