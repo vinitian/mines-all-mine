@@ -97,9 +97,7 @@ export default function LobbyPage() {
         setLoading(true);
         const roomData = await getRoom(parseInt(roomId));
         setRoom(roomData);
-        if (room) {
-          setLobbyRoomName(room.name);
-        }
+        setLobbyRoomName(roomData.name);
       } catch (error) {
         console.error("Error fetching room:", error);
       } finally {
@@ -112,6 +110,12 @@ export default function LobbyPage() {
     }
   }, [roomId]);
 
+  if (!socket.auth || !socket.connected) {
+    router.push("/");
+    return (
+      <LoadingModal text={"No socket auth. Redirecting you to home page"} />
+    );
+  }
   if (loading) {
     return <LoadingModal text={"Loading room information"} />;
   }
@@ -147,8 +151,8 @@ export default function LobbyPage() {
             </div>
           </div>
           <RoomSettings
-            roomId={parseInt(roomId)}
-            roomName={room.name}
+            room={room}
+            isHost={room.host_id == socket.auth.userID}
             setLobbyRoomNameAction={setLobbyRoomName}
           />
         </div>
@@ -181,9 +185,7 @@ export default function LobbyPage() {
       </div>
       {deletedRoomPopup && (
         <LoadingModal
-          text={
-            "The host has deleted the room.\n\nRedirecting you to home page"
-          }
+          text={"The host has deleted the room. Redirecting you to home page"}
         />
       )}
     </div>

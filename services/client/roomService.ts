@@ -26,7 +26,7 @@ export async function getRooms(): Promise<Room[]> {
   }
 }
 
-export async function getRoom(id: number): Promise<Room | null> {
+export async function getRoom(id: number): Promise<Room> {
   try {
     const response = await fetch(`/api/room/${id}`, {
       method: "GET",
@@ -34,13 +34,6 @@ export async function getRoom(id: number): Promise<Room | null> {
         "Content-Type": "application/json",
       },
     });
-
-    if (!response.ok) {
-      if (response.status === 404) {
-        return null;
-      }
-      throw new Error("Failed to fetch room");
-    }
 
     const data = await response.json();
 
@@ -51,7 +44,7 @@ export async function getRoom(id: number): Promise<Room | null> {
     }
   } catch (error) {
     console.error("Error fetching room:", error);
-    return null;
+    throw new Error("Room not found");
   }
 }
 
@@ -61,7 +54,7 @@ export async function getTotalRooms(): Promise<number> {
     return rooms.length;
   } catch (error) {
     console.error("Error fetching room count:", error);
-    return 0;
+    throw new Error("Error fetching room count");
   }
 }
 
@@ -74,7 +67,7 @@ export const checkRoomExists = async (roomId: number): Promise<boolean> => {
     const data = await response.json();
     return data.success;
   } catch (error) {
-    console.error('Error checking room existence:', error);
+    console.error("Error checking room existence:", error);
     return false;
   }
 };

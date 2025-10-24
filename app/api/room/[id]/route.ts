@@ -10,7 +10,6 @@ interface RouteParams {
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
     const roomId = parseInt((await params).id);
-
     if (isNaN(roomId)) {
       return NextResponse.json(
         { success: false, error: "Invalid room ID" },
@@ -35,7 +34,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   } catch (error: any) {
     console.error("Error fetching room:", error);
     return NextResponse.json(
-      { success: false, error: error.message },
+      { success: false, error: "Error fetching room" },
       { status: 500 }
     );
   }
