@@ -125,6 +125,7 @@ export default function Room() {
               onChange={(e) => {
                 setRoomCode(e.target.value);
               }}
+              onKeyUp={handleKeyPress}
             />
 
             <button
