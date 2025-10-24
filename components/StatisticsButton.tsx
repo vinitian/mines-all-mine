@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import socket from "@/socket";
-import { getTotalRooms } from "@/services/client/roomService";
+import getRooms from "@/services/client/getRooms";
 import resetEverything from "@/services/client/resetEverything";
 
 export default function StatisticsButton() {
@@ -26,7 +26,8 @@ export default function StatisticsButton() {
 
   const fetchTotalRooms = async () => {
     try {
-      const count = await getTotalRooms();
+      const response = await getRooms(); // get total room count
+      const count = response.length;
       setTotalRooms(count);
     } catch (error) {
       console.error(error);

@@ -3,7 +3,7 @@
 import { useContext, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Message, Room } from "@/interface";
-import { getRoom } from "@/services/client/roomService";
+import getRoom from "@/services/client/getRoom";
 import RoomSettings from "@/components/RoomSetting";
 import Chat from "@/components/Chat";
 import RoomName from "@/components/RoomName";
@@ -112,8 +112,14 @@ export default function LobbyPage() {
     }
   }, [roomId]);
 
+  useEffect(() => {
+    if (!socket.auth || !socket.connected) {
+      router.push("/");
+    }
+  }, [router, socket.auth, socket.connected]);
+
+  // Remove the direct navigation and just show loading
   if (!socket.auth || !socket.connected) {
-    router.push("/");
     return (
       <LoadingModal text={"No socket auth. Redirecting you to home page"} />
     );

@@ -9,7 +9,7 @@ import { Room } from "@/interface";
 import StatisticsButton from "@/components/StatisticsButton";
 import DuplicateUserPopup from "@/components/DuplicateConnectedUserPopup";
 import handleSignOut from "@/services/client/handleSignOut";
-import { getRoom } from "@/services/client/roomService";
+import getRoom from "@/services/client/getRoom";
 
 export default function InvitePage() {
   const { data: session } = useSession();

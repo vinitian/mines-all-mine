@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import socket from "@/socket";
 import StatisticsButton from "@/components/StatisticsButton";
 import { useRouter } from "next/navigation";
-import { getRooms, checkRoomExists } from "@/services/client/roomService";
+import getRooms from "@/services/client/getRooms";
+import checkRoomExists from "@/services/client/checkRoomExists";
 import { Room as RoomType } from "@/interface";
 
 export default function Room() {
