@@ -73,7 +73,7 @@ export default function LobbyPage() {
     socket.emit("joinRoom", parseInt(roomId));
     const updatePlayer = async () => {
       try {
-        const roomData = await updatePlayerList({
+        await updatePlayerList({
           userId: socket.auth.userID,
           roomId: parseInt(roomId),
           addPlayer: true,
