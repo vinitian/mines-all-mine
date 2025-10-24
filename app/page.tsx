@@ -61,7 +61,7 @@ export default function Home() {
     } else {
       router.push(`/lobby/${response.data.id}`);
     }
-    socket.off("setAuthSuccessfulAck", handleSetAuthSuccessfulAck);
+    socket.off("setAuthSuccessfulAck");
   };
 
   const handleCreateRoom = () => {
@@ -112,9 +112,9 @@ export default function Home() {
     socket.on("duplicateConnectedUser", handleDuplicateConnectedUser);
     socket.on("session", handleSession);
     return () => {
-      socket.off("duplicateConnectedUser", handleDuplicateConnectedUser);
-      socket.off("session", handleSession);
-      socket.off("setAuthSuccessfulAck", handleSetAuthSuccessfulAck);
+      socket.off("duplicateConnectedUser");
+      socket.off("session");
+      socket.off("setAuthSuccessfulAck");
     };
   }, []);
 
