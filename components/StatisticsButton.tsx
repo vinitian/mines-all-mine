@@ -86,12 +86,12 @@ export default function StatisticsButton() {
     };
 
     socket.on("onlineCountUpdate", handleOnlineCountUpdate);
-    socket.emit("getOnlineCount");
 
     socket.on("serverRestarts", handleServerRestarts);
 
     return () => {
       socket.off("onlineCountUpdate", handleOnlineCountUpdate);
+      socket.off("serverRestarts", handleServerRestarts);
     };
   }, []);
 

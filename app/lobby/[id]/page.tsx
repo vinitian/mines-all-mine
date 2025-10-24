@@ -17,6 +17,7 @@ import { Player } from "@/interface";
 
 export default function LobbyPage() {
   const [room, setRoom] = useState<Room | null>(null);
+  const [lobbyRoomName, setLobbyRoomName] = useState("Room");
   const { messages, setMessages } = useContext(ChatContext);
   const [loading, setLoading] = useState(true);
   const params = useParams();
@@ -96,6 +97,7 @@ export default function LobbyPage() {
         setLoading(true);
         const roomData = await getRoom(parseInt(roomId));
         setRoom(roomData);
+        setLobbyRoomName(roomData.name);
       } catch (error) {
         console.error("Error fetching room:", error);
       } finally {
@@ -129,7 +131,7 @@ export default function LobbyPage() {
     <div className="flex flex-col px-[25px]">
       <div className="flex flex-col gap-[25px] py-[25px] md:h-dvh">
         <RoomName
-          roomName={room.name}
+          roomName={lobbyRoomName}
           roomCode={room.id}
           trashVisible={room.host_id == socket.auth.userID}
           trashOnClickAction={handleDeleteRoom}
@@ -151,6 +153,7 @@ export default function LobbyPage() {
           <RoomSettings
             room={room}
             isHost={room.host_id == socket.auth.userID}
+            setLobbyRoomNameAction={setLobbyRoomName}
           />
         </div>
       </div>

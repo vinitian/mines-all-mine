@@ -26,7 +26,7 @@ export async function getRooms(): Promise<Room[]> {
   }
 }
 
-export async function getRoom(id: number): Promise<Room | null> {
+export async function getRoom(id: number): Promise<Room> {
   try {
     const response = await fetch(`/api/room/${id}`, {
       method: "GET",
@@ -44,7 +44,7 @@ export async function getRoom(id: number): Promise<Room | null> {
     }
   } catch (error) {
     console.error("Error fetching room:", error);
-    return null;
+    throw new Error("Room not found");
   }
 }
 

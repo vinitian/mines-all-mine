@@ -26,9 +26,11 @@ function densityToCount(density: BombDensity, size: number) {
 export default function RoomSettings({
   room,
   isHost,
+  setLobbyRoomNameAction = () => {},
 }: {
   room: Room;
   isHost: boolean;
+  setLobbyRoomNameAction?: React.Dispatch<React.SetStateAction<string>>;
 }) {
   const [roomname, setRoomname] = useState(room.name);
   const [mapSize, setMapSize] = useState<MapSize>(8);
@@ -102,6 +104,7 @@ export default function RoomSettings({
           chat_enabled
         );
         setRoomname(name);
+        setLobbyRoomNameAction(name);
         setMapSize(size);
         setTurnLimit(timer);
         setPlayerLimit(player_limit);
