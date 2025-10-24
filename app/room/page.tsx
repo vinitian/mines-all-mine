@@ -26,7 +26,7 @@ export default function Room() {
         const roomsData = await getRooms();
         setRooms(roomsData);
       } catch (error) {
-        console.error("Error fetching rooms:", error);
+        console.error(error);
       } finally {
         setLoading(false);
       }

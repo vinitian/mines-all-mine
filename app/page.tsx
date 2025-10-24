@@ -52,16 +52,17 @@ export default function Home() {
   };
 
   const handleSetAuthSuccessfulAck = async () => {
-    const response = await createRoom({
-      id: socket.auth.userID!,
-      username: username,
-    });
-    if (response.message) {
-      setErrorMessage(response.message);
-    } else {
+    try {
+      const response = await createRoom({
+        id: socket.auth.userID!,
+        username: username,
+      });
       router.push(`/lobby/${response.data.id}`);
+      socket.off("setAuthSuccessfulAck");
+    } catch (error: any) {
+      console.error(error);
+      setErrorMessage(error.message);
     }
-    socket.off("setAuthSuccessfulAck");
   };
 
   const handleCreateRoom = () => {

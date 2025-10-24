@@ -29,7 +29,7 @@ export default function StatisticsButton() {
       const count = await getTotalRooms();
       setTotalRooms(count);
     } catch (error) {
-      console.error("Failed to fetch total rooms:", error);
+      console.error(error);
       setTotalRooms(0);
     }
   };
@@ -47,17 +47,17 @@ export default function StatisticsButton() {
     setResetMessage("");
 
     try {
-      const result = await resetEverything();
+      const response = await resetEverything();
 
-      if (result.success) {
-        setResetMessage(result.message || "Reset completed successfully!");
+      if (response.success) {
+        setResetMessage(response.message || "Reset completed successfully!");
         // Refresh the room count
         await fetchTotalRooms();
       } else {
-        setResetMessage(`Error: ${result.error}`);
+        setResetMessage(`Error: ${response.error}`);
       }
     } catch (error) {
-      setResetMessage("Failed to reset data");
+      setResetMessage("Error: Failed to reset data");
     } finally {
       setResetLoading(false);
       socket.emit("resetNotice");

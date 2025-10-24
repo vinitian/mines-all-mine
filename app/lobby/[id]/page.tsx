@@ -30,9 +30,11 @@ export default function LobbyPage() {
     if (!socket.auth.userID) {
       return;
     }
-    const response = await deleteRoom(parseInt(roomId));
-    if (response) {
+    try {
+      await deleteRoom(parseInt(roomId));
       handleKickAllPlayersInRoom();
+    } catch (error) {
+      console.error(error);
     }
   };
 
@@ -79,7 +81,7 @@ export default function LobbyPage() {
           addPlayer: true,
         });
       } catch (error) {
-        console.error("Error updating room:", error);
+        console.error(error);
       }
     };
     updatePlayer();
@@ -99,7 +101,7 @@ export default function LobbyPage() {
         setRoom(roomData);
         setLobbyRoomName(roomData.name);
       } catch (error) {
-        console.error("Error fetching room:", error);
+        console.error(error);
       } finally {
         setLoading(false);
       }

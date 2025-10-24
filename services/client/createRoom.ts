@@ -18,7 +18,7 @@ export default async function createRoom(apiRequest: CreateRoomRequest) {
   });
 
   if (!response.ok) {
-    return new Error("Failed to create room");
+    throw new Error("Failed to create room");
   }
 
   const result = await response.json();

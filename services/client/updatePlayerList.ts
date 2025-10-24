@@ -4,7 +4,9 @@ interface UpdatePlayerListRequest {
   addPlayer: boolean;
 }
 
-export default async function update(apiRequest: UpdatePlayerListRequest) {
+export default async function updatePlayerList(
+  apiRequest: UpdatePlayerListRequest
+) {
   const baseUrl =
     typeof window === "undefined"
       ? process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3000"
@@ -22,6 +24,6 @@ export default async function update(apiRequest: UpdatePlayerListRequest) {
   );
 
   if (!response.ok) {
-    return new Error("Failed to open room");
+    throw new Error("Failed to update player list: " + response.statusText);
   }
 }

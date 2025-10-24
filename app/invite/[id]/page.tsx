@@ -104,7 +104,7 @@ export default function InvitePage() {
         const response = await getRoom(parseInt(roomId));
         setRoom(response);
       } catch (error) {
-        console.error("Error fetching room:", error);
+        console.error(error);
         setError("Error fetching room");
       } finally {
         setLoading(false);

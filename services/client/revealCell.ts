@@ -1,4 +1,4 @@
-import {Cell, Field} from "@/services/game_logic";
+import { Cell, Field } from "@/services/game_logic";
 
 interface RevealCellRequest {
   user_id: string;
@@ -20,6 +20,6 @@ export default async function editField(apiRequest: RevealCellRequest) {
   });
 
   if (!response.ok) {
-    return new Error("Cell already revealed");
+    throw new Error("Cell already revealed");
   }
 }
