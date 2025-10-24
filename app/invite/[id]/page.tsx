@@ -9,7 +9,7 @@ import { Room } from "@/interface";
 import StatisticsButton from "@/components/StatisticsButton";
 import DuplicateUserPopup from "@/components/DuplicateConnectedUserPopup";
 import handleSignOut from "@/services/client/handleSignOut";
-import { getRoom } from "@/services/client/roomService";
+import getRoom from "@/services/client/getRoom";
 
 export default function InvitePage() {
   const { data: session } = useSession();
@@ -77,7 +77,6 @@ export default function InvitePage() {
 
   useEffect(() => {
     const userID = localStorage.getItem("userID");
-    console.log("localstorage userID:", userID);
     if (userID) {
       socket.auth = { userID };
       socket.connect();
@@ -105,7 +104,7 @@ export default function InvitePage() {
         const response = await getRoom(parseInt(roomId));
         setRoom(response);
       } catch (error) {
-        console.error("Error fetching room:", error);
+        console.error(error);
         setError("Error fetching room");
       } finally {
         setLoading(false);

@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import socket from "@/socket";
 import StatisticsButton from "@/components/StatisticsButton";
 import { useRouter } from "next/navigation";
-import { getRooms, checkRoomExists } from "@/services/client/roomService";
+import getRooms from "@/services/client/getRooms";
+import checkRoomExists from "@/services/client/checkRoomExists";
 import { Room as RoomType } from "@/interface";
 
 export default function Room() {
@@ -26,7 +27,7 @@ export default function Room() {
         const roomsData = await getRooms();
         setRooms(roomsData);
       } catch (error) {
-        console.error("Error fetching rooms:", error);
+        console.error(error);
       } finally {
         setLoading(false);
       }
@@ -125,6 +126,7 @@ export default function Room() {
               onChange={(e) => {
                 setRoomCode(e.target.value);
               }}
+              onKeyUp={handleKeyPress}
             />
 
             <button

@@ -1,20 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/prisma/prisma";
 
-interface RouteParams {
-  params: {
-    id: string;
-  };
-}
-
-export async function GET(request: NextRequest, { params }: RouteParams) {
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
     const roomId = parseInt((await params).id);
     if (isNaN(roomId)) {
-      return NextResponse.json(
-        { success: false, error: "Invalid room ID" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Invalid room ID" }, { status: 400 });
     }
 
     const room = await prisma.room.findUnique({
@@ -24,32 +18,29 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     });
 
     if (!room) {
-      return NextResponse.json(
-        { success: false, error: "Room not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Room not found" }, { status: 404 });
     }
 
     return NextResponse.json({ success: true, data: room });
   } catch (error: any) {
     console.error("Error fetching room:", error);
     return NextResponse.json(
-      { success: false, error: "Error fetching room" },
+      { error: "Error fetching room: " + error.message },
       { status: 500 }
     );
   }
 }
 
-// Delete room from roomId
-export async function DELETE(request: NextRequest, { params }: RouteParams) {
+// Delete room by room ID
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
     const roomId = parseInt((await params).id);
 
     if (isNaN(roomId)) {
-      return NextResponse.json(
-        { success: false, error: "Invalid room ID" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Invalid room ID" }, { status: 400 });
     }
 
     const deletedRoom = await prisma.room.delete({
@@ -60,7 +51,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
 
     if (!deletedRoom) {
       return NextResponse.json(
-        { success: false, error: "Error deleting room." },
+        { error: "Error deleting room." },
         { status: 404 }
       );
     }
@@ -69,7 +60,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
   } catch (error: any) {
     console.error("Error deleting room:", error);
     return NextResponse.json(
-      { success: false, error: error.message },
+      { error: "Failed to delete room: " + error.message },
       { status: 500 }
     );
   }

@@ -3,7 +3,7 @@
 import { useContext, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Message, Room } from "@/interface";
-import { getRoom } from "@/services/client/roomService";
+import getRoom from "@/services/client/getRoom";
 import RoomSettings from "@/components/RoomSetting";
 import Chat from "@/components/Chat";
 import RoomName from "@/components/RoomName";
@@ -30,9 +30,11 @@ export default function LobbyPage() {
     if (!socket.auth.userID) {
       return;
     }
-    const response = await deleteRoom(parseInt(roomId));
-    if (response) {
+    try {
+      await deleteRoom(parseInt(roomId));
       handleKickAllPlayersInRoom();
+    } catch (error) {
+      console.error(error);
     }
   };
 
@@ -73,13 +75,13 @@ export default function LobbyPage() {
     socket.emit("joinRoom", parseInt(roomId));
     const updatePlayer = async () => {
       try {
-        const roomData = await updatePlayerList({
+        await updatePlayerList({
           userId: socket.auth.userID,
           roomId: parseInt(roomId),
           addPlayer: true,
         });
       } catch (error) {
-        console.error("Error updating room:", error);
+        console.error(error);
       }
     };
     updatePlayer();
@@ -99,7 +101,7 @@ export default function LobbyPage() {
         setRoom(roomData);
         setLobbyRoomName(roomData.name);
       } catch (error) {
-        console.error("Error fetching room:", error);
+        console.error(error);
       } finally {
         setLoading(false);
       }
@@ -110,8 +112,14 @@ export default function LobbyPage() {
     }
   }, [roomId]);
 
+  useEffect(() => {
+    if (!socket.auth || !socket.connected) {
+      router.push("/");
+    }
+  }, [router, socket.auth, socket.connected]);
+
+  // Remove the direct navigation and just show loading
   if (!socket.auth || !socket.connected) {
-    router.push("/");
     return (
       <LoadingModal text={"No socket auth. Redirecting you to home page"} />
     );

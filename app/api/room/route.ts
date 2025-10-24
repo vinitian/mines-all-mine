@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ success: true, data: rooms });
   } catch (error: any) {
     return NextResponse.json(
-      { success: false, error: error.message },
+      { error: "Failed to fetch all rooms: " + error.message },
       { status: 500 }
     );
   }
@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true, data: newRoom });
   } catch (error: any) {
     return NextResponse.json(
-      { success: false, error: error.message },
+      { error: "Failed to create new room: " + error.message },
       { status: 500 }
     );
   }
@@ -75,7 +75,7 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ success: true, data: updateRoom });
   } catch (error: any) {
     return NextResponse.json(
-      { success: false, error: error.message },
+      { error: "Failed to update room information: " + error.message },
       { status: 500 }
     );
   }

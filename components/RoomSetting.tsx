@@ -1,4 +1,3 @@
-// roomSetting.tsx
 "use client";
 import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";

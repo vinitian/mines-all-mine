@@ -33,7 +33,7 @@ export async function PATCH(
     return NextResponse.json({ success: true, data: updateRoom });
   } catch (error: any) {
     return NextResponse.json(
-      { success: false, error: error.message },
+      { error: "Failed to update player list: " + error.message },
       { status: 500 }
     );
   }
