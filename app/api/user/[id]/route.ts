@@ -14,7 +14,7 @@ export async function GET(
     return NextResponse.json({ success: true, data: user });
   } catch (error: any) {
     return NextResponse.json(
-      { success: false, error: error.message },
+      { error: "Failed to fetch user by ID: " + error },
       { status: 500 }
     );
   }
