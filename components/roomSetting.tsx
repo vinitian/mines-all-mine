@@ -1,20 +1,19 @@
 // roomSetting.tsx
 "use client";
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import socket from "@/socket";
 import editRoom from "@/services/client/editRoom";
 import CountdownModal from "@/components/CountDownModal";
 import Input from "@/components/Input";
 import Button from "@/components/Button";
-import {
-  Room,
-  Settings,
-  BombDensity,
-  MapSize,
-  PlayerLimit,
-  TurnLimit,
-} from "@/interface";
+import { Room } from "@/interface";
+
+const sizes = [6, 8, 10, 20, 30] as const;
+const sizes2 = [2, 3, 4, 5, 6, 7, 8, 9, 10];
+type MapSize = (typeof sizes)[number];
+type BombDensity = "low" | "medium" | "high";
+type PlayerLimit = (typeof sizes2)[number];
 
 function densityToCount(density: BombDensity, size: number) {
   const cells = size * size;
@@ -33,13 +32,12 @@ export default function RoomSettings({
   const [roomname, setRoomname] = useState(room.name);
   const [mapSize, setMapSize] = useState<MapSize>(8);
   const [bombCount, setBombCount] = useState<BombDensity>("medium");
-  const [turnLimit, setTurnLimit] = useState<TurnLimit>(10);
+  const [turnLimit, setTurnLimit] = useState<0 | 10 | 20 | 30>(10);
   const [playerLimit, setPlayerLimit] = useState<PlayerLimit>(2);
   const [chatState, setChatState] = useState<boolean>(true);
   const router = useRouter();
   const [showCountdown, setShowCountdown] = useState(false);
   const bombs = densityToCount(bombCount, mapSize);
-  const [firstUpdate, setFirstUpdate] = useState(true);
 
   useEffect(() => {
     const onReady = (data: any) => {
@@ -56,75 +54,43 @@ export default function RoomSettings({
 
   const handleEditRoom = async () => {
     const bombs = densityToCount(bombCount, mapSize);
-    // update room settings in database
-    try {
-      const response = await editRoom({
-        user_id: socket.auth.userID,
-        name: roomname,
-        size: mapSize,
-        bomb_count: bombs,
-        turn_limit: turnLimit,
-        player_limit: playerLimit,
-        chat_enabled: chatState,
-      });
-      if (response.success) {
-        const newRoomSettings = {
-          name: roomname,
-          size: mapSize,
-          bomb_density: bombCount,
-          timer: turnLimit,
-          player_limit: playerLimit,
-          chat_enabled: chatState,
-        };
-        // emit setting update to server
-        socket.emit("room:settings-updated", {
-          roomID: room.id,
-          settings: newRoomSettings,
-        });
-      }
-    } catch (e) {
-      console.log(e);
-    }
+    const response = await editRoom({
+      user_id: socket.auth.userID,
+      name: roomname,
+      size: mapSize,
+      bomb_count: bombs,
+      turn_limit: turnLimit,
+      player_limit: playerLimit,
+      chat_enabled: chatState,
+    });
+
+    socket.emit("room:settings-updated", {
+      name: roomname,
+      size: mapSize,
+      bomb_density: bombCount,
+      bomb_count: bombs,
+      turn_limit: turnLimit,
+      player_limit: playerLimit,
+      chat_enabled: chatState,
+    });
   };
 
   useEffect(() => {
-    // listen setting update from server
-    socket.on(
-      "roomSettingsUpdate",
-      ({ name, size, bomb_density, timer, player_limit, chat_enabled }) => {
-        console.log(
-          "receive",
-          name,
-          size,
-          bomb_density,
-          timer,
-          player_limit,
-          chat_enabled
-        );
-        setRoomname(name);
-        setMapSize(size);
-        setTurnLimit(timer);
-        setPlayerLimit(player_limit);
-        setBombCount(bomb_density);
-        setChatState(chat_enabled);
-      }
-    );
+    const onSettingsUpdated = (newSettings: any) => {
+      setRoomname(newSettings.name);
+      setMapSize(newSettings.size);
+      setTurnLimit(newSettings.turn_limit);
+      setPlayerLimit(newSettings.player_limit);
+      setBombCount(newSettings.bomb_density);
+      setChatState(newSettings.chat_enabled);
+    };
+
+    socket.on("room:settings-updated", onSettingsUpdated);
 
     return () => {
-      socket.off("roomSettingsUpdate");
+      socket.off("room:settings-updated", onSettingsUpdated);
     };
   }, []);
-
-  useEffect(() => {
-    if (firstUpdate) {
-      setFirstUpdate(false);
-      return;
-    }
-    if (isHost) {
-      handleEditRoom();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mapSize, bombCount, turnLimit, playerLimit, chatState]);
 
   const handleStartGame = async () => {
     if (!mapSize) return;
@@ -147,11 +113,11 @@ export default function RoomSettings({
             value={roomname}
             onChange={(e) => {
               setRoomname(e.target.value);
+              handleEditRoom();
             }}
-            onBlur={handleEditRoom}
           />
         ) : (
-          <div className="text-xl">{roomname || "Unnamed"}</div>
+          <div className="text-xl -mt-2.5">{roomname || "Unnamed"}</div>
         )}
       </div>
 
@@ -162,6 +128,7 @@ export default function RoomSettings({
             <Button
               onClick={() => {
                 setMapSize(6);
+                handleEditRoom();
               }}
               textColor={mapSize === 6 ? "" : "text-black"}
               className={`w-min ${mapSize === 6 ? "" : "bg-white"}`}
@@ -171,6 +138,7 @@ export default function RoomSettings({
             <Button
               onClick={() => {
                 setMapSize(8);
+                handleEditRoom();
               }}
               textColor={mapSize === 8 ? "" : "text-black"}
               className={`w-min ${mapSize === 8 ? "" : "bg-white"}`}
@@ -180,6 +148,7 @@ export default function RoomSettings({
             <Button
               onClick={() => {
                 setMapSize(10);
+                handleEditRoom();
               }}
               textColor={mapSize === 10 ? "" : "text-black"}
               className={`w-min ${mapSize === 10 ? "" : "bg-white"}`}
@@ -189,6 +158,7 @@ export default function RoomSettings({
             <Button
               onClick={() => {
                 setMapSize(20);
+                handleEditRoom();
               }}
               textColor={mapSize === 20 ? "" : "text-black"}
               className={`w-min ${mapSize === 20 ? "" : "bg-white"}`}
@@ -198,6 +168,7 @@ export default function RoomSettings({
             <Button
               onClick={() => {
                 setMapSize(30);
+                handleEditRoom();
               }}
               textColor={mapSize === 30 ? "" : "text-black"}
               className={`w-min ${mapSize === 30 ? "" : "bg-white"}`}
@@ -223,6 +194,7 @@ export default function RoomSettings({
               value={playerLimit}
               onChange={(e) => {
                 setPlayerLimit(Number(e.target.value) as PlayerLimit);
+                handleEditRoom();
               }}
               aria-label="Set the maximum number of players for the game."
               className="w-full"
@@ -255,6 +227,7 @@ export default function RoomSettings({
               value={bombCount}
               onChange={(e) => {
                 setBombCount(e.target.value as BombDensity);
+                handleEditRoom();
               }}
               aria-label="Set the amount of bomb density you want for the game."
               className="w-full"
@@ -281,6 +254,7 @@ export default function RoomSettings({
               value={chatState ? "enable" : "disable"}
               onChange={(e) => {
                 setChatState(e.target.value === "enable");
+                handleEditRoom();
               }}
               aria-label="Set to enable/disable chat"
               className="w-full"
@@ -307,6 +281,7 @@ export default function RoomSettings({
               value={turnLimit}
               onChange={(e) => {
                 setTurnLimit(Number(e.target.value) as 0 | 10 | 20 | 30);
+                handleEditRoom();
               }}
               aria-label="Timer"
               className="w-full"
@@ -335,7 +310,6 @@ export default function RoomSettings({
                   console.error("Socket not connected!");
                   return;
                 }
-                socket.emit("leaveRoom");
                 router.push("/");
               }}
               className="bg-red"
@@ -352,7 +326,6 @@ export default function RoomSettings({
                 console.error("Socket not connected!");
                 return;
               }
-              socket.emit("leaveRoom");
               router.push("/");
             }}
             className="bg-red"
