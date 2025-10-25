@@ -29,7 +29,7 @@ export default function GameGrid({ size, onPick, revealed }: GameGridProps) {
   const totalGapWidth = (size - 1) * gapSize;
   const cellSize = (containerWidth - totalGapWidth) / size;
 
-
+  console.log(revealed, "<--dis is revealed");
   return (
     <div
       style={{

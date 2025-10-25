@@ -62,7 +62,7 @@ export function mineGameLogic() {
   //   }, []);
 
   const resetLocal = useCallback(() => {
-    setRevealed({});
+    //setRevealed({}); ?/Todo come back to investigate
     setBombsInfo(null);
     setWinners(null);
     setLeaderboard([]);

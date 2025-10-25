@@ -113,22 +113,25 @@ app.prepare().then(() => {
       this.on_complete = on_complete;
     }
     start() {
-      if (this.timer) {
+      if (this.interval) {
         this.reset();
       }
       this.on_run();
-      this.timer = setInterval(() => {
+      console.log("timer starting");
+      clearInterval(this.interval);
+      this.interval = setInterval(() => {
+        console.log(this.time_remaining);
         this.time_remaining = this.time_remaining - 1;
-        this.on_run();
+        if (this.on_run) this.on_run();
         if (this.time_remaining <= 0) {
-          this.on_complete();
+          if (this.on_complete) this.on_complete();
           this.reset();
         }
       }, 1000);
     }
     reset() {
-      if (this.timer) {
-        clearInterval(this.timer);
+      if (this.interval) {
+        clearInterval(this.interval);
         this.interval = undefined;
         this.time_remaining = this.max_time;
       }
@@ -305,14 +308,16 @@ app.prepare().then(() => {
 
       if (state.game_started) {
         const field = new Field();
-        field.load(state.placement, state.size, state.bomb_count);
+        field.load(state.placement, [state.size, state.size], state.bomb_count);
         const hits = field.get_hit_count();
+
         socket.emit("map:ready", {
           size: state.size,
           bombsTotal: state.bomb_count,
           bombsFound: hits,
           turnLimit: state.turn_limit ?? 10,
           currentPlayer: currentPlayer || null,
+          revealed: field.export_display_data(),
         });
 
         if (state.turn_limit > 0) {
@@ -356,7 +361,7 @@ app.prepare().then(() => {
 
         if (state.game_started) {
           console.log("Game in progress, resetting...");
-          resetGame();
+          resetGame(state, timer);
         }
 
         if (size) state.size = Number(size);
@@ -428,7 +433,7 @@ app.prepare().then(() => {
       const { size, bombCount, turnLimit } = payload;
 
       if (state.game_started) {
-        resetGame();
+        resetGame(state, timer);
       }
 
       if (typeof size === "number") state.size = size;
@@ -468,9 +473,11 @@ app.prepare().then(() => {
       );
 
       // change to room level (chganged)
+      state.current_turn = 0;
       const { id: currentPlayer, index: currentIndex } = findCurrentPlayer(state.player_id_list, state.current_turn);
+      console.log("starting game with current player", currentPlayer);
 
-
+      console.log("startGame map:ready emit");
       io.to(current_room_id).emit("map:ready", {
         size: state.size,
         bombsTotal: state.bomb_count,
@@ -525,7 +532,11 @@ app.prepare().then(() => {
       // check if player id is already in the room
       if (!roomPlayers[room_id].some((p) => p.userID === newPlayer.userID)) {
         roomPlayers[room_id].push(newPlayer);
-      }
+      };
+      // // add player to socket state
+      // if (!state.player_id_list.includes(socket.data.userID)) {
+      //   state.player_id_list.push(socket.data.userID);
+      // };
 
       io.to(room_id).emit("currentPlayers", roomPlayers[room_id]);
 
@@ -547,6 +558,11 @@ app.prepare().then(() => {
             roomPlayers[room] = roomPlayers[room].filter(
               (p) => p.userID !== socket.data.userID
             );
+
+            // //if may not be necessay if roomPlayers always sync with this
+            // if (state.player_id_list.includes(socket.data.userID)) {
+            //   state.player_id_list.splice(state.player_id_list.indexOf(socket.data.userID), 1);
+            // };
 
             io.to(room).emit("currentPlayers", roomPlayers[room]);
           }
@@ -582,9 +598,11 @@ app.prepare().then(() => {
       }
 
       const field = new Field();
-      field.load(state.placement, state.size, state, bomb_count);
+      field.load(state.placement, [state.size, state.size], state.bomb_count);
       const [x, y] = field.index_to_coordinate(index);
       const [flag, success] = field.open_cell(x, y);
+
+      console.log(`Picking cell at (${x},${y})`);
 
       const hit = (flag == Field.open_cell_flags.BOMB);
 
@@ -599,8 +617,6 @@ app.prepare().then(() => {
 
       const hits = field.get_hit_count();
 
-      console.log("HERE!HERE!HERE!HERE!HERE!HERE!HERE!HERE!HERE!HERE!");
-      console.log(field.export_display_data());
 
       io.to(currentRoom).emit("cellResult", {
         revealMap: field.export_display_data(),
@@ -726,13 +742,13 @@ app.prepare().then(() => {
     return winners;
   }
 
-  function resetGame() {
+  function resetGame(state, timer) {
     state.game_started = false;
     const field = new Field();
     field.generate_field([state.size, state.size], state.bomb_count);
     state.placement = field.field;
     state.scores = new Map();
-    this.current_turn = 0;
+    state.current_turn = 0;
     state.player_id_list = fisherYatesShuffle(state.player_id_list);
 
     // if (state.turnTimer) { // migrate timer (Done)
@@ -797,6 +813,7 @@ app.prepare().then(() => {
 
   //TODO redo this remove current_turn_index
   function nextTurn(state, timer, reason = "miss") {
+    console.log(`Starting new turn because reason ${reason}`);
     timer.reset(); // migrate timer (Done)
     state.current_turn = state.curret_turn + 1;
     const { id: currentPlayer, index: currentIndex } = findCurrentPlayer(state.player_id_list, state.current_turn);
@@ -805,6 +822,7 @@ app.prepare().then(() => {
       reason,
     });
     if (state.game_started) {
+      console.log("Timer Restarting");
       timer.start()
     }
   }

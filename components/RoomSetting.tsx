@@ -54,9 +54,11 @@ function countToDensity(count: number, size: number): BombDensity {
 export default function RoomSettings({
   roomId,
   roomName,
+  handleLeaveRoomAction = () => { },
 }: {
   roomId: number;
   roomName: string;
+  handleLeaveRoomAction?: () => void;
 }) {
   const [roomname, setRoomname] = useState(roomName);
   const [mapSize, setMapSize] = useState<MapSize>(8);
@@ -443,14 +445,7 @@ export default function RoomSettings({
         {isHost ? (
           <>
             <Button
-              onClick={() => {
-                if (!socket.connected) {
-                  console.error("Socket not connected!");
-                  return;
-                }
-                socket.emit("leaveRoom");
-                router.push("/");
-              }}
+              onClick={() => handleLeaveRoomAction()}
               className="bg-red"
             >
               Leave Room
@@ -460,14 +455,7 @@ export default function RoomSettings({
           </>
         ) : (
           <Button
-            onClick={() => {
-              if (!socket.connected) {
-                console.error("Socket not connected!");
-                return;
-              }
-              socket.emit("leaveRoom");
-              router.push("/");
-            }}
+            onClick={() => handleLeaveRoomAction()}
             className="bg-red"
           >
             Leave Room

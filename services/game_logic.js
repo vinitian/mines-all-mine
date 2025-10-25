@@ -183,9 +183,9 @@ export class Field {
         return (this.field.map((cell) => { cell.is_open && cell.bomb }).filter(value => value === true).length);
     }
     export_display_data() {
-        return (Object.fromEntries(this.placement.map((cell) => {
+        return (Object.fromEntries(this.field.map((cell) =>
             [
-                cell.number,
+                this.coordinate_to_index(cell.posx, cell.posy),
                 {
                     is_open: cell.is_open,
                     index: this.coordinate_to_index(cell.posx, cell.posy),
@@ -193,7 +193,7 @@ export class Field {
                     bomb: cell.bomb
                 }
             ]
-        })))
+        )))
     }
 }
 
