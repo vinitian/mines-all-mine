@@ -44,6 +44,20 @@ export default function LobbyPage() {
     socket.emit("kickAllPlayersInRoom", parseInt(roomId));
   };
 
+  const handleLeaveRoom = async () => {
+    socket.emit("leaveRoom");
+    router.push("/");
+    if (players.length <= 1) {
+      // if player is the only one left, delete the room
+      await deleteRoom(+roomId);
+      return;
+    }
+    // TODO: select new host
+    if (room && room.host_id == socket.auth.userID) {
+      console.log("TODO: select new host");
+    }
+  };
+
   useEffect(() => {
     // Listen for messages from the server
     socket.on("message", (msg: Message) => {
@@ -156,6 +170,7 @@ export default function LobbyPage() {
             room={room}
             isHost={room.host_id == socket.auth.userID}
             setLobbyRoomNameAction={setLobbyRoomName}
+            handleLeaveRoomAction={handleLeaveRoom}
           />
         </div>
       </div>

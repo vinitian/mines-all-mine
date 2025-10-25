@@ -26,10 +26,12 @@ export default function RoomSettings({
   room,
   isHost,
   setLobbyRoomNameAction = () => {},
+  handleLeaveRoomAction = () => {},
 }: {
   room: Room;
   isHost: boolean;
   setLobbyRoomNameAction?: React.Dispatch<React.SetStateAction<string>>;
+  handleLeaveRoomAction?: () => void;
 }) {
   const [roomname, setRoomname] = useState(room.name);
   const [mapSize, setMapSize] = useState<MapSize>(8);
@@ -294,14 +296,7 @@ export default function RoomSettings({
         className={`flex gap-5 ${!isHost ? "justify-end" : "justify-between"}`}
       >
         <Button
-          onClick={() => {
-            if (!socket.connected) {
-              console.error("Socket not connected!");
-              return;
-            }
-            socket.emit("leaveRoom");
-            router.push("/");
-          }}
+          onClick={() => handleLeaveRoomAction()}
           className="bg-red text-white"
         >
           Leave Room
