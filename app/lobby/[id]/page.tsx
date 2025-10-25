@@ -155,7 +155,7 @@ export default function LobbyPage() {
               <PlayerList
                 playerLimit={room.player_limit}
                 players={players}
-                hostID={room.host_id}
+                isHost={room.host_id == socket.auth.userID}
               />
             </div>
 
