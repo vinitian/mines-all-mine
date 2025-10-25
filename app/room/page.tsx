@@ -160,58 +160,73 @@ export default function Room() {
                 <div className="text-gray-500 text-h4">No rooms available</div>
               </div>
             ) : (
-              rooms.map((room) => (
-                <div
-                  key={room.id}
-                  className="bg-white border-1 rounded-2xl p-4 transition-shadow cursor-pointer"
-                  onClick={() => handleJoinRoom(room.id)}
-                >
-                  <div className="flex justify-between items-start mb-2">
-                    <h3 className="text-h2 font-bold text-gray-800">
-                      {room.name}
-                    </h3>
-                  </div>
+              rooms.map((room) => {
+                const isFull = room.player_id_list.length >= room.player_limit;
 
-                  <div className="text-h4 flex flex-col -space-y-1">
-                    <div>
-                      <span className="font-regular">Status:</span>{" "}
-                      {room.game_started ? (
-                        <span className="text-red font-bold">Game ongoing</span>
-                      ) : (
-                        <span className="text-green font-bold">In lobby</span>
-                      )}
+                return (
+                  <div
+                    key={room.id}
+                    className="bg-white border-1 rounded-2xl p-4 transition-shadow cursor-pointer"
+                    onClick={() => handleJoinRoom(room.id)}
+                  >
+                    <div className="flex justify-between items-start mb-2">
+                      <h3 className="text-h2 font-bold text-gray-800">
+                        {room.name}
+                      </h3>
                     </div>
-                    <div>
-                      <span className="font-regular">Map Size:</span>{" "}
-                      {room.size}x{room.size}
-                    </div>
-                    <div>
-                      <span className="font-regular">Capacity:</span>{" "}
-                      {room.player_id_list.length}/{room.player_limit}
-                    </div>
-                    <div>
-                      <span className="font-regular">Number of mines:</span>{" "}
-                      {room.bomb_count}
-                    </div>
-                    <div>
-                      <span className="font-regular">Time Limit:</span>{" "}
-                      {room.timer === 0 ? "Unlimited" : `${room.timer} seconds`}
-                    </div>
-                  </div>
 
-                  <div className="mt-3 flex justify-center">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleJoinRoom(room.id);
-                      }}
-                      className="w-full bg-[#8499FF] text-white text-h3 border-2 border-border rounded-2xl px-6 py-2 hover:bg-[#7388ee] transition-colors duration-200 whitespace-nowrap flex-shrink-0 cursor-pointer"
-                    >
-                      Join
-                    </button>
+                    <div className="text-h4 flex flex-col -space-y-1">
+                      <div>
+                        <span className="font-regular">Status:</span>{" "}
+                        {room.game_started ? (
+                          <span className="text-red font-bold">
+                            Game ongoing
+                          </span>
+                        ) : (
+                          <span className="text-green font-bold">In lobby</span>
+                        )}
+                      </div>
+                      <div>
+                        <span className="font-regular">Map Size:</span>{" "}
+                        {room.size}x{room.size}
+                      </div>
+                      <div>
+                        <span className="font-regular">Capacity:</span>{" "}
+                        {room.player_id_list.length}/{room.player_limit}
+                      </div>
+                      <div>
+                        <span className="font-regular">Number of mines:</span>{" "}
+                        {room.bomb_count}
+                      </div>
+                      <div>
+                        <span className="font-regular">Time Limit:</span>{" "}
+                        {room.timer === 0
+                          ? "Unlimited"
+                          : `${room.timer} seconds`}
+                      </div>
+                    </div>
+
+                    <div className="mt-3 flex justify-center">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (isFull) return; // block full rooms
+                          handleJoinRoom(room.id);
+                        }}
+                        disabled={isFull}
+                        className={`w-full text-h3 border-2 border-border rounded-2xl px-6 py-2 transition-colors duration-200 whitespace-nowrap flex-shrink-0 cursor-pointer
+                          ${
+                            isFull
+                              ? "bg-gray-300 text-gray-600 cursor-not-allowed"
+                              : "bg-[#8499FF] text-white hover:bg-[#7388ee]"
+                          }`}
+                      >
+                        {isFull ? "Room Full" : "Join"}
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         </div>
