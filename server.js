@@ -54,7 +54,7 @@ app.prepare().then(() => {
       this.placement = undefined;
       //this.score_list = undefined; // list of integers score, index same as player id list
       //VV now this is index?
-      this.current_turn = undefined; //count by player (to find amout of cycles through all players use division)
+      this.current_turn = 0; //count by player (to find amout of cycles through all players use division)
       console.log(`player id ${host_id} created room id ${id}`);
       //possibly temp
       this.current_turn_index = undefined; // to be depricated
@@ -116,7 +116,7 @@ app.prepare().then(() => {
       if (this.interval) {
         this.reset();
       }
-      this.on_run();
+      if (this.on_run) this.on_run();
       console.log("timer starting");
       clearInterval(this.interval);
       this.interval = setInterval(() => {
@@ -135,6 +135,7 @@ app.prepare().then(() => {
         this.interval = undefined;
         this.time_remaining = this.max_time;
       }
+      this.time_remaining = this.max_time;
     }
   }
 
@@ -158,7 +159,7 @@ app.prepare().then(() => {
         });
       };
       data["timer"].on_complete = () => {
-        nextTurn(data["state"], data["timer"], "Times up");
+        nextTurn(room_id, data["state"], data["timer"], "Times up");
       };
     }
   }
@@ -368,7 +369,9 @@ app.prepare().then(() => {
         if (typeof bombCount === "number") state.bomb_count = bombCount;
         if (typeof turnLimit === "number") state.turn_limit = turnLimit;
 
-        io.emit("settings:updated", {
+        //broadcast to current room only?
+
+        io.to(current_room_id).emit("settings:updated", {
           size: state.size,
           bombCount: state.bomb_count,
           turnLimit: state.turn_limit ?? 10,
@@ -487,6 +490,7 @@ app.prepare().then(() => {
         revealed: field.export_display_data(),
       });
 
+      console.log(`Turn changed to player ${currentPlayer} for reason gameStart`);
       io.to(current_room_id).emit("turnChanged", {
         currentPlayer: currentPlayer,
         reason: "gameStart",
@@ -533,10 +537,10 @@ app.prepare().then(() => {
       if (!roomPlayers[room_id].some((p) => p.userID === newPlayer.userID)) {
         roomPlayers[room_id].push(newPlayer);
       };
-      // // add player to socket state
-      // if (!state.player_id_list.includes(socket.data.userID)) {
-      //   state.player_id_list.push(socket.data.userID);
-      // };
+      // add player to socket state
+      if (state && !state.player_id_list.includes(socket.data.userID)) {
+        state.player_id_list.push(socket.data.userID);
+      };
 
       io.to(room_id).emit("currentPlayers", roomPlayers[room_id]);
 
@@ -559,10 +563,10 @@ app.prepare().then(() => {
               (p) => p.userID !== socket.data.userID
             );
 
-            // //if may not be necessay if roomPlayers always sync with this
-            // if (state.player_id_list.includes(socket.data.userID)) {
-            //   state.player_id_list.splice(state.player_id_list.indexOf(socket.data.userID), 1);
-            // };
+            //if may not be necessay if roomPlayers always sync with this
+            if (state && state.player_id_list.includes(socket.data.userID)) {
+              state.player_id_list.splice(state.player_id_list.indexOf(socket.data.userID), 1);
+            };
 
             io.to(room).emit("currentPlayers", roomPlayers[room]);
           }
@@ -637,7 +641,8 @@ app.prepare().then(() => {
         state.game_started = false;
         const winners = computeWinners(state.scores);
 
-        io.emit("gameOver", {
+        //broadcast to current room only?
+        io.to(current_room_id).emit("gameOver", {
           winners,
           scores: state.scores,
           size: state.size,
@@ -647,7 +652,7 @@ app.prepare().then(() => {
       }
 
       if (!hit) {
-        nextTurn(state, timer, "miss");
+        nextTurn(current_room_id, state, timer, "miss");
       } else {
         timer.start();//migrate timer (Done)
       }
@@ -664,6 +669,7 @@ app.prepare().then(() => {
       // tracking players (global) (upon disconnect)
       sockets.delete(socket.data.userID);
 
+      // TODO still broken needs fixing
       // remove player
       const { id: currentPlayer, index: currentIndex } = findCurrentPlayer(state.player_id_list, state.current_turn);
       const playerIndex = state.player_id_list.indexOf(socket.id);
@@ -690,17 +696,19 @@ app.prepare().then(() => {
 
         state.current_turn = state.player_id_list.indexOf(newCurrentPlayer);
 
-        io.emit("playersUpdated", {
-          players: state.player_id_list,
-          currentPlayer: newCurrentPlayer,
-        });
-
+        //emit only if player is in room?
+        if (current_room_id) {
+          io.to(current_room_id).emit("playersUpdated", {
+            players: state.player_id_list,
+            currentPlayer: newCurrentPlayer,
+          });
+        }
         if (
           leftIsCurrentPlayer &&
           state.game_started &&
           state.player_id_list.length > 0
         ) {
-          nextTurn(state, timer, "playerLeft");
+          nextTurn(current_room_id, state, timer, "playerLeft");
         }
       }
     });
@@ -812,18 +820,23 @@ app.prepare().then(() => {
   }
 
   //TODO redo this remove current_turn_index
-  function nextTurn(state, timer, reason = "miss") {
+  function nextTurn(current_room_id, state, timer, reason = "miss") {
     console.log(`Starting new turn because reason ${reason}`);
     timer.reset(); // migrate timer (Done)
-    state.current_turn = state.curret_turn + 1;
+    state.current_turn = state.current_turn + 1;
+    console.log("121", state.player_id_list, state.current_turn)
+    console.log(state);
+    console.log(timer)
     const { id: currentPlayer, index: currentIndex } = findCurrentPlayer(state.player_id_list, state.current_turn);
-    io.emit("turnChanged", {
+    console.log(`Turn changed to player ${currentPlayer} for reason ${reason}`);
+    io.to(current_room_id).emit("turnChanged", {
       currentPlayer: currentPlayer,
       reason,
     });
     if (state.game_started) {
       console.log("Timer Restarting");
       timer.start()
+      console.log(timer);
     }
   }
 
