@@ -4,6 +4,7 @@
 import { useCallback, useEffect, useState } from "react";
 import socket from "@/socket";
 import { Cell, Field } from "@/services/game_logic";
+import { useRouter } from "next/navigation"; 
 
 type RevealMap = Record<
   number,
@@ -16,6 +17,7 @@ type RevealMap = Record<
 type Winner = { id: string; score: number };
 
 export function mineGameLogic() {
+  const router = useRouter();
   const [isConnected, setIsConnected] = useState(false);
   const [transport, setTransport] = useState("N/A");
   const [size, setSize] = useState<number | null>(null);
@@ -35,6 +37,10 @@ export function mineGameLogic() {
   const [players, setPlayers] = useState<string[]>([]);
   const [timeRemaining, setTimeRemaining] = useState<number>(10);
   const [myId, setMyId] = useState<string | null>(null);
+  const [roomId, setRoomId] = useState<string | null>(null);
+  const [returnCountdown, setReturnCountdown] = useState<number | null>(null);
+
+
 
   const pickCell = useCallback(
     (i: number) => {
@@ -59,6 +65,23 @@ export function mineGameLogic() {
   //     setStarted(true);
   //     socket.emit('startGame', payload);
   //   }, []);
+
+  const onReturnToLobby = (data: { reason: string }) => {
+    console.log("ReturnToLobby:", data.reason);
+
+    if ((window as any).__lobbyCountdownInterval) {
+      clearInterval((window as any).__lobbyCountdownInterval);
+      delete (window as any).__lobbyCountdownInterval;
+    }
+    resetLocal();
+    socket.emit("leaveRoom");
+    const savedRoomId = localStorage.getItem("currentRoomId");
+    if (savedRoomId) {
+      router.push(`/lobby/${savedRoomId}`);
+    } else {
+      router.push("/");
+    }
+  };
 
   const resetLocal = useCallback(() => {
     setRevealed({});
@@ -153,6 +176,18 @@ export function mineGameLogic() {
       }
       setWinners(w);
       setLeaderboard(Object.entries(p.scores).sort((a, b) => b[1] - a[1]));
+      setReturnCountdown(10);
+      const intervalId = setInterval(() => {
+        setReturnCountdown((prev) => {
+          if (prev === null) return prev;
+          if (prev <= 1) {
+            clearInterval(intervalId);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+      (window as any).__lobbyCountdownInterval = intervalId;
     };
     const onTurnChanged = (data: { currentPlayer: string; reason: string }) => {
       console.log(`Turn changed to ${data.currentPlayer} (${data.reason})`);
@@ -178,6 +213,8 @@ export function mineGameLogic() {
       console.error("Server error:", data.message);
     };
 
+
+
     socket.on("connect", onConnect);
     socket.on("disconnect", onDisconnect);
     socket.on("map:ready", onReady);
@@ -187,6 +224,7 @@ export function mineGameLogic() {
     socket.on("turnTime", onTurnTime);
     socket.on("playersUpdated", onPlayersUpdated);
     socket.on("error", onError);
+    socket.on("returnToLobby", onReturnToLobby);
 
     if (socket.connected) {
       socket.emit("requestState");
@@ -202,6 +240,7 @@ export function mineGameLogic() {
       socket.off("turnTime", onTurnTime);
       socket.off("playersUpdated", onPlayersUpdated);
       socket.off("error", onError);
+      socket.off("returnToLobby", onReturnToLobby);
     };
   }, []);
 
@@ -225,5 +264,6 @@ export function mineGameLogic() {
     isMyTurn: currentPlayer === myId,
     pickCell,
     resetLocal,
+    returnCountdown
   };
 }
