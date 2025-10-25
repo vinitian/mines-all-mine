@@ -33,8 +33,8 @@ export default function LobbyPage() {
       return;
     }
     try {
-      await deleteRoom(parseInt(roomId));
       handleKickAllPlayersInRoom();
+      await deleteRoom(parseInt(roomId));
     } catch (error) {
       console.error(error);
     }
