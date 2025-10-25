@@ -28,8 +28,8 @@ export default function Home() {
       userID: userIdInLocal
         ? userIdInLocal
         : session && session.user
-        ? session.user.email
-        : "",
+          ? session.user.email
+          : "",
       username: username,
     };
 
@@ -74,14 +74,30 @@ export default function Home() {
     setErrorMessage(undefined);
     connectSocket();
     socket.on("setAuthSuccessfulAck", async () => {
-      const response = await createRoom({
+      // const response = await createRoom({
+      //   id: socket.auth.userID!,
+      //   username: username,
+      // });
+      const creatorData = {
         id: socket.auth.userID!,
         username: username,
-      });
+      };
+      const response: any = await requestCreateRoom(creatorData);
       socket.emit("joinRoom", response.data.id);
       router.push(`/lobby/${response.data.id}`);
     });
   };
+
+  const requestCreateRoom = async (creatorData: object) => {
+    const promise: Promise<object> = new Promise((resolve, reject) => {
+      socket.emit("room:init", creatorData, (response: any) => {
+        resolve(response);
+      });
+    }
+    );
+    return (promise);
+  }
+
 
   // Hide error when user starts typing
   const handleUsernameChange = (e: React.ChangeEvent<HTMLInputElement>) => {

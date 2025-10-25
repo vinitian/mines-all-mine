@@ -15,12 +15,40 @@ import {
   PlayerLimit,
   TurnLimit,
 } from "@/interface";
+import { Timer } from "lucide-react";
 
 function densityToCount(density: BombDensity, size: number) {
   const cells = size * size;
   const ratio = density === "low" ? 0.18 : density === "high" ? 0.42 : 0.3;
   return Math.max(1, Math.floor(cells * ratio));
 }
+//check this function later VV
+
+function countToDensity(count: number, size: number): BombDensity {
+  const cells = size * size;
+
+  const ratios: Record<BombDensity, number> = {
+    low: 0.18,
+    medium: 0.3,
+    high: 0.42,
+  };
+
+  // Find the density whose count is closest to the given count
+  let closest: BombDensity = "medium";
+  let minDiff = Infinity;
+
+  for (const [density, ratio] of Object.entries(ratios) as [BombDensity, number][]) {
+    const ratioCount = Math.max(1, Math.floor(cells * ratio));
+    const diff = Math.abs(count - ratioCount);
+    if (diff < minDiff) {
+      minDiff = diff;
+      closest = density;
+    }
+  }
+
+  return closest;
+}
+// ^^
 // single global room for testing
 
 export default function RoomSettings({
@@ -90,14 +118,16 @@ export default function RoomSettings({
     };
   }, [router]);
 
-  useEffect(() => {
-    handleEditRoom();
-  }, [mapSize, bombCount, turnLimit, playerLimit, chatState]);
+  //edit room (depricated)
+  // useEffect(() => {
+  //   handleEditRoom();
+  // }, [mapSize, bombCount, turnLimit, playerLimit, chatState]);
 
   const handleEditRoom = async () => {
     if (!socket.auth.userID) {
       return;
     }
+    // TODO fix this to update via server? also batch to when starting game?
     const bombs = densityToCount(bombCount, mapSize);
     // update room settings in database
     const response = await editRoom({
@@ -125,24 +155,48 @@ export default function RoomSettings({
     });
   };
   //TODO: generate placement
+  // done? 
+
+  // Send default state to server
+  useEffect(() => {
+    requestEditRoomSettings({
+      size: mapSize,
+      bomb_count: bombs,
+      turn_limit: turnLimit,
+      player_limit: playerLimit,
+      chat_enabled: chatState,
+      name: roomname,
+    }, false);
+  }, [])
 
   useEffect(() => {
     // listen setting update from server
-    socket.on(
-      "roomSettingsUpdate",
-      ({ name, size, bomb_density, timer, player_limit, chat_enabled }) => {
-        console.log("receive", name);
-        setRoomname(name);
-        setMapSize(size);
-        setTurnLimit(timer);
-        setPlayerLimit(player_limit);
-        setBombCount(bomb_density);
-        setChatState(chat_enabled);
-      }
-    );
+
+    // old version depricated
+    // socket.on(
+    //   "roomSettingsUpdate",
+    //   ({ name, size, bomb_density, timer, player_limit, chat_enabled }) => {
+    //     console.log("receive", name);
+    //     setRoomname(name);
+    //     setMapSize(size);
+    //     setTurnLimit(timer);
+    //     setPlayerLimit(player_limit);
+    //     setBombCount(bomb_density);
+    //     setChatState(chat_enabled);
+    //   }
+    // );
+    socket.on("room:update-settings-success", (state) => {
+      setRoomname(state.name);
+      setMapSize(state.size);
+      setTurnLimit(state.turn_limit);
+      setPlayerLimit(state.player_limit);
+      setBombCount(state.density);
+      setChatState(state.chat_enabled);
+    });
 
     return () => {
-      socket.off("roomSettingsUpdate");
+      //socket.off("roomSettingsUpdate");
+      socket.off("room:update-settings-success")
     };
   }, []);
 
@@ -186,6 +240,30 @@ export default function RoomSettings({
     setShowCountdown(true);
   };
 
+  const requestEditRoomSettings = async (payload: object, updateDb: boolean) => {
+    console.log("room setting change requested cosnsiting of");
+    console.log(payload);
+    const promise: Promise<object> = new Promise((resolve, reject) => {
+      if (!socket.auth.userID) {
+        reject({ ok: false, error: "Failed auth" });
+      }
+      socket.emit("room:update-settings", payload, updateDb, (response: any) => {
+        console.log("Updating room setting");
+        const state = response.state;
+        setRoomname(state.name);
+        setMapSize(state.size);
+        setTurnLimit(state.turn_limit);
+        setPlayerLimit(state.player_limit);
+        setBombCount(state.density);
+        setChatState(state.chat_enabled);
+        resolve(response);
+        console.log(state);
+      });
+    }
+    );
+    return (promise);
+  };
+
   return (
     <div
       className="bg-white border rounded-lg p-[25px] w-full h-full
@@ -196,8 +274,8 @@ export default function RoomSettings({
         {isHost ? (
           <Input
             value={roomname}
-            onChange={(e) => setRoomname(e.target.value)}
-            onBlur={handleEditRoom}
+            onChange={(e) => requestEditRoomSettings({ name: e.target.value }, false)}
+            onBlur={(e) => requestEditRoomSettings({ name: e.target.value }, false)}
           />
         ) : (
           <div className="text-xl">{roomname || "Unnamed"}</div>
@@ -209,35 +287,35 @@ export default function RoomSettings({
         {isHost ? (
           <div className="flex flex-wrap gap-[6px]">
             <Button
-              onClick={() => setMapSize(6)}
+              onClick={() => requestEditRoomSettings({ size: 6 }, false)}
               textColor={mapSize === 6 ? "" : "text-black"}
               className={`w-min ${mapSize === 6 ? "" : "bg-white"}`}
             >
               6×6
             </Button>
             <Button
-              onClick={() => setMapSize(8)}
+              onClick={() => requestEditRoomSettings({ size: 8 }, false)}
               textColor={mapSize === 8 ? "" : "text-black"}
               className={`w-min ${mapSize === 8 ? "" : "bg-white"}`}
             >
               8×8
             </Button>
             <Button
-              onClick={() => setMapSize(10)}
+              onClick={() => requestEditRoomSettings({ size: 10 }, false)}
               textColor={mapSize === 10 ? "" : "text-black"}
               className={`w-min ${mapSize === 10 ? "" : "bg-white"}`}
             >
               10×10
             </Button>
             <Button
-              onClick={() => setMapSize(20)}
+              onClick={() => requestEditRoomSettings({ size: 20 }, false)}
               textColor={mapSize === 20 ? "" : "text-black"}
               className={`w-min ${mapSize === 20 ? "" : "bg-white"}`}
             >
               20×20
             </Button>
             <Button
-              onClick={() => setMapSize(30)}
+              onClick={() => requestEditRoomSettings({ size: 30 }, false)}
               textColor={mapSize === 30 ? "" : "text-black"}
               className={`w-min ${mapSize === 30 ? "" : "bg-white"}`}
             >
@@ -260,8 +338,8 @@ export default function RoomSettings({
           >
             <select
               value={playerLimit}
-              onChange={(e) =>
-                setPlayerLimit(Number(e.target.value) as PlayerLimit)
+              onChange={
+                (e) => requestEditRoomSettings({ player_limit: Number(e.target.value) }, false)
               }
               aria-label="Set the maximum number of players for the game."
               className="w-full"
@@ -292,7 +370,7 @@ export default function RoomSettings({
             <select
               id="num-bombs"
               value={bombCount}
-              onChange={(e) => setBombCount(e.target.value as BombDensity)}
+              onChange={(e) => requestEditRoomSettings({ bomb_count: densityToCount(e.target.value as BombDensity, mapSize), density: e.target.value }, false)}
               aria-label="Set the amount of bomb density you want for the game."
               className="w-full"
             >
@@ -316,7 +394,7 @@ export default function RoomSettings({
             <select
               id="chat"
               value={chatState ? "enable" : "disable"}
-              onChange={(e) => setChatState(e.target.value === "enable")}
+              onChange={(e) => requestEditRoomSettings({ chat_enabled: e.target.value }, false)}
               aria-label="Set to enable/disable chat"
               className="w-full"
             >
@@ -340,8 +418,8 @@ export default function RoomSettings({
           >
             <select
               value={turnLimit}
-              onChange={(e) =>
-                setTurnLimit(Number(e.target.value) as 0 | 10 | 20 | 30)
+              onChange={
+                (e) => requestEditRoomSettings({ turn_limit: Number(e.target.value) as 0 | 10 | 20 | 30 }, false)
               }
               aria-label="Timer"
               className="w-full"
@@ -399,7 +477,7 @@ export default function RoomSettings({
         <CountdownModal
           open={showCountdown}
           seconds={3}
-          onComplete={() => {
+          onComplete={async () => {
             const bombs = densityToCount(bombCount, mapSize);
             console.log("Starting game with settings:", {
               size: mapSize,
@@ -409,32 +487,53 @@ export default function RoomSettings({
               chatEnabled: chatState,
             });
 
-            socket.emit(
-              "settings:update",
-              {
-                size: mapSize,
-                bombCount: bombs,
-                turnLimit,
-                playerLimit,
-                chatEnabled: chatState,
-                roomName: roomname,
-              },
-              (ack: any) => {
-                if (!ack?.ok) {
-                  console.error("Failed to save settings:", ack?.error);
-                  return;
-                }
 
-                socket.emit("startGame", {
-                  size: mapSize,
-                  bombCount: densityToCount(bombCount, mapSize),
-                  turnLimit,
-                });
-              }
-            );
+            const ack: any = await requestEditRoomSettings({
+              size: mapSize,
+              bomb_count: bombs,
+              turn_limit: turnLimit,
+              player_limit: playerLimit,
+              chat_enabled: chatState,
+              name: roomname,
+            }, true);
+
+            if (!ack?.ok) {
+              console.error("Failed to save settings:", ack?.error);
+              return;
+            }
+
+            socket.emit("startGame", {
+              size: mapSize,
+              bombCount: densityToCount(bombCount, mapSize),
+              turnLimit,
+            });
+
+            // socket.emit(
+            //   "settings:update",
+            //   {
+            //     size: mapSize,
+            //     bombCount: bombs,
+            //     turnLimit,
+            //     playerLimit,
+            //     chatEnabled: chatState,
+            //     roomName: roomname,
+            //   },
+            //   (ack: any) => {
+            //     if (!ack?.ok) {
+            //       console.error("Failed to save settings:", ack?.error);
+            //       return;
+            //     }
+
+            //     socket.emit("startGame", {
+            //       size: mapSize,
+            //       bombCount: densityToCount(bombCount, mapSize),
+            //       turnLimit,
+            //     });
+            //   }
+            // );
           }}
         />
       </div>
-    </div>
+    </div >
   );
 }

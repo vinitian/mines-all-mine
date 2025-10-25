@@ -5,13 +5,14 @@ import { useCallback, useEffect, useState } from "react";
 import socket from "@/socket";
 import { Cell, Field } from "@/services/game_logic";
 
-type RevealMap = Record<
-  number,
-  {
-    type: "hit" | "miss";
-    hintNumber?: number;
-  }
->;
+type CellDisplayData = {
+  is_open: boolean;
+  index: number;
+  number: number;
+  bomb: boolean;
+}
+
+type RevealMap = Record<number, CellDisplayData>;
 
 type Winner = { id: string; score: number };
 
@@ -26,7 +27,7 @@ export function mineGameLogic() {
   const [bombsInfo, setBombsInfo] = useState<{
     total: number;
     found: number;
-  } | null>(null);
+  } | null>(null); //total and found
   const [turnLimit, setTurnLimit] = useState<number>(0);
   const [winners, setWinners] = useState<Winner[] | null>(null);
   const [leaderboard, setLeaderboard] = useState<[string, number][]>([]);
@@ -77,12 +78,14 @@ export function mineGameLogic() {
   useEffect(() => {
     if (socket.connected) {
       setIsConnected(true);
+      // TODO investigate need for setTransport
       setTransport(socket.io.engine.transport.name);
       setMyId(socket.auth.userID || null);
     }
 
     const onConnect = () => {
       setIsConnected(true);
+      // TODO investigate need for setTransport
       setTransport(socket.io.engine.transport.name);
       setMyId(socket.auth.userID || null);
       socket.io.engine.on("upgrade", (t) => setTransport(t.name));
@@ -94,15 +97,17 @@ export function mineGameLogic() {
       setTransport("N/A");
     };
 
+    // write initial state
     const onReady = (data: {
       size: number;
       bombsTotal: number;
       bombsFound: number;
       turnLimit?: number;
       currentPlayer?: string;
+      revealed: RevealMap;
     }) => {
       setBombsInfo({ total: data.bombsTotal, found: data.bombsFound });
-      setRevealed({});
+      setRevealed(data.revealed);
       setGameOver(false);
       setWinners(null);
       setLeaderboard([]);
@@ -113,27 +118,18 @@ export function mineGameLogic() {
     };
 
     const onCell = (p: {
-      index: number;
-      hit: boolean;
-      hintNumber: number;
-      by: string;
+      revealMap: RevealMap;
       bombsFound: number;
       bombsTotal: number;
-      scores: Record<string, number>;
+      scores: Map<string, number>;
     }) => {
       setBombsInfo({ total: p.bombsTotal, found: p.bombsFound });
-      setRevealed((prev) => ({
-        ...prev,
-        [p.index]: {
-          type: p.hit ? "hit" : "miss",
-          hintNumber: p.hintNumber,
-        },
-      }));
+      setRevealed(p.revealMap);
     };
 
     const onOver = (p: {
       winners?: Winner[];
-      scores: Record<string, number>;
+      scores: Map<string, number>;
       size: number;
       bombCount: number;
     }) => {
@@ -143,7 +139,7 @@ export function mineGameLogic() {
 
       let w = Array.isArray(p.winners) ? p.winners : [];
       if (w.length === 0) {
-        const entries = Object.entries(p.scores);
+        const entries = Array.from(p.scores.entries());
         if (entries.length) {
           const max = Math.max(...entries.map(([, s]) => s));
           w = entries
@@ -152,7 +148,7 @@ export function mineGameLogic() {
         }
       }
       setWinners(w);
-      setLeaderboard(Object.entries(p.scores).sort((a, b) => b[1] - a[1]));
+      setLeaderboard(Array.from(p.scores.entries()).sort((a, b) => b[1] - a[1]));
     };
     const onTurnChanged = (data: { currentPlayer: string; reason: string }) => {
       console.log(`Turn changed to ${data.currentPlayer} (${data.reason})`);
@@ -180,6 +176,7 @@ export function mineGameLogic() {
 
     socket.on("connect", onConnect);
     socket.on("disconnect", onDisconnect);
+    //initial state is fetched
     socket.on("map:ready", onReady);
     socket.on("cellResult", onCell);
     socket.on("gameOver", onOver);

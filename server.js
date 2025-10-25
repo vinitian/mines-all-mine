@@ -4,6 +4,9 @@ import { Server } from "socket.io";
 import InMemoryUserStore from "./userStore.js";
 import { randomBytes } from "node:crypto";
 import { Field } from "./services/game_logic.js";
+import getGameState from "./services/client/getGameState.js"
+import updateGameState from "./services/client/updateGameState.js"
+import createRoom from "./services/client/createRoom.js"
 
 const dev = process.env.NODE_ENV !== "production";
 const hostname = "localhost";
@@ -11,6 +14,8 @@ const port = 3000;
 // when using middleware `hostname` and `port` must be provided below
 const app = next({ dev, hostname, port });
 const handler = app.getRequestHandler();
+
+// tracking players (rooms)
 const roomPlayers = {};
 
 app.prepare().then(() => {
@@ -19,6 +24,146 @@ app.prepare().then(() => {
 
   const httpServer = createServer(handler);
   const io = new Server(httpServer);
+
+  // Server data (frequently updated)
+
+  /*
+  roomData={
+    room_id:{
+      "timer": Timer,
+      "state": Room,
+    },
+  }   
+  */
+
+  const roomData = {};
+  const sockets = new Map();
+
+  class Room {
+    constructor(id, name, host_id) {
+      this.id = id;
+      this.name = name;
+      this.host_id = host_id;
+      this.player_id_list = [host_id];
+      this.size = undefined; // for both x and y
+      this.player_limit = undefined;
+      this.bomb_count = undefined; //init bombs count
+      this.chat_enabled = undefined;
+      this.timer = undefined; //init time amount
+      this.game_started = undefined;
+      this.placement = undefined;
+      //this.score_list = undefined; // list of integers score, index same as player id list
+      //VV now this is index?
+      this.current_turn = undefined; //count by player (to find amout of cycles through all players use division)
+      console.log(`player id ${host_id} created room id ${id}`);
+      //possibly temp
+      this.current_turn_index = undefined; // to be depricated
+      this.scores = undefined; // migrate from score_list Map<string, number>
+      // also know as timer in db?
+      this.turn_limit = undefined;
+      this.density = undefined; // for proporgation only
+    }
+    updateDatabase(reason = "unspecified") {
+      //TODO link to database.
+      console.log(`updating database for ${reason} reason`);
+      return;
+    }
+    loadDatabase() {
+      //TODO link to database.
+    }
+    update(updateJson) {
+      for (let key in updateJson) {
+        if (this.hasOwnProperty(key) && updateJson[key] !== undefined) {
+          this[key] = updateJson[key];
+        }
+      }
+    }
+  }
+
+  // Getter (get object reference, can edit, do not forget to update database!) 
+
+  function getGameState(room_id, reason = "unspecified") {
+    console.log(`getting data of room id ${room_id} for ${reason} reason`);
+    return (roomData[room_id]["state"]);
+  }
+
+  function createRoomObject(room_id, name, host_id) {
+    let data = roomData[room_id];
+    if (data === undefined) {
+      roomData[room_id] = {};
+      data = roomData[room_id]
+    }
+    let state = data["state"];
+    if (state === undefined) {
+      data["state"] = new Room(room_id, name, host_id);
+      state = data["state"];
+    }
+    return (state);
+  }
+
+  // Timer data
+
+  class Timer {
+    constructor(room_id, max_time, on_run, on_complete) {
+      this.interval = undefined;
+      this.room_id = room_id;
+      this.time_remaining = max_time;
+      this.max_time = max_time;
+      this.on_run = on_run;
+      this.on_complete = on_complete;
+    }
+    start() {
+      if (this.timer) {
+        this.reset();
+      }
+      this.on_run();
+      this.timer = setInterval(() => {
+        this.time_remaining = this.time_remaining - 1;
+        this.on_run();
+        if (this.time_remaining <= 0) {
+          this.on_complete();
+          this.reset();
+        }
+      }, 1000);
+    }
+    reset() {
+      if (this.timer) {
+        clearInterval(this.timer);
+        this.interval = undefined;
+        this.time_remaining = this.max_time;
+      }
+    }
+  }
+
+  function createTimer(room_id, max_time) {
+    let data = roomData[room_id];
+    if (data === undefined) {
+      roomData[room_id] = {};
+      data = roomData[room_id]
+    }
+    let timer = data["timer"];
+    if (timer === undefined) {
+      data["timer"] = new Timer(
+        room_id,
+        max_time,
+        undefined,
+        undefined,
+      );
+      data["timer"].on_run = () => {
+        io.to(room_id).emit("turnTime", {
+          timeRemaining: data["timer"].time_remaining,
+        });
+      };
+      data["timer"].on_complete = () => {
+        nextTurn(data["state"], data["timer"], "Times up");
+      };
+    }
+  }
+
+  function getTimer(room_id, reason = "unspecified") {
+    console.log(`getting timer of room id ${room_id} for ${reason} reason`);
+    return (roomData[room_id]["timer"]);
+  }
 
   io.use((socket, next) => {
     console.log("handshake AUTH", socket.handshake.auth);
@@ -38,8 +183,8 @@ app.prepare().then(() => {
       auth.userID && auth.userID.trim()
         ? auth.userID
         : user && user.userID
-        ? user.userID
-        : randomId();
+          ? user.userID
+          : randomId();
     socket.data.username =
       auth.username && auth.username.trim() ? auth.username : user.username;
     userStore.saveUser(socket.data.userID, {
@@ -70,9 +215,19 @@ app.prepare().then(() => {
       `Connection from: ${socket.handshake.headers.origin}, isLocalhost: ${isLocalhost}`
     );
 
-    if (!state.players.includes(socket.data.userID)) {
-      state.players.push(socket.data.userID);
-      console.log(`New player joined: ${socket.data.userID}`);
+    //Room Management
+    let current_room_id = undefined;
+    let state = undefined;
+    let timer = undefined;
+
+    //tracking players (global) (upon connect)
+    sockets.set(socket.data.userID, socket);
+
+    if (!sockets.has(socket.data.userID)) {
+      sockets.set(socket.data.userID, socket);;
+      console.log(
+        `Player ${socket.data.userID} joined. Total players: ${sockets.size}`
+      );
     }
 
     socket.emit("session", {
@@ -84,115 +239,93 @@ app.prepare().then(() => {
       socket.emit("setAuthSuccessfulAck");
     });
 
-    if (!state.players.includes(socket.data.userID)) {
-      state.players.push(socket.data.userID);
-      console.log(
-        `Player ${socket.data.userID} joined. Total players: ${state.players.length}`
-      );
-    }
-
     socket.on("getOnlineCount", () => {
       console.log(
-        `getOnlineCount requested by ${socket.data.userID}, current players: ${state.players.length}`
+        `getOnlineCount requested by ${socket.data.userID}, current players: ${sockets.size}`
       );
 
       socket.emit("onlineCountUpdate", {
-        count: state.players.length,
+        count: sockets.size,
         isHost: isLocalhost,
       });
     });
 
     // Broadcast to all clients
     io.emit("onlineCountUpdate", {
-      count: state.players.length,
+      count: sockets.size,
       isHost: isLocalhost,
     });
 
+    // TODO investigate
+
+    const { id: currentPlayer, index: currentIndex } = state ? findCurrentPlayer(state.player_id_list, state.current_turn) : { id: undefined, index: undefined };
+
     io.emit("playersUpdated", {
-      players: state.players,
-      currentPlayer: state.started
-        ? state.players[state.currentTurnIndex]
+      players: Array.from(sockets.keys()),
+      currentPlayer: (state && state.game_started)
+        ? currentPlayer
         : null,
     });
 
+    // convert state.found? convert state.current_turn_index? may be needed for joining mid game?
     // If game is in progress, send current state to the connecting player
-    if (state.started) {
-      const hits = [...state.found].filter((i) => state.bombs.has(i)).length;
-      socket.emit("map:ready", {
-        size: state.size,
-        bombsTotal: state.bombCount,
-        bombsFound: hits,
-        turnLimit: state.turnLimit ?? 10,
-        currentPlayer: state.players[state.currentTurnIndex] || null,
-      });
+    // dont know if needed
+    // if (state && state.game_started) {
+    //   const hits = [...state.found].filter((i) => state.bombs.has(i)).length;
+    //   socket.emit("map:ready", {
+    //     size: state.size,
+    //     bombsTotal: state.bomb_count,
+    //     bombsFound: hits,
+    //     turnLimit: state.turn_limit ?? 10,
+    //     currentPlayer: state.player_id_list[state.current_turn_index] || null,
+    //   });
 
-      socket.emit("turnChanged", {
-        currentPlayer: state.players[state.currentTurnIndex],
-        reason: "joined",
-      });
+    //   socket.emit("turnChanged", {
+    //     currentPlayer: state.player_id_list[state.current_turn_index],
+    //     reason: "joined",
+    //   });
 
-      if (state.turnLimit > 0) {
-        socket.emit("turnTime", {
-          currentPlayer: state.players[state.currentTurnIndex],
-          timeRemaining: state.turnTimeRemaining,
-        });
-      }
-    }
+    //   if (state.turn_limit > 0) {
+    //     socket.emit("turnTime", {
+    //       currentPlayer: state.player_id_list[state.current_turn_index],
+    //       timeRemaining: state.turnTimeRemaining,
+    //     });
+    //   }
+    // }
 
     socket.on("requestState", () => {
+      const { id: currentPlayer, index: currentIndex } = findCurrentPlayer(state.player_id_list, state.current_turn);
       socket.emit("playersUpdated", {
-        players: state.players,
+        players: state.player_id_list,
         currentPlayer:
-          state.started && state.players.length > 0
-            ? state.players[state.currentTurnIndex]
+          state.game_started && state.player_id_list.length > 0
+            ? currentPlayer
             : null,
       });
 
-      if (state.started) {
-        const hits = [...state.found].filter((i) => state.bombs.has(i)).length;
+      if (state.game_started) {
+        const field = new Field();
+        field.load(state.placement, state.size, state.bomb_count);
+        const hits = field.get_hit_count();
         socket.emit("map:ready", {
           size: state.size,
-          bombsTotal: state.bombCount,
+          bombsTotal: state.bomb_count,
           bombsFound: hits,
-          turnLimit: state.turnLimit ?? 10,
-          currentPlayer: state.players[state.currentTurnIndex] || null,
+          turnLimit: state.turn_limit ?? 10,
+          currentPlayer: currentPlayer || null,
         });
 
-        if (state.turnLimit > 0) {
+        if (state.turn_limit > 0) {
           socket.emit("turnTime", {
-            currentPlayer: state.players[state.currentTurnIndex],
-            timeRemaining: state.turnTimeRemaining,
+            currentPlayer: currentPlayer,
+            timeRemaining: timer.time_remaining, // migrate timer (Done)
           });
         }
       }
     });
 
-    if (state.started) {
-      const hits = [...state.found].filter((i) => state.bombs.has(i)).length;
-      socket.emit("map:ready", {
-        size: state.size,
-        bombsTotal: state.bombCount,
-        bombsFound: hits,
-        turnLimit: state.turnLimit ?? 10,
-        currentPlayer: state.players[state.currentTurnIndex] || null,
-      });
-
-      socket.emit("turnChanged", {
-        currentPlayer: state.players[state.currentTurnIndex],
-        reason: "reconnect",
-      });
-
-      if (state.turnLimit > 0) {
-        socket.emit("turnTime", {
-          currentPlayer: state.players[state.currentTurnIndex],
-          timeRemaining: state.turnTimeRemaining,
-        });
-      }
-    }
-
     socket.on("message", (msg) => {
       socket.rooms.forEach((room) => {
-        // TODO: why check room and socket.id??????
         if (room !== socket.id) {
           socket.to(room).emit("message", msg);
         }
@@ -203,6 +336,7 @@ app.prepare().then(() => {
       io.to(room_id).emit("kickAllPlayersInRoom");
     });
 
+    // runs every adjustment (depricated)
     socket.on("room:settings-updated", (data) => {
       console.log(data.settings.bomb_density);
       io.to(data.roomID).emit("roomSettingsUpdate", {
@@ -215,23 +349,24 @@ app.prepare().then(() => {
       });
     });
 
+    // runs on start game (depricated)
     socket.on("settings:update", (payload, cb) => {
       try {
         const { size, bombCount, turnLimit } = payload || {};
 
-        if (state.started) {
+        if (state.game_started) {
           console.log("Game in progress, resetting...");
           resetGame();
         }
 
         if (size) state.size = Number(size);
-        if (typeof bombCount === "number") state.bombCount = bombCount;
-        if (typeof turnLimit === "number") state.turnLimit = turnLimit;
+        if (typeof bombCount === "number") state.bomb_count = bombCount;
+        if (typeof turnLimit === "number") state.turn_limit = turnLimit;
 
         io.emit("settings:updated", {
           size: state.size,
-          bombCount: state.bombCount,
-          turnLimit: state.turnLimit ?? 10,
+          bombCount: state.bomb_count,
+          turnLimit: state.turn_limit ?? 10,
         });
 
         cb?.({ ok: true });
@@ -240,58 +375,121 @@ app.prepare().then(() => {
       }
     });
 
+    socket.on("room:update-settings", (payload, updateDb, callback) => {
+      console.log("Room setting update request received");
+      if (updateDb) {
+        // TODO handle timer
+        // migrate timer
+        // TODO not implemeted yet
+        state.update(payload);
+        state.updateDatabase();
+        // return fail if unable to update DB and revert socket state too
+
+        if ("turn_limit" in payload) {
+          timer.max_time = payload.turn_limit;
+        };
+        //update others
+        socket.to(current_room_id).emit("room:update-settings-success", state);
+        //update editor
+        console.log(state);
+        callback({ ok: true, state: state });
+
+      } else {
+        state.update(payload);
+
+        if ("turn_limit" in payload) {
+          timer.max_time = payload.turn_limit;
+        };
+        //update others
+        socket.to(current_room_id).emit("room:update-settings-success", state);
+        //update editor
+        console.log(state);
+        callback({ ok: true, state: state });
+      }
+    });
+
+    //Initialize room
+    socket.on("room:init", async (creatorData, callback) => {
+      const response = await createRoom({
+        id: creatorData.id,
+        username: creatorData.username,
+      });
+      console.log(response);
+      const data = response.data
+      createRoomObject(data.id, data.name, data.host_id);
+      createTimer(data.id, 10); // assuming 10 default, may need to change later, maybe useEffect will take care of this in roomsettings
+      // may be needed to set defaults?
+      //const state = getGameState(data.id, reason = "init values on create room")
+      // init state is defined at launch of room Setting
+      callback(response);
+    });
+
     socket.on("startGame", (payload = {}) => {
       const { size, bombCount, turnLimit } = payload;
 
-      if (state.started) {
+      if (state.game_started) {
         resetGame();
       }
 
       if (typeof size === "number") state.size = size;
-      if (typeof bombCount === "number") state.bombCount = bombCount;
-      if (typeof turnLimit === "number") state.turnLimit = turnLimit;
+      if (typeof bombCount === "number") state.bomb_count = bombCount;
+      if (typeof turnLimit === "number") state.turn_limit = turnLimit;
 
       if (typeof state.size !== "number") state.size = 6;
-      if (!Number.isFinite(state.bombCount)) {
-        state.bombCount =
+      if (!Number.isFinite(state.bomb_count)) {
+        state.bomb_count =
           state.size === 6 ? 11 : Math.floor(state.size * state.size * 0.3);
       }
-      if (typeof state.turnLimit !== "number") state.turnLimit = 10;
+      if (typeof state.turn_limit !== "number") state.turn_limit = 10;
+      timer.max_time = state.turn_limit // migrate timer (Done)
 
-      state.field = new Field();
-      state.field.generate_field([state.size, state.size], state.bombCount);
+      const field = new Field();
+      field.generate_field([state.size, state.size], state.bomb_count);
+      state.placement = field.field;
 
-      state.bombs = new Set();
-      for (let i = 0; i < state.field.field.length; i++) {
-        if (state.field.field[i].bomb) {
-          state.bombs.add(i);
-        }
-      }
+      // TODO depricate, remove dependence
+      // state.bombs = new Set();
+      // for (let i = 0; i < state.field.field.length; i++) {
+      //   if (state.field.field[i].bomb) {
+      //     state.bombs.add(i);
+      //   }
+      // }
 
-      state.found = new Set();
-      state.scores = {};
-      state.started = true;
-      state.currentTurnIndex = Math.floor(Math.random() * state.players.length);
+      // state.found = new Set();
+      state.scores = new Map();
+      state.game_started = true;
+
+      //shuffle players
+      //TODO make winner start first
+      state.player_id_list = fisherYatesShuffle(state.player_id_list);
 
       console.log(
-        `Game started: ${state.size}x${state.size}, ${state.bombCount} bombs, ${state.turnLimit}s turns`
+        `Game started: ${state.size}x${state.size}, ${state.bomb_count} bombs, ${state.turn_limit}s turns`
       );
 
-      io.emit("map:ready", {
+      // change to room level (chganged)
+      const { id: currentPlayer, index: currentIndex } = findCurrentPlayer(state.player_id_list, state.current_turn);
+
+
+      io.to(current_room_id).emit("map:ready", {
         size: state.size,
-        bombsTotal: state.bombCount,
+        bombsTotal: state.bomb_count,
         bombsFound: 0,
-        turnLimit: state.turnLimit,
-        currentPlayer: state.players[state.currentTurnIndex],
+        turnLimit: state.turn_limit,
+        currentPlayer: currentPlayer,
+        revealed: field.export_display_data(),
       });
 
-      io.emit("turnChanged", {
-        currentPlayer: state.players[state.currentTurnIndex],
+      io.to(current_room_id).emit("turnChanged", {
+        currentPlayer: currentPlayer,
         reason: "gameStart",
       });
 
-      startTurnTimer();
+      //startTurnTimer(); //migrate timer
+      timer.start();
     });
+
+    //Room Management
 
     socket.on("joinRoom", (room_id) => {
       console.log("Player joinnnnnnn");
@@ -334,6 +532,11 @@ app.prepare().then(() => {
       console.log(newPlayer.userID);
       console.log("BBB");
       console.log(roomPlayers[room_id]);
+
+      //tracking player room and setting state
+      current_room_id = room_id;
+      state = getGameState(room_id, "joining room");
+      timer = getTimer(room_id, "joining room");
     });
 
     socket.on("leaveRoom", () => {
@@ -349,6 +552,10 @@ app.prepare().then(() => {
           }
         }
       });
+      //tracking player room and setting state
+      current_room_id = undefined;
+      state = undefined;
+      timer = undefined;
     });
 
     socket.on("resetNotice", () => {
@@ -357,86 +564,76 @@ app.prepare().then(() => {
     });
 
     socket.on("pickCell", (index) => {
-      if (!state.started) {
+      if (!state.game_started) {
         socket.emit("error", { message: "Game hasn't started yet" });
         return;
       }
 
-      if (state.players[state.currentTurnIndex] !== socket.data.userID) {
+      const { id: currentPlayer, index: currentIndex } = findCurrentPlayer(state.player_id_list, state.current_turn);
+
+      if (currentPlayer !== socket.data.userID) {
         socket.emit("error", { message: "It's not your turn!" });
         return;
       }
 
-      if (state.found.has(index)) {
+      if (state.placement.is_open == true) {
         socket.emit("error", { message: "Cell already revealed" });
         return;
       }
 
-      const cell = state.field.field[index];
-      const hit = cell.bomb;
-      const hintNumber = cell.number;
+      const field = new Field();
+      field.load(state.placement, state.size, state, bomb_count);
+      const [x, y] = field.index_to_coordinate(index);
+      const [flag, success] = field.open_cell(x, y);
 
-      const [x, y] = state.field.index_to_coordinate(index);
-      const [flag, success] = state.field.open_cell(x, y);
+      const hit = (flag == Field.open_cell_flags.BOMB);
 
       if (!success) {
         socket.emit("error", { message: "Failed to reveal cell" });
         return;
       }
 
-      const revealedCells = [];
-      for (let i = 0; i < state.field.field.length; i++) {
-        if (state.field.field[i].is_open && !state.found.has(i)) {
-          revealedCells.push({
-            index: i,
-            hit: state.field.field[i].bomb,
-            hintNumber: state.field.field[i].number,
-          });
-          state.found.add(i);
-        }
-      }
-
       if (hit) {
-        state.scores[socket.data.userID] =
-          (state.scores[socket.data.userID] || 0) + 1;
+        state.scores.set(socket.data.userID, (state.scores[socket.data.userID] || 0) + 1);
       }
 
-      const hits = [...state.found].filter((i) => state.bombs.has(i)).length;
+      const hits = field.get_hit_count();
 
-      revealedCells.forEach((cellData) => {
-        io.emit("cellResult", {
-          index: cellData.index,
-          hit: cellData.hit,
-          hintNumber: cellData.hintNumber,
-          by: cellData.index === index ? socket.data.userID : "auto-reveal",
-          bombsFound: hits,
-          bombsTotal: state.bombCount,
-          scores: state.scores,
-        });
+      console.log("HERE!HERE!HERE!HERE!HERE!HERE!HERE!HERE!HERE!HERE!");
+      console.log(field.export_display_data());
+
+      io.to(currentRoom).emit("cellResult", {
+        revealMap: field.export_display_data(),
+        bombsFound: hits,
+        bombsTotal: state.bomb_count,
+        scores: state.scores
       });
 
-      if (hits >= state.bombCount) {
-        if (state.turnTimer) {
-          clearInterval(state.turnTimer);
-          state.turnTimer = null;
-        }
+      // end game scenario
+      if (hits >= state.bomb_count) {
+        // migrate timer (Done)
+        // if (state.turnTimer) {
+        //   clearInterval(state.turnTimer);
+        //   state.turnTimer = null;
+        // }
+        timer.reset()
 
-        state.started = false;
+        state.game_started = false;
         const winners = computeWinners(state.scores);
 
         io.emit("gameOver", {
           winners,
           scores: state.scores,
           size: state.size,
-          bombCount: state.bombCount,
+          bombCount: state.bomb_count,
         });
         return;
       }
 
       if (!hit) {
-        nextTurn("miss");
+        nextTurn(state, timer, "miss");
       } else {
-        startTurnTimer();
+        timer.start();//migrate timer (Done)
       }
     });
 
@@ -448,65 +645,76 @@ app.prepare().then(() => {
         connected: false,
       });
 
+      // tracking players (global) (upon disconnect)
+      sockets.delete(socket.data.userID);
+
       // remove player
-      const playerIndex = state.players.indexOf(socket.id);
+      const { id: currentPlayer, index: currentIndex } = findCurrentPlayer(state.player_id_list, state.current_turn);
+      const playerIndex = state.player_id_list.indexOf(socket.id);
       if (playerIndex != -1) {
-        state.players.splice(playerIndex, 1);
 
         io.emit("onlineCountUpdate", {
-          count: state.players.length,
+          count: sockets.size,
           isHost: false,
         });
 
-        if (
-          state.currentTurnIndex >= state.players.length &&
-          state.players.length > 0
-        ) {
-          state.currentTurnIndex = 0;
+        // cases
+        let newCurrentPlayer;
+        let leftIsCurrentPlayer;
+        if (currentPlayer == socket.data.userID) {
+          // is current player
+          ({ id: newCurrentPlayer, index: _ } = findCurrentPlayer(state.player_id_list, state.current_turn + 1));
+          leftIsCurrentPlayer = true;
+        } else {
+          // is not current player
+          newCurrentPlayer = currentPlayer;
+          leftIsCurrentPlayer = false;
         }
+        state.player_id_list.splice(playerIndex, 1);
+
+        state.current_turn = state.player_id_list.indexOf(newCurrentPlayer);
+
         io.emit("playersUpdated", {
-          players: state.players,
-          currentPlayer:
-            state.started && state.players.length > 0
-              ? state.players[state.currentTurnIndex]
-              : null,
+          players: state.player_id_list,
+          currentPlayer: newCurrentPlayer,
         });
 
         if (
-          playerIndex === state.currentTurnIndex &&
-          state.started &&
-          state.players.length > 0
+          leftIsCurrentPlayer &&
+          state.game_started &&
+          state.player_id_list.length > 0
         ) {
-          nextTurn("playerLeft");
+          nextTurn(state, timer, "playerLeft");
         }
       }
     });
 
-    if (state.started) {
-      const hits = [...state.found].filter((i) => state.bombs.has(i)).length;
-      socket.emit("map:ready", {
-        size: state.size,
-        bombsTotal: state.bombCount,
-        bombsFound: hits,
-        turnLimit: state.turnLimit ?? 10,
-      });
-      socket.emit("turnChanged", {
-        currentPlayer: state.players[state.currentTurnIndex],
-        reason: "reconnect",
-      });
-      if (state.turnLimit > 0) {
-        socket.emit("turnTime", {
-          currentPlayer: state.players[state.currentTurnIndex],
-          timeRemaining: state.turnTimeRemaining,
-        });
-      }
-    }
+    //init for new client (duplicate of unneeded?)
+    // if (state.game_started) {
+    //   const hits = [...state.found].filter((i) => state.bombs.has(i)).length;
+    //   socket.emit("map:ready", {
+    //     size: state.size,
+    //     bombsTotal: state.bomb_count,
+    //     bombsFound: hits,
+    //     turnLimit: state.turn_limit ?? 10,
+    //   });
+    //   socket.emit("turnChanged", {
+    //     currentPlayer: state.player_id_list[state.current_turn_index],
+    //     reason: "reconnect",
+    //   });
+    //   if (state.turn_limit > 0) {
+    //     socket.emit("turnTime", {
+    //       currentPlayer: state.player_id_list[state.current_turn_index],
+    //       timeRemaining: timer,
+    //     });
+    //   }
+    // }
   });
 
   function computeWinners(scores) {
     let max = -Infinity;
     const winners = [];
-    for (const [id, score] of Object.entries(scores)) {
+    for (const [id, score] of scores.entries()) {
       if (score > max) {
         max = score;
         winners.length = 0;
@@ -518,88 +726,107 @@ app.prepare().then(() => {
     return winners;
   }
 
-  function randomize(size = 6, bombCount = 11) {
-    const bombs = new Set();
-    while (bombs.size < bombCount) {
-      bombs.add(Math.floor(Math.random() * (size * size)));
-    }
-    return bombs;
-  }
-
   function resetGame() {
-    state.bombs = new Set();
-    state.found = new Set();
-    state.scores = {};
-    state.started = false;
-    state.currentTurnIndex = 0;
-    state.turnTimeRemaining = state.turnLimit || 10;
-    state.field = null;
+    state.game_started = false;
+    const field = new Field();
+    field.generate_field([state.size, state.size], state.bomb_count);
+    state.placement = field.field;
+    state.scores = new Map();
+    this.current_turn = 0;
+    state.player_id_list = fisherYatesShuffle(state.player_id_list);
 
-    if (state.turnTimer) {
-      clearInterval(state.turnTimer);
-      state.turnTimer = null;
-    }
+    // if (state.turnTimer) { // migrate timer (Done)
+    //   clearInterval(state.turnTimer);
+    //   state.turnTimer = null;
+    // }
+    timer.reset();
     console.log("Game reset");
   }
 
-  let state = {
-    size: 6,
-    bombCount: 11,
-    turnLimit: 10,
-    bombs: new Set(),
-    found: new Set(),
-    scores: {},
-    started: false,
-    players: [],
-    currentTurnIndex: 0,
-    turnTimer: null,
-    turnTimeRemaining: 10,
-    field: null,
-  };
+  // let state = {
+  //   size: 6,
+  //   bombCount: 11,
+  //   turnLimit: 10,
+  //   bombs: new Set(),
+  //   found: new Set(),
+  //   scores: {},
+  //   started: false,
+  //   players: [],
+  //   currentTurnIndex: 0,
+  //   turnTimer: null,
+  //   turnTimeRemaining: 10,
+  //   field: null,
+  // };
 
-  function startTurnTimer() {
-    if (state.turnTimer) {
-      clearInterval(state.turnTimer);
+  // TODO replace with new timer object
+  // function startTurnTimer() {
+  //   if (state.turnTimer) {
+  //     clearInterval(state.turnTimer);
+  //   }
+  //   state.turnTimeRemaining = state.turn_limit;
+
+  //   io.emit("turnTime", {
+  //     currentPlayer: state.player_id_list[state.current_turn_index],
+  //     timeRemaining: state.turnTimeRemaining,
+  //   });
+  //   if (state.turn_limit === 0) return;
+
+  //   state.turnTimer = setInterval(() => {
+  //     state.turnTimeRemaining--;
+
+  //     io.emit("turnTime", {
+  //       currentPlayer: state.player_id_list[state.current_turn_index],
+  //       timeRemaining: state.turnTimeRemaining,
+  //     });
+
+  //     if (state.turnTimeRemaining <= 0) {
+  //       nextTurn("times up"); // TODO: reason should be same format -> timesUp
+  //     }
+  //   }, 1000);
+  // }
+
+  //convert from current turn to old turn index
+  function findCurrentPlayer(players, current_turn) {
+    const index = current_turn % players.length;
+    return ({
+      id: players[index],
+      index: index
     }
-    state.turnTimeRemaining = state.turnLimit;
-
-    io.emit("turnTime", {
-      currentPlayer: state.players[state.currentTurnIndex],
-      timeRemaining: state.turnTimeRemaining,
-    });
-    if (state.turnLimit === 0) return;
-
-    state.turnTimer = setInterval(() => {
-      state.turnTimeRemaining--;
-
-      io.emit("turnTime", {
-        currentPlayer: state.players[state.currentTurnIndex],
-        timeRemaining: state.turnTimeRemaining,
-      });
-
-      if (state.turnTimeRemaining <= 0) {
-        nextTurn("times up"); // TODO: reason should be same format -> timesUp
-      }
-    }, 1000);
+    );
   }
 
-  function nextTurn(reason = "miss") {
-    if (state.turnTimer) {
-      clearInterval(state.turnTimer);
-      state.turnTimer = null;
-    }
-
-    state.currentTurnIndex =
-      (state.currentTurnIndex + 1) % state.players.length;
-
+  //TODO redo this remove current_turn_index
+  function nextTurn(state, timer, reason = "miss") {
+    timer.reset(); // migrate timer (Done)
+    state.current_turn = state.curret_turn + 1;
+    const { id: currentPlayer, index: currentIndex } = findCurrentPlayer(state.player_id_list, state.current_turn);
     io.emit("turnChanged", {
-      currentPlayer: state.players[state.currentTurnIndex],
+      currentPlayer: currentPlayer,
       reason,
     });
-
-    if (state.started) {
-      startTurnTimer();
+    if (state.game_started) {
+      timer.start()
     }
+  }
+
+  function fisherYatesShuffle(array) {
+    let currentIndex = array.length;
+    let randomIndex;
+
+    // While there remain elements to shuffle.
+    while (currentIndex !== 0) {
+      // Pick a remaining element.
+      randomIndex = Math.floor(Math.random() * currentIndex);
+      currentIndex--;
+
+      // And swap it with the current element.
+      [array[currentIndex], array[randomIndex]] = [
+        array[randomIndex],
+        array[currentIndex],
+      ];
+    }
+
+    return array;
   }
 
   httpServer
