@@ -7,21 +7,12 @@ import { Player } from "@/interface";
 export default function PlayerList({
   playerLimit,
   players,
-  hostID,
+  isHost,
 }: {
   playerLimit: number;
   players: Player[];
-  hostID: string;
+  isHost: boolean;
 }) {
-  const [isHost, setIsHost] = useState(false);
-
-  useEffect(() => {
-    const userID = socket.auth.userID;
-    if (userID == hostID) {
-      setIsHost(true);
-    }
-  }, [hostID]);
-
   const handleKickPlayer = (playerID: string) => {
     socket.emit("kick_player", { playerID });
   };
