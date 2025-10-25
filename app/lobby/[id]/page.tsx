@@ -14,6 +14,8 @@ import { ChatContext } from "@/components/ChatContext";
 import updatePlayerList from "@/services/client/updatePlayerList";
 import PlayerList from "@/components/PlayerList";
 import { Player } from "@/interface";
+import CheckAuth from "@/components/CheckAuth";
+import Button from "@/components/Button";
 
 export default function LobbyPage() {
   const [room, setRoom] = useState<Room | null>(null);
@@ -112,31 +114,23 @@ export default function LobbyPage() {
     }
   }, [roomId]);
 
-  useEffect(() => {
-    if (!socket.auth || !socket.connected) {
-      router.push("/");
-    }
-  }, [router, socket.auth, socket.connected]);
-
-  // Remove the direct navigation and just show loading
-  if (!socket.auth || !socket.connected) {
-    return (
-      <LoadingModal text={"No socket auth. Redirecting you to home page"} />
-    );
-  }
   if (loading) {
     return <LoadingModal text={"Loading room information"} />;
   }
   if (!room) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div>Room not found</div>
+      <div className="min-h-screen flex flex-col items-center justify-center m-8 gap-8">
+        <div className="text-h1">Room not found</div>
+        <div className="w-1/2">
+          <Button onClick={() => router.push("/")}>Return to Home</Button>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="flex flex-col px-[25px]">
+      <CheckAuth />
       <div className="flex flex-col gap-[25px] py-[25px] md:h-dvh">
         <RoomName
           roomName={lobbyRoomName}

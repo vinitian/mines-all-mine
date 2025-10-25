@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import getRooms from "@/services/client/getRooms";
 import checkRoomExists from "@/services/client/checkRoomExists";
 import { Room as RoomType } from "@/interface";
+import CheckAuth from "@/components/CheckAuth";
 
 export default function Room() {
   const [rooms, setRooms] = useState<RoomType[]>([]);
@@ -15,10 +16,6 @@ export default function Room() {
   const [error, setError] = useState("");
   const [checkingRoom, setCheckingRoom] = useState(false);
   const router = useRouter();
-
-  useEffect(() => {
-    console.log("ROOM auth", socket.auth); // FOR TEST
-  }, []);
 
   useEffect(() => {
     const fetchRooms = async () => {
@@ -80,6 +77,7 @@ export default function Room() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#fffff5] from-30% via-[#ddf7ff] via-71% to-[#dde4ff] to-100% bg-fixed">
+      <CheckAuth />
       <button
         onClick={() => router.push("/")}
         className="p-6 text-h4 flex items-center gap-2 cursor-pointer"
