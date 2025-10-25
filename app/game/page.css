@@ -1,12 +1,4 @@
 
-.game-div-container {
-    background-color: white;
-    display: flex;
-    justify-content: center; /* Centers horizontally */
-    align-items: center;    /* Centers vertically */
-    height: 100vh; 
-    
-}
 .start-btn {
     background-color: #4AF089;
     border: 1px solid grey;
