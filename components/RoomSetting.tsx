@@ -161,51 +161,19 @@ export default function RoomSettings({
         <div className="text-h3">Map size</div>
         {isHost ? (
           <div className="flex flex-wrap gap-[6px]">
-            <Button
-              onClick={() => {
-                setMapSize(6);
-              }}
-              textColor={mapSize === 6 ? "" : "text-black"}
-              className={`w-min ${mapSize === 6 ? "" : "bg-white"}`}
-            >
-              6×6
-            </Button>
-            <Button
-              onClick={() => {
-                setMapSize(8);
-              }}
-              textColor={mapSize === 8 ? "" : "text-black"}
-              className={`w-min ${mapSize === 8 ? "" : "bg-white"}`}
-            >
-              8×8
-            </Button>
-            <Button
-              onClick={() => {
-                setMapSize(10);
-              }}
-              textColor={mapSize === 10 ? "" : "text-black"}
-              className={`w-min ${mapSize === 10 ? "" : "bg-white"}`}
-            >
-              10×10
-            </Button>
-            <Button
-              onClick={() => {
-                setMapSize(20);
-              }}
-              textColor={mapSize === 20 ? "" : "text-black"}
-              className={`w-min ${mapSize === 20 ? "" : "bg-white"}`}
-            >
-              20×20
-            </Button>
-            <Button
-              onClick={() => {
-                setMapSize(30);
-              }}
-              textColor={mapSize === 30 ? "" : "text-black"}
-              className={`w-min ${mapSize === 30 ? "" : "bg-white"}`}
-            >
-              30×30
-            </Button>
+            {[6, 8, 10, 20, 30].map((size) => (
+              <Button
+                onClick={() => {
+                  setMapSize(size as MapSize);
+                }}
+                className={`w-min ${
+                  mapSize === size ? "text-white" : "bg-white text-black"
+                }`}
+                key={size}
+              >
+                {size}×{size}
+              </Button>
+            ))}
           </div>
         ) : (
           <div className="text-xl -mt-2.5">
@@ -229,15 +197,11 @@ export default function RoomSettings({
               aria-label="Set the maximum number of players for the game."
               className="w-full"
             >
-              <option value={2}>2</option>
-              <option value={3}>3</option>
-              <option value={4}>4</option>
-              <option value={5}>5</option>
-              <option value={6}>6</option>
-              <option value={7}>7</option>
-              <option value={8}>8</option>
-              <option value={9}>9</option>
-              <option value={10}>10</option>
+              {[2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
+                <option key={n} value={n}>
+                  {n}
+                </option>
+              ))}
             </select>
           </div>
         ) : (
@@ -308,7 +272,7 @@ export default function RoomSettings({
             <select
               value={turnLimit}
               onChange={(e) => {
-                setTurnLimit(Number(e.target.value) as 0 | 10 | 20 | 30);
+                setTurnLimit(Number(e.target.value) as TurnLimit);
               }}
               aria-label="Timer"
               className="w-full"
@@ -329,37 +293,22 @@ export default function RoomSettings({
       <div
         className={`flex gap-5 ${!isHost ? "justify-end" : "justify-between"}`}
       >
-        {isHost ? (
-          <>
-            <Button
-              onClick={() => {
-                if (!socket.connected) {
-                  console.error("Socket not connected!");
-                  return;
-                }
-                socket.emit("leaveRoom");
-                router.push("/");
-              }}
-              className="bg-red"
-            >
-              Leave Room
-            </Button>
-
-            <Button onClick={handleStartGame}>Start Game</Button>
-          </>
-        ) : (
-          <Button
-            onClick={() => {
-              if (!socket.connected) {
-                console.error("Socket not connected!");
-                return;
-              }
-              socket.emit("leaveRoom");
-              router.push("/");
-            }}
-            className="bg-red"
-          >
-            Leave Room
+        <Button
+          onClick={() => {
+            if (!socket.connected) {
+              console.error("Socket not connected!");
+              return;
+            }
+            socket.emit("leaveRoom");
+            router.push("/");
+          }}
+          className="bg-red text-white"
+        >
+          Leave Room
+        </Button>
+        {isHost && (
+          <Button onClick={handleStartGame} className="text-white">
+            Start Game
           </Button>
         )}
 
