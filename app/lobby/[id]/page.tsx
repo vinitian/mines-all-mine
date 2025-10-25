@@ -29,9 +29,6 @@ export default function LobbyPage() {
   const [players, setPlayers] = useState<Player[]>([]);
 
   const handleDeleteRoom = async () => {
-    if (!socket.auth.userID) {
-      return;
-    }
     try {
       handleKickAllPlayersInRoom();
       await deleteRoom(parseInt(roomId));
