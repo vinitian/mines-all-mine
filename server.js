@@ -430,6 +430,11 @@ app.prepare().then(() => {
           size: state.size,
           bombCount: state.bombCount,
         });
+        setTimeout(() => {
+          resetGame() // เริ่มใหม่ตาหน้า
+          io.emit("returnToLobby",{reason: "gameEnded"})
+        },10000);
+
         return;
       }
 
