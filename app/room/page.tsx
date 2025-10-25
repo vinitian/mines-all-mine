@@ -5,6 +5,7 @@ import socket from "@/socket";
 import StatisticsButton from "@/components/StatisticsButton";
 import { useRouter } from "next/navigation";
 import getRooms from "@/services/client/getRooms";
+import getRoom from "@/services/client/getRoom";
 import checkRoomExists from "@/services/client/checkRoomExists";
 import { Room as RoomType } from "@/interface";
 import CheckAuth from "@/components/CheckAuth";
@@ -54,13 +55,20 @@ export default function Room() {
 
     try {
       setCheckingRoom(true);
-      const roomExists = await checkRoomExists(roomId);
 
-      if (roomExists) {
-        router.push(`/lobby/${roomId}`);
-      } else {
+      const roomExists = await checkRoomExists(roomId);
+      if (!roomExists) {
         setError(`Room with ID: ${roomId} not found!`);
+        return;
       }
+      const roomData = await getRoom(roomId);
+      const isFull = roomData.player_id_list.length >= roomData.player_limit;
+      if (isFull) {
+        setError("That room is full");
+        return;
+      }
+
+      router.push(`/lobby/${roomId}`);
     } catch (error) {
       console.error("Error checking room:", error);
       setError("Error checking room. Please try again.");
