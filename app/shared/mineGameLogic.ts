@@ -162,6 +162,17 @@ export default function MineGameLogic() {
       console.error("Server error:", data.message);
     };
 
+    const onReturnToLobby = (data: { reason: string }) => {
+      console.log("ReturnToLobby:", data.reason);
+
+      if ((window as any).__lobbyCountdownInterval) {
+        clearInterval((window as any).__lobbyCountdownInterval);
+        delete (window as any).__lobbyCountdownInterval;
+      }
+      resetLocal();
+      router.back();
+    };
+
     const resetLocal = () => {
       setRevealed({});
       setBombsInfo(null);
@@ -172,23 +183,6 @@ export default function MineGameLogic() {
       setTurnLimit(0);
       setCurrentPlayer(null);
       setTimeRemaining(10);
-    };
-
-    const onReturnToLobby = (data: { reason: string }) => {
-      console.log("ReturnToLobby:", data.reason);
-
-      if ((window as any).__lobbyCountdownInterval) {
-        clearInterval((window as any).__lobbyCountdownInterval);
-        delete (window as any).__lobbyCountdownInterval;
-      }
-      resetLocal();
-      socket.emit("leaveRoom");
-      const savedRoomId = localStorage.getItem("currentRoomId");
-      if (savedRoomId) {
-        router.push(`/lobby/${savedRoomId}`);
-      } else {
-        router.push("/");
-      }
     };
 
     socket.on("map:ready", onReady);

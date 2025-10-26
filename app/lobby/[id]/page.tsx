@@ -86,7 +86,6 @@ export default function LobbyPage() {
 
     // update player list in database
     socket.emit("joinRoom", parseInt(roomId));
-    localStorage.setItem("currentRoomId", roomId);
     const updatePlayer = async () => {
       try {
         await updatePlayerList({
