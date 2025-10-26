@@ -181,7 +181,11 @@ export default function LobbyPage() {
         <div className="flex flex-col md:flex-row gap-[20px] h-10/12 md:h-9/12">
           <div className="flex flex-col gap-[20px] md:h-full md:w-1/2 md:max-w-[315px]">
             <div>
-              <PlayerList players={players} hostID={room.host_id} />
+              <PlayerList
+                players={players}
+                isHost={room.host_id == socket.auth.userID}
+                roomId={room.id}
+              />
             </div>
 
             <div className="hidden md:block w-full h-full">

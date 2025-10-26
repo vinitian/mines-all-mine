@@ -1,6 +1,6 @@
 "use client";
 
-import React, { use, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import socket from "@/socket";
 import { Player } from "@/interface";
 
@@ -10,25 +10,25 @@ export default function PlayerList({
   isHost,
 }: {
   players: Player[];
-  roomId: string;
+  roomId: number;
   isHost: boolean;
 }) {
   const [playerLimit, setPlayerLimit] = useState<number>(2);
 
   useEffect(() => {
     // listen setting update from server
-    socket.on("RSU", ({ player_limit }) => {
+    socket.on("roomSettingsUpdate", ({ player_limit }) => {
       setPlayerLimit(player_limit);
     });
 
     return () => {
-      socket.off("RSU");
+      socket.off("roomSettingsUpdate");
     };
   }, []);
 
   const handleKickPlayer = (playerID: string) => {
     console.log("Kicking player with ID:", playerID);
-    socket.emit("kickPlayer", parseInt(roomId), playerID);
+    socket.emit("kickPlayer", roomId, playerID);
   };
 
   return (
