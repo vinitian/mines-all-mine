@@ -1,9 +1,7 @@
-//page.tsx (game page)
 "use client";
 import GameGrid from "@/components/gameGrid";
-import { mineGameLogic } from "../shared/mineGameLogic";
+import MineGameLogic from "../shared/mineGameLogic";
 import "./page.css";
-import socket from "@/socket";
 import Link from "next/link";
 import WelcomeMessage from "@/components/WelcomeMessage";
 import CheckAuth from "@/components/CheckAuth";
@@ -24,9 +22,8 @@ export default function GamePage() {
     myId,
     isMyTurn,
     pickCell,
-    resetLocal,
     returnCountdown,
-  } = mineGameLogic();
+  } = MineGameLogic();
 
   // REMOVED duplicate return - fixed syntax error
   return (
