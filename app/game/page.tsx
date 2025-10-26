@@ -25,6 +25,7 @@ export default function GamePage() {
     isMyTurn,
     pickCell,
     resetLocal,
+    returnCountdown,
   } = mineGameLogic();
 
   // REMOVED duplicate return - fixed syntax error
@@ -101,6 +102,23 @@ export default function GamePage() {
 
         {gameOver && (
           <div className="result-div">
+            {typeof returnCountdown === "number" && (
+              <div
+                style={{
+                  marginTop: "12px",
+                  fontSize: "14px",
+                  fontWeight: "600",
+                  background: "#000000aa",
+                  color: "white",
+                  padding: "8px 12px",
+                  borderRadius: "6px",
+                  display: "inline-block",
+                }}
+              >
+                Returning to lobby in {returnCountdown}s...
+              </div>
+            )}
+
             {winners?.length ? (
               winners.length === 1 ? (
                 <>
