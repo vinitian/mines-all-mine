@@ -124,8 +124,12 @@ app.prepare().then(() => {
         this.time_remaining = this.time_remaining - 1;
         if (this.on_run) this.on_run();
         if (this.time_remaining <= 0) {
-          if (this.on_complete) this.on_complete();
-          this.reset();
+          try {
+            if (this.on_complete) this.on_complete();
+            //this.reset();
+          } catch (error) {
+            console.log("Timer error", error)
+          }
         }
       }, 1000);
     }
@@ -399,7 +403,7 @@ app.prepare().then(() => {
         //update others
         socket.to(current_room_id).emit("room:update-settings-success", state);
         //update editor
-        console.log(state);
+        //console.log(state);
         callback({ ok: true, state: state });
 
       } else {
@@ -411,7 +415,7 @@ app.prepare().then(() => {
         //update others
         socket.to(current_room_id).emit("room:update-settings-success", state);
         //update editor
-        console.log(state);
+        //console.log(state);
         callback({ ok: true, state: state });
       }
     });
@@ -422,7 +426,7 @@ app.prepare().then(() => {
         id: creatorData.id,
         username: creatorData.username,
       });
-      console.log(response);
+      //console.log(response);
       const data = response.data
       createRoomObject(data.id, data.name, data.host_id);
       createTimer(data.id, 10); // assuming 10 default, may need to change later, maybe useEffect will take care of this in roomsettings
@@ -572,6 +576,7 @@ app.prepare().then(() => {
           }
         }
       });
+      console.log("leave room run", roomPlayers[current_room_id], state.player_id_list);
       //tracking player room and setting state
       current_room_id = undefined;
       state = undefined;
@@ -657,6 +662,7 @@ app.prepare().then(() => {
         nextTurn(current_room_id, state, timer, "miss");
       } else {
         console.log("Hit bomb, restarting timer");
+        timer.reset();
         timer.start();//migrate timer (Done)
       }
     });
