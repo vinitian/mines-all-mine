@@ -73,10 +73,6 @@ export default function LobbyPage() {
       setPlayers(currentPlayers);
     });
 
-    // re join room
-    socket.emit("joinRoom", parseInt(roomId));
-    localStorage.setItem("currentRoomId", roomId);
-
     // update player list in database
     socket.emit("joinRoom", parseInt(roomId));
     localStorage.setItem("currentRoomId", roomId);
