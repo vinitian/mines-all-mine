@@ -29,12 +29,9 @@ export default function LobbyPage() {
   const [players, setPlayers] = useState<Player[]>([]);
 
   const handleDeleteRoom = async () => {
-    if (!socket.auth.userID) {
-      return;
-    }
     try {
-      await deleteRoom(parseInt(roomId));
       handleKickAllPlayersInRoom();
+      await deleteRoom(parseInt(roomId));
     } catch (error) {
       console.error(error);
     }
@@ -42,6 +39,20 @@ export default function LobbyPage() {
 
   const handleKickAllPlayersInRoom = () => {
     socket.emit("kickAllPlayersInRoom", parseInt(roomId));
+  };
+
+  const handleLeaveRoom = async () => {
+    socket.emit("leaveRoom");
+    router.push("/");
+    if (players.length <= 1) {
+      // if player is the only one left, delete the room
+      await deleteRoom(+roomId);
+      return;
+    }
+    // TODO: select new host
+    if (room && room.host_id == socket.auth.userID) {
+      console.log("TODO: select new host");
+    }
   };
 
   useEffect(() => {
@@ -145,7 +156,7 @@ export default function LobbyPage() {
               <PlayerList
                 playerLimit={room.player_limit}
                 players={players}
-                hostID={room.host_id}
+                isHost={room.host_id == socket.auth.userID}
               />
             </div>
 
@@ -157,6 +168,7 @@ export default function LobbyPage() {
             room={room}
             isHost={room.host_id == socket.auth.userID}
             setLobbyRoomNameAction={setLobbyRoomName}
+            handleLeaveRoomAction={handleLeaveRoom}
           />
         </div>
       </div>
