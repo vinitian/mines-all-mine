@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { SessionProvider } from "next-auth/react";
 import ChatContextObj from "@/components/ChatContext";
+import GlobalSocket from "@/components/GlobalSocket";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -20,7 +21,9 @@ export default function RootLayout({
     <html lang="en">
       <body className={inter.className}>
         <SessionProvider>
-          <ChatContextObj>{children}</ChatContextObj>
+          <GlobalSocket>
+            <ChatContextObj>{children}</ChatContextObj>
+          </GlobalSocket>
         </SessionProvider>
       </body>
     </html>

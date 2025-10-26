@@ -203,6 +203,11 @@ app.prepare().then(() => {
       io.to(room_id).emit("kickAllPlayersInRoom");
     });
 
+    //reset button kicking everyone in every room
+    socket.on("kickAllPlayersInEveryRoom", () => {
+      io.emit("kickAllPlayersInEveryRoom");
+    });
+
     socket.on("room:settings-updated", (data) => {
       console.log(data.settings.bomb_density);
       io.to(data.roomID).emit("roomSettingsUpdate", {
@@ -353,7 +358,6 @@ app.prepare().then(() => {
 
     socket.on("resetNotice", () => {
       console.log("Reset Complete!");
-      io.emit("serverRestarts");
     });
 
     socket.on("pickCell", (index) => {
