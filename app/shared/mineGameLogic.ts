@@ -39,13 +39,16 @@ export function mineGameLogic() {
 
   const pickCell = useCallback(
     (i: number) => {
-      if (!started || gameOver || revealed[i]) return;
-
+      console.log(`picking cell index ${i}`);
+      if (!started || gameOver || revealed[i].is_open) {
+        console.log("Conditions not met", !started, gameOver, revealed[i]);
+        return;
+      }
       if (currentPlayer !== myId) {
         console.log("Not your turn!");
         return;
       }
-
+      console.log(`requesting pickCell ${i}`);
       socket.emit("pickCell", i);
     },
     [started, gameOver, revealed, currentPlayer, myId]
@@ -67,6 +70,7 @@ export function mineGameLogic() {
     setWinners(null);
     setLeaderboard([]);
     setGameOver(false);
+    console.log("set started resetLocal");
     setStarted(false);
     setTurnLimit(0);
     setCurrentPlayer(null);
@@ -113,7 +117,9 @@ export function mineGameLogic() {
       setLeaderboard([]);
       setSize(data.size);
       setTurnLimit(data.turnLimit ?? 10);
+      console.log("setting started to true");
       setStarted(true);
+      //console.log(started);
       if (data.currentPlayer) setCurrentPlayer(data.currentPlayer);
     };
 
@@ -129,17 +135,19 @@ export function mineGameLogic() {
 
     const onOver = (p: {
       winners?: Winner[];
-      scores: Map<string, number>;
+      scores: Array<[string, number]>;
       size: number;
       bombCount: number;
     }) => {
       setGameOver(true);
+      console.log("set started onOver");
       setStarted(false);
       setCurrentPlayer(null);
+      const scores = new Map(p.scores);
 
       let w = Array.isArray(p.winners) ? p.winners : [];
       if (w.length === 0) {
-        const entries = Array.from(p.scores.entries());
+        const entries = Array.from(scores.entries());
         if (entries.length) {
           const max = Math.max(...entries.map(([, s]) => s));
           w = entries
@@ -148,7 +156,7 @@ export function mineGameLogic() {
         }
       }
       setWinners(w);
-      setLeaderboard(Array.from(p.scores.entries()).sort((a, b) => b[1] - a[1]));
+      setLeaderboard(Array.from(scores.entries()).sort((a, b) => b[1] - a[1]));
     };
     const onTurnChanged = (data: { currentPlayer: string; reason: string }) => {
       console.log(`Turn changed to ${data.currentPlayer} (${data.reason})`);

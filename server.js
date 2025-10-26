@@ -584,6 +584,7 @@ app.prepare().then(() => {
     });
 
     socket.on("pickCell", (index) => {
+      console.log(`Picking cell at index ${index}`);
       if (!state.game_started) {
         socket.emit("error", { message: "Game hasn't started yet" });
         return;
@@ -603,7 +604,7 @@ app.prepare().then(() => {
 
       const field = new Field();
       field.load(state.placement, [state.size, state.size], state.bomb_count);
-      const [x, y] = field.index_to_coordinate(index);
+      const [y, x] = field.index_to_coordinate(index); // needed to swap this
       const [flag, success] = field.open_cell(x, y);
 
       console.log(`Picking cell at (${x},${y})`);
@@ -616,13 +617,13 @@ app.prepare().then(() => {
       }
 
       if (hit) {
-        state.scores.set(socket.data.userID, (state.scores[socket.data.userID] || 0) + 1);
+        state.scores.set(socket.data.userID, (state.scores.get(socket.data.userID) || 0) + 1);
       }
 
       const hits = field.get_hit_count();
 
-
-      io.to(currentRoom).emit("cellResult", {
+      console.log("sending pickCellResult", hits, state.bomb_count, state.scores);
+      io.to(current_room_id).emit("cellResult", {
         revealMap: field.export_display_data(),
         bombsFound: hits,
         bombsTotal: state.bomb_count,
@@ -636,7 +637,8 @@ app.prepare().then(() => {
         //   clearInterval(state.turnTimer);
         //   state.turnTimer = null;
         // }
-        timer.reset()
+        console.log("Game ending");
+        timer.reset();
 
         state.game_started = false;
         const winners = computeWinners(state.scores);
@@ -644,7 +646,7 @@ app.prepare().then(() => {
         //broadcast to current room only?
         io.to(current_room_id).emit("gameOver", {
           winners,
-          scores: state.scores,
+          scores: Array.from(state.scores.entries()), // changed from map to array because socket cant send map
           size: state.size,
           bombCount: state.bomb_count,
         });
@@ -654,6 +656,7 @@ app.prepare().then(() => {
       if (!hit) {
         nextTurn(current_room_id, state, timer, "miss");
       } else {
+        console.log("Hit bomb, restarting timer");
         timer.start();//migrate timer (Done)
       }
     });
@@ -672,7 +675,7 @@ app.prepare().then(() => {
       // TODO still broken needs fixing
       // remove player
       const { id: currentPlayer, index: currentIndex } = findCurrentPlayer(state.player_id_list, state.current_turn);
-      const playerIndex = state.player_id_list.indexOf(socket.id);
+      const playerIndex = state.player_id_list.indexOf(socket.data.userID);//changed from socket.id
       if (playerIndex != -1) {
 
         io.emit("onlineCountUpdate", {
@@ -824,8 +827,8 @@ app.prepare().then(() => {
     console.log(`Starting new turn because reason ${reason}`);
     timer.reset(); // migrate timer (Done)
     state.current_turn = state.current_turn + 1;
-    console.log("121", state.player_id_list, state.current_turn)
-    console.log(state);
+    //console.log("121", state.player_id_list, state.current_turn)
+    //console.log(state);
     console.log(timer)
     const { id: currentPlayer, index: currentIndex } = findCurrentPlayer(state.player_id_list, state.current_turn);
     console.log(`Turn changed to player ${currentPlayer} for reason ${reason}`);
@@ -835,8 +838,8 @@ app.prepare().then(() => {
     });
     if (state.game_started) {
       console.log("Timer Restarting");
-      timer.start()
-      console.log(timer);
+      timer.start();
+      console.log("999", timer);
     }
   }
 

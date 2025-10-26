@@ -180,7 +180,7 @@ export class Field {
         console.log(output.join("\n"));
     }
     get_hit_count() {
-        return (this.field.map((cell) => { cell.is_open && cell.bomb }).filter(value => value === true).length);
+        return (this.field.map((cell) => (cell.is_open && cell.bomb)).filter(value => value === true).length);
     }
     export_display_data() {
         return (Object.fromEntries(this.field.map((cell) =>
