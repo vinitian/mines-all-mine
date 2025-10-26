@@ -19,9 +19,9 @@ export async function PATCH(
     });
 
     let playerList = player_id_list;
-    if (addPlayer) {
+    if (addPlayer && !playerList.includes(userId as string)) {
       playerList.push(userId);
-    } else {
+    } else if (!addPlayer) {
       playerList = playerList.filter((id: string) => id !== userId);
     }
 

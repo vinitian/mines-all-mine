@@ -208,6 +208,10 @@ app.prepare().then(() => {
       io.emit("kickAllPlayersInEveryRoom");
     });
 
+    socket.on("kickPlayer", (room_id, user_id) => {
+      io.to(room_id).emit("kickPlayer", user_id);
+    });
+
     socket.on("room:settings-updated", (data) => {
       console.log(data.settings.bomb_density);
       io.to(data.roomID).emit("roomSettingsUpdate", {
@@ -299,12 +303,10 @@ app.prepare().then(() => {
     });
 
     socket.on("joinRoom", (room_id) => {
-      console.log("Player joinnnnnnn");
       socket.rooms.forEach((room) => {
         // TODO
         if (room !== socket.id) {
           socket.leave(room);
-
           // leave room
           if (roomPlayers[room]) {
             roomPlayers[room] = roomPlayers[room].filter(
@@ -315,8 +317,6 @@ app.prepare().then(() => {
           }
         }
       });
-
-      console.log("hello");
 
       socket.join(room_id);
       // if room doesn't exist
@@ -335,10 +335,6 @@ app.prepare().then(() => {
       }
 
       io.to(room_id).emit("currentPlayers", roomPlayers[room_id]);
-
-      console.log(newPlayer.userID);
-      console.log("BBB");
-      console.log(roomPlayers[room_id]);
     });
 
     socket.on("leaveRoom", () => {
@@ -351,6 +347,8 @@ app.prepare().then(() => {
             );
 
             io.to(room).emit("currentPlayers", roomPlayers[room]);
+            // tell other players that a player has left
+            io.to(room).emit("playerLeft", socket.data.userID);
           }
         }
       });
@@ -431,9 +429,9 @@ app.prepare().then(() => {
           bombCount: state.bombCount,
         });
         setTimeout(() => {
-          resetGame() // เริ่มใหม่ตาหน้า
-          io.emit("returnToLobby",{reason: "gameEnded"})
-        },10000);
+          resetGame(); // เริ่มใหม่ตาหน้า
+          io.emit("returnToLobby", { reason: "gameEnded" });
+        }, 10000);
 
         return;
       }

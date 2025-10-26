@@ -1,24 +1,35 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import socket from "@/socket";
 import { Player } from "@/interface";
 
 export default function PlayerList({
-  playerLimit,
   players,
+  roomId,
   isHost,
 }: {
-  playerLimit: number;
   players: Player[];
+  roomId: number;
   isHost: boolean;
 }) {
-  const handleKickPlayer = (playerID: string) => {
-    socket.emit("kick_player", { playerID });
-  };
+  const [playerLimit, setPlayerLimit] = useState<number>(2);
 
-  // remove player from database & remove player from room (forced leave room?)
-  // if players get kicked/leave room --> playerlist update real-time?
+  useEffect(() => {
+    // listen setting update from server
+    socket.on("roomSettingsUpdate", ({ player_limit }) => {
+      setPlayerLimit(player_limit);
+    });
+
+    return () => {
+      socket.off("roomSettingsUpdate");
+    };
+  }, []);
+
+  const handleKickPlayer = (playerID: string) => {
+    console.log("Kicking player with ID:", playerID);
+    socket.emit("kickPlayer", roomId, playerID);
+  };
 
   return (
     <div className="rounded-lg border bg-white flex flex-col p-[10px] w-full h-full">
@@ -49,7 +60,7 @@ export default function PlayerList({
                     strokeWidth="2"
                     strokeLinecap="round"
                     strokeLinejoin="round"
-                    onClick={() => {}}
+                    onClick={handleKickPlayer.bind(null, player.userID)}
                     className="lucide lucide-trash-icon lucide-trash text-red
                   size-[24px] hover:stroke-blue transition-colors duration-200 cursor-pointer"
                   >
@@ -66,5 +77,3 @@ export default function PlayerList({
     </div>
   );
 }
-// ISSUE: the player doesn't see the players that join before them
-// update player limit real-time
