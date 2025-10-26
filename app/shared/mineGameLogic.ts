@@ -4,7 +4,7 @@
 import { useCallback, useEffect, useState } from "react";
 import socket from "@/socket";
 import { Cell, Field } from "@/services/game_logic";
-import { useRouter } from "next/navigation"; 
+import { useRouter } from "next/navigation";
 
 type RevealMap = Record<
   number,
@@ -40,8 +40,6 @@ export function mineGameLogic() {
   const [roomId, setRoomId] = useState<string | null>(null);
   const [returnCountdown, setReturnCountdown] = useState<number | null>(null);
 
-
-
   const pickCell = useCallback(
     (i: number) => {
       if (!started || gameOver || revealed[i]) return;
@@ -74,13 +72,7 @@ export function mineGameLogic() {
       delete (window as any).__lobbyCountdownInterval;
     }
     resetLocal();
-    socket.emit("leaveRoom");
-    const savedRoomId = localStorage.getItem("currentRoomId");
-    if (savedRoomId) {
-      router.push(`/lobby/${savedRoomId}`);
-    } else {
-      router.push("/");
-    }
+    router.back();
   };
 
   const resetLocal = useCallback(() => {
@@ -213,8 +205,6 @@ export function mineGameLogic() {
       console.error("Server error:", data.message);
     };
 
-
-
     socket.on("connect", onConnect);
     socket.on("disconnect", onDisconnect);
     socket.on("map:ready", onReady);
@@ -264,6 +254,6 @@ export function mineGameLogic() {
     isMyTurn: currentPlayer === myId,
     pickCell,
     resetLocal,
-    returnCountdown
+    returnCountdown,
   };
 }
