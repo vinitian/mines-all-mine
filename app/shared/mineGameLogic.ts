@@ -3,7 +3,6 @@
 
 import { useCallback, useEffect, useState } from "react";
 import socket from "@/socket";
-import { Cell, Field } from "@/services/game_logic";
 import { useRouter } from "next/navigation";
 
 type RevealMap = Record<
@@ -16,10 +15,8 @@ type RevealMap = Record<
 
 type Winner = { id: string; score: number };
 
-export function mineGameLogic() {
+export default function MineGameLogic() {
   const router = useRouter();
-  const [isConnected, setIsConnected] = useState(false);
-  const [transport, setTransport] = useState("N/A");
   const [size, setSize] = useState<number | null>(null);
 
   const [started, setStarted] = useState(false);
@@ -36,9 +33,8 @@ export function mineGameLogic() {
   const [currentPlayer, setCurrentPlayer] = useState<string | null>(null);
   const [players, setPlayers] = useState<string[]>([]);
   const [timeRemaining, setTimeRemaining] = useState<number>(10);
-  const [myId, setMyId] = useState<string | null>(null);
-  const [roomId, setRoomId] = useState<string | null>(null);
   const [returnCountdown, setReturnCountdown] = useState<number | null>(null);
+  const myId = socket.auth.userID;
 
   const pickCell = useCallback(
     (i: number) => {
@@ -64,51 +60,9 @@ export function mineGameLogic() {
   //     socket.emit('startGame', payload);
   //   }, []);
 
-  const onReturnToLobby = (data: { reason: string }) => {
-    console.log("ReturnToLobby:", data.reason);
-
-    if ((window as any).__lobbyCountdownInterval) {
-      clearInterval((window as any).__lobbyCountdownInterval);
-      delete (window as any).__lobbyCountdownInterval;
-    }
-    resetLocal();
-    router.back();
-  };
-
-  const resetLocal = useCallback(() => {
-    setRevealed({});
-    setBombsInfo(null);
-    setWinners(null);
-    setLeaderboard([]);
-    setGameOver(false);
-    setStarted(false);
-    setTurnLimit(0);
-    setCurrentPlayer(null);
-    setTimeRemaining(10);
-  }, []);
-
   // socket thing
 
   useEffect(() => {
-    if (socket.connected) {
-      setIsConnected(true);
-      setTransport(socket.io.engine.transport.name);
-      setMyId(socket.auth.userID || null);
-    }
-
-    const onConnect = () => {
-      setIsConnected(true);
-      setTransport(socket.io.engine.transport.name);
-      setMyId(socket.auth.userID || null);
-      socket.io.engine.on("upgrade", (t) => setTransport(t.name));
-      socket.emit("requestState");
-    };
-
-    const onDisconnect = () => {
-      setIsConnected(false);
-      setTransport("N/A");
-    };
-
     const onReady = (data: {
       size: number;
       bombsTotal: number;
@@ -181,16 +135,19 @@ export function mineGameLogic() {
       }, 1000);
       (window as any).__lobbyCountdownInterval = intervalId;
     };
+
     const onTurnChanged = (data: { currentPlayer: string; reason: string }) => {
       console.log(`Turn changed to ${data.currentPlayer} (${data.reason})`);
       setCurrentPlayer(data.currentPlayer);
     };
+
     const onTurnTime = (data: {
       currentPlayer: string;
       timeRemaining: number;
     }) => {
       setTimeRemaining(data.timeRemaining);
     };
+
     const onPlayersUpdated = (data: {
       players: string[];
       currentPlayer: string | null;
@@ -205,8 +162,29 @@ export function mineGameLogic() {
       console.error("Server error:", data.message);
     };
 
-    socket.on("connect", onConnect);
-    socket.on("disconnect", onDisconnect);
+    const onReturnToLobby = (data: { reason: string }) => {
+      console.log("ReturnToLobby:", data.reason);
+
+      if ((window as any).__lobbyCountdownInterval) {
+        clearInterval((window as any).__lobbyCountdownInterval);
+        delete (window as any).__lobbyCountdownInterval;
+      }
+      resetLocal();
+      router.back();
+    };
+
+    const resetLocal = () => {
+      setRevealed({});
+      setBombsInfo(null);
+      setWinners(null);
+      setLeaderboard([]);
+      setGameOver(false);
+      setStarted(false);
+      setTurnLimit(0);
+      setCurrentPlayer(null);
+      setTimeRemaining(10);
+    };
+
     socket.on("map:ready", onReady);
     socket.on("cellResult", onCell);
     socket.on("gameOver", onOver);
@@ -216,13 +194,9 @@ export function mineGameLogic() {
     socket.on("error", onError);
     socket.on("returnToLobby", onReturnToLobby);
 
-    if (socket.connected) {
-      socket.emit("requestState");
-    }
+    socket.emit("requestState");
 
     return () => {
-      socket.off("connect", onConnect);
-      socket.off("disconnect", onDisconnect);
       socket.off("map:ready", onReady);
       socket.off("cellResult", onCell);
       socket.off("gameOver", onOver);
@@ -232,12 +206,9 @@ export function mineGameLogic() {
       socket.off("error", onError);
       socket.off("returnToLobby", onReturnToLobby);
     };
-  }, []);
+  }, [router]);
 
   return {
-    isConnected,
-    transport,
-
     size,
     setSize,
     started,
@@ -253,7 +224,6 @@ export function mineGameLogic() {
     myId,
     isMyTurn: currentPlayer === myId,
     pickCell,
-    resetLocal,
     returnCountdown,
   };
 }

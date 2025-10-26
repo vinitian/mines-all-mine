@@ -5,6 +5,7 @@ import socket from "@/socket";
 import StatisticsButton from "@/components/StatisticsButton";
 import { useRouter } from "next/navigation";
 import getRooms from "@/services/client/getRooms";
+import getRoom from "@/services/client/getRoom";
 import checkRoomExists from "@/services/client/checkRoomExists";
 import { Room as RoomType } from "@/interface";
 import CheckAuth from "@/components/CheckAuth";
@@ -54,13 +55,20 @@ export default function Room() {
 
     try {
       setCheckingRoom(true);
-      const roomExists = await checkRoomExists(roomId);
 
-      if (roomExists) {
-        router.push(`/lobby/${roomId}`);
-      } else {
-        setError(`Room with ID: ${roomId} not found!`);
+      const roomExists = await checkRoomExists(roomId);
+      if (!roomExists) {
+        setError(`Room with ID ${roomId} not found!`);
+        return;
       }
+      const roomData = await getRoom(roomId);
+      const isFull = roomData.player_id_list.length >= roomData.player_limit;
+      if (isFull) {
+        setError("That room is full");
+        return;
+      }
+
+      router.push(`/lobby/${roomId}`);
     } catch (error) {
       console.error("Error checking room:", error);
       setError("Error checking room. Please try again.");
@@ -101,110 +109,126 @@ export default function Room() {
       <StatisticsButton />
 
       <div className="flex flex-col items-center p-6">
-        <div className="flex justify-center text-h1 xl:text-subtitle font-bold text-center mb-2">
+        <h1 className="flex justify-center text-h1 xl:text-subtitle font-bold text-center mb-2">
           Welcome, {socket.auth.username || "Guest"}!
-        </div>
+        </h1>
 
-        <div className="p-6 w-full max-w-md md:max-w-3xl xl:max-w-4xl mb-8">
-          <div className="mb-2">
-            <span className="text-h4 sm:text-h3 xl:text-h2">
-              Join by Room Code
-            </span>
-          </div>
+        <div className="flex flex-col gap-6 p-6 w-full max-w-md md:max-w-3xl xl:max-w-4xl mb-8">
+          {/* Join by Room Code section */}
+          <div className="flex flex-col gap-2">
+            <h2 className="text-h4 sm:text-h3 xl:text-h2">Join by Room Code</h2>
 
-          <div className="flex gap-4 items-center mb-6">
-            <input
-              type="text"
-              placeholder="Enter 3-digit code"
-              className="w-full border-2 bg-white border-border rounded-2xl px-4 py-3 placeholder-gray-400 text-h4 focus:outline-none focus:border-[#3728BE]"
-              onChange={(e) => {
-                setRoomCode(e.target.value);
-              }}
-              onKeyUp={handleKeyPress}
-            />
+            <div className="flex gap-4 items-center">
+              <input
+                type="text"
+                placeholder="Enter 3-digit code"
+                className="w-full border-2 bg-white border-border rounded-2xl px-4 py-3 placeholder-gray-400 text-h4 focus:outline-none focus:border-[#3728BE]"
+                onChange={(e) => {
+                  setRoomCode(e.target.value);
+                }}
+                onKeyUp={handleKeyPress}
+              />
 
-            <button
-              onClick={handleJoinByCode}
-              disabled={checkingRoom}
-              className="bg-[#8499FF] text-white text-h3 border-2 border-border rounded-2xl px-6 py-2 hover:bg-[#7388ee] transition-colors duration-200 whitespace-nowrap flex-shrink-0 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {checkingRoom ? "Checking..." : "Enter"}
-            </button>
-          </div>
-
-          {error && (
-            <div className="mb-4">
-              <span className="text-red text-h4">{error}</span>
+              <button
+                onClick={handleJoinByCode}
+                disabled={checkingRoom}
+                className="bg-[#8499FF] text-white text-h3 border-2 border-border rounded-2xl px-6 py-2 hover:bg-[#7388ee] transition-colors duration-200 whitespace-nowrap flex-shrink-0 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {checkingRoom ? "Checking..." : "Enter"}
+              </button>
             </div>
-          )}
 
-          <div className="mb-4">
-            <span className="text-h4 sm:text-h3 xl:text-h2">Room List</span>
+            {error && <p className="text-red text-h4">{error}</p>}
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            {loading ? (
-              <div className="col-span-full text-center py-8">
-                <div className="text-gray-500 text-h4">Loading rooms...</div>
-              </div>
-            ) : rooms.length === 0 ? (
-              <div className="col-span-full text-center py-8">
-                <div className="text-gray-500 text-h4">No rooms available</div>
-              </div>
-            ) : (
-              rooms.map((room) => (
-                <div
-                  key={room.id}
-                  className="bg-white border-1 rounded-2xl p-4 transition-shadow cursor-pointer"
-                  onClick={() => handleJoinRoom(room.id)}
-                >
-                  <div className="flex justify-between items-start mb-2">
-                    <h3 className="text-h2 font-bold text-gray-800">
-                      {room.name}
-                    </h3>
-                  </div>
+          {/* Room list section */}
+          <div>
+            <h2 className="mb-4 text-h4 sm:text-h3 xl:text-h2">Room List</h2>
 
-                  <div className="text-h4 flex flex-col -space-y-1">
-                    <div>
-                      <span className="font-regular">Status:</span>{" "}
-                      {room.game_started ? (
-                        <span className="text-red font-bold">Game ongoing</span>
-                      ) : (
-                        <span className="text-green font-bold">In lobby</span>
-                      )}
-                    </div>
-                    <div>
-                      <span className="font-regular">Map Size:</span>{" "}
-                      {room.size}x{room.size}
-                    </div>
-                    <div>
-                      <span className="font-regular">Capacity:</span>{" "}
-                      {room.player_id_list.length}/{room.player_limit}
-                    </div>
-                    <div>
-                      <span className="font-regular">Number of mines:</span>{" "}
-                      {room.bomb_count}
-                    </div>
-                    <div>
-                      <span className="font-regular">Time Limit:</span>{" "}
-                      {room.timer === 0 ? "Unlimited" : `${room.timer} seconds`}
-                    </div>
-                  </div>
-
-                  <div className="mt-3 flex justify-center">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleJoinRoom(room.id);
-                      }}
-                      className="w-full bg-[#8499FF] text-white text-h3 border-2 border-border rounded-2xl px-6 py-2 hover:bg-[#7388ee] transition-colors duration-200 whitespace-nowrap flex-shrink-0 cursor-pointer"
-                    >
-                      Join
-                    </button>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              {loading ? (
+                <div className="col-span-full text-center py-8">
+                  <div className="text-gray-500 text-h4">Loading rooms...</div>
+                </div>
+              ) : rooms.length === 0 ? (
+                <div className="col-span-full text-center py-8">
+                  <div className="text-gray-500 text-h4">
+                    No rooms available
                   </div>
                 </div>
-              ))
-            )}
+              ) : (
+                rooms.map((room) => {
+                  const isFull =
+                    room.player_id_list.length >= room.player_limit;
+
+                  return (
+                    <div
+                      key={room.id}
+                      className="bg-white border-1 rounded-2xl p-4 transition-shadow cursor-pointer"
+                      onClick={() => handleJoinRoom(room.id)}
+                    >
+                      <div className="flex justify-between items-start mb-2">
+                        <h3 className="text-h2 font-bold text-gray-800">
+                          {room.name}
+                        </h3>
+                      </div>
+
+                      <div className="text-h4 flex flex-col -space-y-1">
+                        <div>
+                          <span className="font-regular">Status:</span>{" "}
+                          {room.game_started ? (
+                            <span className="text-red font-bold">
+                              Game ongoing
+                            </span>
+                          ) : (
+                            <span className="text-green font-bold">
+                              In lobby
+                            </span>
+                          )}
+                        </div>
+                        <div>
+                          <span className="font-regular">Map Size:</span>{" "}
+                          {room.size}x{room.size}
+                        </div>
+                        <div>
+                          <span className="font-regular">Capacity:</span>{" "}
+                          {room.player_id_list.length}/{room.player_limit}
+                        </div>
+                        <div>
+                          <span className="font-regular">Number of mines:</span>{" "}
+                          {room.bomb_count}
+                        </div>
+                        <div>
+                          <span className="font-regular">Time Limit:</span>{" "}
+                          {room.timer === 0
+                            ? "Unlimited"
+                            : `${room.timer} seconds`}
+                        </div>
+                      </div>
+
+                      <div className="mt-3 flex justify-center">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (isFull) return; // block full rooms
+                            handleJoinRoom(room.id);
+                          }}
+                          disabled={isFull}
+                          className={`w-full text-h3 border-2 rounded-2xl px-6 py-2 transition-colors duration-200 whitespace-nowrap flex-shrink-0 cursor-pointer
+                          ${
+                            isFull
+                              ? "bg-gray-300 border-gray-dark text-gray-600 cursor-not-allowed"
+                              : "bg-[#8499FF] hover:bg-[#7388ee] border-border text-white "
+                          }`}
+                        >
+                          {isFull ? "Room Full" : "Join"}
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
           </div>
         </div>
       </div>

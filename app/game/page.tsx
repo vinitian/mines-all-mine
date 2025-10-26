@@ -1,9 +1,7 @@
-//page.tsx (game page)
 "use client";
 import GameGrid from "@/components/gameGrid";
-import { mineGameLogic } from "../shared/mineGameLogic";
+import MineGameLogic from "../shared/mineGameLogic";
 import "./page.css";
-import socket from "@/socket";
 import Link from "next/link";
 import WelcomeMessage from "@/components/WelcomeMessage";
 import CheckAuth from "@/components/CheckAuth";
@@ -24,9 +22,8 @@ export default function GamePage() {
     myId,
     isMyTurn,
     pickCell,
-    resetLocal,
     returnCountdown,
-  } = mineGameLogic();
+  } = MineGameLogic();
 
   // REMOVED duplicate return - fixed syntax error
   return (
@@ -103,18 +100,7 @@ export default function GamePage() {
         {gameOver && (
           <div className="result-div">
             {typeof returnCountdown === "number" && (
-              <div
-                style={{
-                  marginTop: "12px",
-                  fontSize: "14px",
-                  fontWeight: "600",
-                  background: "#000000aa",
-                  color: "white",
-                  padding: "8px 12px",
-                  borderRadius: "6px",
-                  display: "inline-block",
-                }}
-              >
+              <div className="mt-3 text-body font-bold text-white bg-black/65 px-2 py-3 rounded-md ">
                 Returning to lobby in {returnCountdown}s...
               </div>
             )}
