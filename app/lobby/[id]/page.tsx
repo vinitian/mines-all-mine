@@ -40,6 +40,24 @@ export default function LobbyPage() {
   };
 
   useEffect(() => {
+    const fetchRoom = async () => {
+      try {
+        setLoading(true);
+        const roomData = await getRoom(parseInt(roomId));
+        setRoom(roomData);
+      } catch (error) {
+        console.error("Error fetching room:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (roomId) {
+      fetchRoom();
+    }
+  }, [roomId]);
+
+  useEffect(() => {
     // Listen for messages from the server
     socket.on("message", (msg: Message) => {
       setMessages((prev: Message[]) => [
@@ -61,52 +79,64 @@ export default function LobbyPage() {
         router.replace("/");
       }, 3000);
     });
-    // add players into array when they join
+
+    // player needs to go back to home page when kicked
+    socket.on("kickPlayer", (userID: string) => {
+      if (socket.auth.userID === userID) {
+        socket.emit("leaveRoom");
+        router.replace("/");
+      }
+    });
+
     // may need to leave when socket disconnect
     socket.on("currentPlayers", (currentPlayers: Player[]) => {
-      console.log("Received players:", currentPlayers);
       setPlayers(currentPlayers);
     });
 
     // update player list in database
     socket.emit("joinRoom", parseInt(roomId));
-    const updatePlayer = async () => {
-      try {
-        const roomData = await updatePlayerList({
-          userId: socket.auth.userID,
-          roomId: parseInt(roomId),
-          addPlayer: true,
-        });
-      } catch (error) {
-        console.error("Error updating room:", error);
+    if (socket.auth.userID && room) {
+      const updatePlayer = async () => {
+        try {
+          const roomData = await updatePlayerList({
+            userId: socket.auth.userID,
+            roomId: parseInt(roomId),
+            addPlayer: true,
+          });
+        } catch (error) {
+          console.error("Error updating room:", error);
+        }
+      };
+      updatePlayer();
+    }
+    // update player list in database when a player leaves
+    socket.on("playerLeft", (PlayerID: string) => {
+      if (socket.auth.userID == room?.host_id) {
+        const updatePlayerLeave = async () => {
+          try {
+            const roomData = await updatePlayerList({
+              userId: PlayerID,
+              roomId: parseInt(roomId),
+              addPlayer: false,
+            });
+          } catch (error) {
+            console.error("Error updating room:", error);
+          }
+        };
+        updatePlayerLeave();
       }
-    };
-    updatePlayer();
+    });
+
+    //ISSUE: when the player is the last in the room and leaves, the database is not updated, "playerLeft" is not received. Use the same behavior of deleteRoom on last leave like in main branch.
 
     return () => {
       socket.off("message");
       socket.off("kickAllPlayersInRoom");
       socket.off("currentPlayers");
+      socket.off("playerLeft");
+      socket.off("kickPlayer");
     };
-  }, []);
-
-  useEffect(() => {
-    const fetchRoom = async () => {
-      try {
-        setLoading(true);
-        const roomData = await getRoom(parseInt(roomId));
-        setRoom(roomData);
-      } catch (error) {
-        console.error("Error fetching room:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (roomId) {
-      fetchRoom();
-    }
-  }, [roomId]);
+  }, [room]);
 
   if (loading) {
     return <LoadingModal text={"Loading room information"} />;
@@ -132,9 +162,9 @@ export default function LobbyPage() {
           <div className="flex flex-col gap-[20px] md:h-full md:w-1/2 md:max-w-[315px]">
             <div>
               <PlayerList
-                playerLimit={room.player_limit}
                 players={players}
                 hostID={room.host_id}
+                roomId={roomId}
               />
             </div>
 

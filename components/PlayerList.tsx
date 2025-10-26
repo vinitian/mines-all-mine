@@ -1,19 +1,31 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { use, useEffect, useState } from "react";
 import socket from "@/socket";
 import { Player } from "@/interface";
 
 export default function PlayerList({
-  playerLimit,
   players,
   hostID,
+  roomId,
 }: {
-  playerLimit: number;
   players: Player[];
   hostID: string;
+  roomId: string;
 }) {
   const [isHost, setIsHost] = useState(false);
+  const [playerLimit, setPlayerLimit] = useState<number>(2);
+
+  useEffect(() => {
+    // listen setting update from server
+    socket.on("RSU", ({ player_limit }) => {
+      setPlayerLimit(player_limit);
+    });
+
+    return () => {
+      socket.off("RSU");
+    };
+  }, []);
 
   useEffect(() => {
     const userID = socket.auth.userID;
@@ -23,11 +35,9 @@ export default function PlayerList({
   }, [hostID]);
 
   const handleKickPlayer = (playerID: string) => {
-    socket.emit("kick_player", { playerID });
+    console.log("Kicking player with ID:", playerID);
+    socket.emit("kickPlayer", parseInt(roomId), playerID);
   };
-
-  // remove player from database & remove player from room (forced leave room?)
-  // if players get kicked/leave room --> playerlist update real-time?
 
   return (
     <div className="rounded-lg border bg-white flex flex-col p-[10px] w-full h-full">
@@ -58,7 +68,7 @@ export default function PlayerList({
                     strokeWidth="2"
                     strokeLinecap="round"
                     strokeLinejoin="round"
-                    onClick={() => {}}
+                    onClick={handleKickPlayer.bind(null, player.userID)}
                     className="lucide lucide-trash-icon lucide-trash text-red
                   size-[24px] hover:stroke-blue transition-colors duration-200 cursor-pointer"
                   >
@@ -75,5 +85,3 @@ export default function PlayerList({
     </div>
   );
 }
-// ISSUE: the player doesn't see the players that join before them
-// update player limit real-time

@@ -131,7 +131,6 @@ export default function RoomSettings({
     socket.on(
       "roomSettingsUpdate",
       ({ name, size, bomb_density, timer, player_limit, chat_enabled }) => {
-        console.log("receive", name);
         setRoomname(name);
         setMapSize(size);
         setTurnLimit(timer);
@@ -283,7 +282,7 @@ export default function RoomSettings({
       </div>
 
       <div className="flex flex-col">
-        <div className="text-h3">Number of mines</div>
+        <div className="text-h3">Amount of mines</div>
         {isHost ? (
           <div
             className="w-full border-2 border-border rounded-2xl px-4 py-2 placeholder-gray-400 text-h4 focus:outline-none focus:border-[#3728BE]
@@ -302,7 +301,7 @@ export default function RoomSettings({
             </select>
           </div>
         ) : (
-          <div className="text-xl -mt-2.5">{bombs}</div>
+          <div className="text-xl -mt-2.5">{bombCount}</div>
         )}
       </div>
 
