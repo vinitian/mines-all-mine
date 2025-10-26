@@ -103,18 +103,7 @@ export default function GamePage() {
         {gameOver && (
           <div className="result-div">
             {typeof returnCountdown === "number" && (
-              <div
-                style={{
-                  marginTop: "12px",
-                  fontSize: "14px",
-                  fontWeight: "600",
-                  background: "#000000aa",
-                  color: "white",
-                  padding: "8px 12px",
-                  borderRadius: "6px",
-                  display: "inline-block",
-                }}
-              >
+              <div className="mt-3 text-body font-bold text-white bg-black/65 px-2 py-3 rounded-md ">
                 Returning to lobby in {returnCountdown}s...
               </div>
             )}
