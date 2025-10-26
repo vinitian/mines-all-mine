@@ -1,14 +1,12 @@
-//page.tsx (game page) 
 "use client";
 import GameGrid from "@/components/gameGrid";
-import { mineGameLogic } from "../shared/mineGameLogic";
+import MineGameLogic from "../shared/mineGameLogic";
 import "./page.css";
-import socket from "@/socket";
 import Link from "next/link";
 import WelcomeMessage from "@/components/WelcomeMessage";
+import CheckAuth from "@/components/CheckAuth";
 
 export default function GamePage() {
-
   const {
     size,
     started,
@@ -24,14 +22,14 @@ export default function GamePage() {
     myId,
     isMyTurn,
     pickCell,
-    resetLocal,
-  } = mineGameLogic();
-
+    returnCountdown,
+  } = MineGameLogic();
 
   // REMOVED duplicate return - fixed syntax error
   return (
     <div className="game-div-container  bg-gradient-to-b from-[#fffff5] from-30% via-[#ddf7ff] via-71% to-[#dde4ff] to-100% flex items-center justify-center p-4">
-      {started && <WelcomeMessage/>}
+      <CheckAuth />
+      {started && <WelcomeMessage />}
       {/* later {started && <WelcomeMessage text={`Welcome to Mines all Mine, ${nickname}!`} />} */}
 
       <h1 className="absolute text-3xl text-semibold top-[2%] left-[2%]">
@@ -41,7 +39,7 @@ export default function GamePage() {
         <Link href="/" className="cta">
           Home
         </Link>
-        
+
         <div className="bomb-count-div flex items-center gap-2">
           {turnLimit > 0 && <div>Time per turn: {turnLimit} seconds</div>}
           {bombsInfo && (
@@ -101,6 +99,12 @@ export default function GamePage() {
 
         {gameOver && (
           <div className="result-div">
+            {typeof returnCountdown === "number" && (
+              <div className="mt-3 text-body font-bold text-white bg-black/65 px-2 py-3 rounded-md ">
+                Returning to lobby in {returnCountdown}s...
+              </div>
+            )}
+
             {winners?.length ? (
               winners.length === 1 ? (
                 <>

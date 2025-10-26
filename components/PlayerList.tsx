@@ -6,14 +6,13 @@ import { Player } from "@/interface";
 
 export default function PlayerList({
   players,
-  hostID,
   roomId,
+  isHost,
 }: {
   players: Player[];
-  hostID: string;
   roomId: string;
+  isHost: boolean;
 }) {
-  const [isHost, setIsHost] = useState(false);
   const [playerLimit, setPlayerLimit] = useState<number>(2);
 
   useEffect(() => {
@@ -26,13 +25,6 @@ export default function PlayerList({
       socket.off("RSU");
     };
   }, []);
-
-  useEffect(() => {
-    const userID = socket.auth.userID;
-    if (userID == hostID) {
-      setIsHost(true);
-    }
-  }, [hostID]);
 
   const handleKickPlayer = (playerID: string) => {
     console.log("Kicking player with ID:", playerID);

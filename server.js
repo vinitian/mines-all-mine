@@ -203,6 +203,11 @@ app.prepare().then(() => {
       io.to(room_id).emit("kickAllPlayersInRoom");
     });
 
+    //reset button kicking everyone in every room
+    socket.on("kickAllPlayersInEveryRoom", () => {
+      io.emit("kickAllPlayersInEveryRoom");
+    });
+
     socket.on("kickPlayer", (room_id, user_id) => {
       io.to(room_id).emit("kickPlayer", user_id);
     });
@@ -349,11 +354,6 @@ app.prepare().then(() => {
       });
     });
 
-    socket.on("resetNotice", () => {
-      console.log("Reset Complete!");
-      io.emit("serverRestarts");
-    });
-
     socket.on("pickCell", (index) => {
       if (!state.started) {
         socket.emit("error", { message: "Game hasn't started yet" });
@@ -428,6 +428,11 @@ app.prepare().then(() => {
           size: state.size,
           bombCount: state.bombCount,
         });
+        setTimeout(() => {
+          resetGame(); // เริ่มใหม่ตาหน้า
+          io.emit("returnToLobby", { reason: "gameEnded" });
+        }, 10000);
+
         return;
       }
 
@@ -440,6 +445,30 @@ app.prepare().then(() => {
 
     socket.on("disconnect", () => {
       console.log("User disconnected", socket.data.userID);
+
+      // Automatically removes the player from the room they're in
+      outerLoop: for (const [roomId, playersList] of Object.entries(
+        roomPlayers
+      )) {
+        console.log(`Key: ${parseInt(roomId)}, Value: ${playersList}`);
+
+        for (const player of playersList) {
+          if (socket.data.userID == player.userID) {
+            console.log(player);
+
+            roomPlayers[parseInt(roomId)] = roomPlayers[
+              parseInt(roomId)
+            ].filter((p) => p.userID !== socket.data.userID);
+
+            io.to(parseInt(roomId)).emit(
+              "currentPlayers",
+              roomPlayers[parseInt(roomId)]
+            );
+
+            break outerLoop;
+          }
+        }
+      }
 
       userStore.saveUser(socket.data.userID, {
         username: socket.data.username,

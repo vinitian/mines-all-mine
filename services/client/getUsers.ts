@@ -12,7 +12,7 @@ export default async function getUsers() {
   });
 
   if (!response.ok) {
-    return new Error("Failed to fetch users");
+    throw new Error("Failed to fetch users");
   }
 
   return await response.json();

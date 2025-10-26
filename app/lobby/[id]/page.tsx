@@ -3,7 +3,7 @@
 import { useContext, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Message, Room } from "@/interface";
-import { getRoom } from "@/services/client/roomService";
+import getRoom from "@/services/client/getRoom";
 import RoomSettings from "@/components/RoomSetting";
 import Chat from "@/components/Chat";
 import RoomName from "@/components/RoomName";
@@ -14,9 +14,12 @@ import { ChatContext } from "@/components/ChatContext";
 import updatePlayerList from "@/services/client/updatePlayerList";
 import PlayerList from "@/components/PlayerList";
 import { Player } from "@/interface";
+import CheckAuth from "@/components/CheckAuth";
+import Button from "@/components/Button";
 
 export default function LobbyPage() {
   const [room, setRoom] = useState<Room | null>(null);
+  const [lobbyRoomName, setLobbyRoomName] = useState("Room");
   const { messages, setMessages } = useContext(ChatContext);
   const [loading, setLoading] = useState(true);
   const params = useParams();
@@ -26,17 +29,30 @@ export default function LobbyPage() {
   const [players, setPlayers] = useState<Player[]>([]);
 
   const handleDeleteRoom = async () => {
-    if (!socket.auth.userID) {
-      return;
-    }
-    const response = await deleteRoom(parseInt(roomId));
-    if (response) {
+    try {
       handleKickAllPlayersInRoom();
+      await deleteRoom(parseInt(roomId));
+    } catch (error) {
+      console.error(error);
     }
   };
 
   const handleKickAllPlayersInRoom = () => {
     socket.emit("kickAllPlayersInRoom", parseInt(roomId));
+  };
+
+  const handleLeaveRoom = async () => {
+    socket.emit("leaveRoom");
+    router.push("/");
+    if (players.length <= 1) {
+      // if player is the only one left, delete the room
+      await deleteRoom(+roomId);
+      return;
+    }
+    // TODO: select new host
+    if (room && room.host_id == socket.auth.userID) {
+      console.log("TODO: select new host");
+    }
   };
 
   useEffect(() => {
@@ -98,13 +114,13 @@ export default function LobbyPage() {
     if (socket.auth.userID && room) {
       const updatePlayer = async () => {
         try {
-          const roomData = await updatePlayerList({
+          await updatePlayerList({
             userId: socket.auth.userID,
             roomId: parseInt(roomId),
             addPlayer: true,
           });
         } catch (error) {
-          console.error("Error updating room:", error);
+          console.error(error);
         }
       };
       updatePlayer();
@@ -114,13 +130,13 @@ export default function LobbyPage() {
       if (socket.auth.userID == room?.host_id) {
         const updatePlayerLeave = async () => {
           try {
-            const roomData = await updatePlayerList({
+            await updatePlayerList({
               userId: PlayerID,
               roomId: parseInt(roomId),
               addPlayer: false,
             });
           } catch (error) {
-            console.error("Error updating room:", error);
+            console.error(error);
           }
         };
         updatePlayerLeave();
@@ -143,17 +159,21 @@ export default function LobbyPage() {
   }
   if (!room) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div>Room not found</div>
+      <div className="min-h-screen flex flex-col items-center justify-center m-8 gap-8">
+        <div className="text-h1">Room not found</div>
+        <div className="w-1/2">
+          <Button onClick={() => router.push("/")}>Return to Home</Button>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="flex flex-col px-[25px]">
+      <CheckAuth />
       <div className="flex flex-col gap-[25px] py-[25px] md:h-dvh">
         <RoomName
-          roomName={room.name}
+          roomName={lobbyRoomName}
           roomCode={room.id}
           trashVisible={room.host_id == socket.auth.userID}
           trashOnClickAction={handleDeleteRoom}
@@ -161,18 +181,19 @@ export default function LobbyPage() {
         <div className="flex flex-col md:flex-row gap-[20px] h-10/12 md:h-9/12">
           <div className="flex flex-col gap-[20px] md:h-full md:w-1/2 md:max-w-[315px]">
             <div>
-              <PlayerList
-                players={players}
-                hostID={room.host_id}
-                roomId={roomId}
-              />
+              <PlayerList players={players} hostID={room.host_id} />
             </div>
 
             <div className="hidden md:block w-full h-full">
               <Chat />
             </div>
           </div>
-          <RoomSettings roomId={parseInt(roomId)} roomName={room.name} />
+          <RoomSettings
+            room={room}
+            isHost={room.host_id == socket.auth.userID}
+            setLobbyRoomNameAction={setLobbyRoomName}
+            handleLeaveRoomAction={handleLeaveRoom}
+          />
         </div>
       </div>
       <div className="md:hidden w-full h-[60dvh]">
@@ -203,9 +224,7 @@ export default function LobbyPage() {
       </div>
       {deletedRoomPopup && (
         <LoadingModal
-          text={
-            "The host has deleted the room.\n\nRedirecting you to home page"
-          }
+          text={"The host has deleted the room. Redirecting you to home page"}
         />
       )}
     </div>

@@ -1,70 +1,111 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import socket from "@/socket";
-import Link from "next/link";
-import { Message, Room, User, Placement } from "@/interface";
-import Image from "next/image";
-import StatisticsButton from "@/components/StatisticsButton";
 import { useRouter } from "next/navigation";
 import { useParams } from "next/navigation";
+import { signIn, useSession } from "next-auth/react";
+import socket from "@/socket";
+import { Room } from "@/interface";
+import StatisticsButton from "@/components/StatisticsButton";
+import DuplicateUserPopup from "@/components/DuplicateConnectedUserPopup";
+import handleSignOut from "@/services/client/handleSignOut";
+import getRoom from "@/services/client/getRoom";
 
 export default function InvitePage() {
-  const [nickname, setNickname] = useState("");
-  const [showError, setShowError] = useState(false);
+  const { data: session } = useSession();
+
+  const [username, setUsername] = useState(
+    socket.auth ? socket.auth.username : session?.user?.name ?? ""
+  ); // check for username in socket first, else get from auth.js, else leave empty
+  const [nameErrorMessage, setNameErrorMessage] = useState<string | undefined>(
+    undefined
+  );
+  const [showDuplicateUserPopup, setShowDuplicateUserPopup] = useState(false);
   const [room, setRoom] = useState<Room | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
   const params = useParams();
   const roomId = params.id as string;
 
-  const [username, setUsername] = useState("john");
+  const connectSocket = () => {
+    const userIdInLocal = localStorage.getItem("userID");
+    socket.auth = {
+      userID: userIdInLocal
+        ? userIdInLocal
+        : session && session.user
+        ? session.user.email
+        : "",
+      username: username,
+    };
+
+    socket.disconnect().connect();
+    socket.on("session", ({ userID, username }) => {
+      // set auth for client for the next reconnection attempts
+      socket.auth = {
+        userID: userID,
+        username: username,
+      };
+      localStorage.setItem("userID", userID);
+      console.log("invite/id-connectSocket auth", socket.auth);
+      socket.emit("setAuthSuccessful");
+    });
+  };
 
   const handleJoinRoom = () => {
-    if (nickname.trim()) {
-      setShowError(false);
-      router.push(`/lobby/${roomId}`);
-    } else {
-      setShowError(true);
+    if (!username || !username.trim()) {
+      setNameErrorMessage("Please enter your username first!");
+      return;
     }
-  };
 
-  const isNicknameValid = nickname.trim().length > 0;
+    if (username.length > 12) {
+      setNameErrorMessage("Username must be 12 characters or less!");
+      return;
+    }
+
+    connectSocket();
+    router.push(`/lobby/${roomId}`);
+  };
 
   // Hide error when user starts typing
-  const handleNicknameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setNickname(e.target.value);
-    if (showError && e.target.value.trim()) {
-      setShowError(false);
+  const handleUsernameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setUsername(e.target.value);
+    if (nameErrorMessage && e.target.value.trim()) {
+      setNameErrorMessage(undefined);
     }
   };
+
+  useEffect(() => {
+    const userID = localStorage.getItem("userID");
+    if (userID) {
+      socket.auth = { userID };
+      socket.connect();
+      socket.on("duplicateConnectedUser", () => {
+        setShowDuplicateUserPopup(true);
+      });
+      socket.on("session", ({ userID, username }) => {
+        socket.auth = { userID, username }; // set auth for client
+        setUsername(username);
+      });
+    }
+  }, []);
+
+  // when user logs in, change username to their google name
+  useEffect(() => {
+    if (session && session.user && session.user.name) {
+      setUsername(session.user.name.substring(0, 12));
+    }
+  }, [session]);
 
   useEffect(() => {
     const fetchRoom = async () => {
       try {
         setLoading(true);
-        const response = await fetch(`/api/room/${roomId}`);
-
-        if (!response.ok) {
-          if (response.status === 404) {
-            setError("Room not found");
-          } else {
-            setError("Error loading room");
-          }
-          return;
-        }
-
-        const result = await response.json();
-
-        if (result.success && result.data) {
-          setRoom(result.data);
-        } else {
-          setError(result.error || "Error loading room");
-        }
+        const response = await getRoom(parseInt(roomId));
+        setRoom(response);
       } catch (error) {
-        console.error('Error fetching room:', error);
-        setError("Error loading room");
+        console.error(error);
+        setError("Error fetching room");
       } finally {
         setLoading(false);
       }
@@ -95,9 +136,7 @@ export default function InvitePage() {
           <div className="flex justify-center text-title/16 font-bold text-center my-4">
             Mines, All Mine!
           </div>
-          <div className="text-center text-h3 text-red mb-4">
-            {error || "Room not found!"}
-          </div>
+          <div className="text-center text-h3 text-red mb-4">{error}</div>
           <button
             onClick={() => router.push("/")}
             className="w-full bg-blue text-white text-h3 border-2 border-border rounded-2xl py-2 hover:bg-[#7388ee] transition-colors duration-200 flex justify-center mt-4 cursor-pointer"
@@ -118,24 +157,24 @@ export default function InvitePage() {
         </div>
 
         <div className="text-center text-h3 text-gray-blue font-bold mb-4">
-          You are entering "{room.name}"
+          You are entering &quot;{room.name}&quot;
         </div>
 
         <div className="flex justify-center items-center gap-4 mt-2">
-          <div className="text-h3">Nickname</div>
+          <div className="text-h3">Username</div>
           <input
             type="text"
-            placeholder="Type your nickname here..."
+            placeholder="Type your username here..."
             className="w-full border-2 border-border rounded-2xl px-4 py-2 placeholder-gray-400 text-h4 focus:outline-none focus:border-[#3728BE]"
-            value={nickname}
-            onChange={handleNicknameChange}
+            value={username}
+            onChange={handleUsernameChange}
           />
         </div>
 
         <div className="flex justify-center">
-          {showError && (
+          {nameErrorMessage && (
             <div className="w-[60%] mt-2 p-2 text-red rounded-lg text-center">
-              Please enter your nickname first!
+              {nameErrorMessage}
             </div>
           )}
         </div>
@@ -147,13 +186,23 @@ export default function InvitePage() {
           Join Room
         </button>
 
-        {/* Placeholder button that doesn't do anything */}
-        <button
-          className="w-full bg-white text-black text-h3 border-2 border-border rounded-2xl py-2 hover:bg-[#f0f0f0] transition-colors duration-200 flex justify-center mt-4 cursor-pointer"
-        >
-          Sign in with Google
-        </button>
+        {session ? (
+          <button
+            className="w-full bg-white text-black text-h3 border-2 border-border rounded-2xl py-2 hover:bg-[#f0f0f0] transition-colors duration-200 flex justify-center mt-4 cursor-pointer"
+            onClick={handleSignOut}
+          >
+            Sign out
+          </button>
+        ) : (
+          <button
+            className="w-full bg-white text-black text-h3 border-2 border-border rounded-2xl py-2 hover:bg-[#f0f0f0] transition-colors duration-200 flex justify-center mt-4 cursor-pointer"
+            onClick={() => signIn("google")}
+          >
+            Sign in with Google
+          </button>
+        )}
       </div>
+      {showDuplicateUserPopup && <DuplicateUserPopup />}
     </div>
   );
 }
