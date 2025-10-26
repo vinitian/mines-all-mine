@@ -55,7 +55,6 @@ export default function StatisticsButton() {
         // Refresh the room count
         await fetchTotalRooms();
         socket.emit("kickAllPlayersInEveryRoom");
-        socket.emit("resetNotice");
       } else {
         setResetMessage(`Error: ${response.error}`);
       }
