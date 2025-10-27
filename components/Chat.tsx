@@ -70,7 +70,7 @@ export default function Chat() {
           onKeyDown={handleKeyDown}
           placeholder="Type a message..."
         />
-        <Button onClick={sendMessage} className="w-min bg-green">
+        <Button onClick={sendMessage} className="w-min bg-green text-white">
           Send
         </Button>
       </div>
