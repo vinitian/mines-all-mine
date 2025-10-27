@@ -184,7 +184,7 @@ export default function LobbyPage() {
               <PlayerList
                 players={players}
                 isHost={room.host_id == socket.auth.userID}
-                roomId={room.id}
+                room={room}
               />
             </div>
 

@@ -34,10 +34,14 @@ export default function RoomSettings({
   handleLeaveRoomAction?: () => void;
 }) {
   const [roomname, setRoomname] = useState(room.name);
-  const [mapSize, setMapSize] = useState<MapSize>(8);
-  const [bombCount, setBombCount] = useState<BombDensity>("medium");
-  const [turnLimit, setTurnLimit] = useState<TurnLimit>(10);
-  const [playerLimit, setPlayerLimit] = useState<PlayerLimit>(2);
+  const [mapSize, setMapSize] = useState<MapSize>(room.size as MapSize);
+  const [bombCount, setBombCount] = useState<BombDensity>("medium"); // TODO: get bombDensity instead of bombCount from socket
+  const [turnLimit, setTurnLimit] = useState<TurnLimit>(
+    room.timer as TurnLimit
+  );
+  const [playerLimit, setPlayerLimit] = useState<PlayerLimit>(
+    room.player_limit as PlayerLimit
+  );
   const [chatState, setChatState] = useState<boolean>(true);
   const router = useRouter();
   const [showCountdown, setShowCountdown] = useState(false);
