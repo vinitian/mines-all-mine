@@ -13,16 +13,18 @@ export default function Chat() {
   const scrollContainerRef = useRef(null);
 
   const sendMessage = () => {
-    const newMessageObj = {
-      userID: socket.auth.userID,
-      username: socket.auth.username,
-      text: message,
-      timestamp: Date(),
-    };
+    if (message.trim() !== "") {
+      const newMessageObj = {
+        userID: socket.auth.userID,
+        username: socket.auth.username,
+        text: message,
+        timestamp: Date(),
+      };
 
-    socket.emit("message", newMessageObj); // Send message to server
-    setMessages((prev: Message[]) => [...prev, newMessageObj]); // Add your message to the chat
-    setMessage(""); // Clear input field
+      socket.emit("message", newMessageObj); // Send message to server
+      setMessages((prev: Message[]) => [...prev, newMessageObj]); // Add your message to the chat
+      setMessage(""); // Clear input field
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
