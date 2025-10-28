@@ -21,7 +21,7 @@ export default function CheckAuth({ children }: { children: React.ReactNode }) {
   // Remove the direct navigation and just show loading
   if (needRedirect) {
     return (
-      <LoadingModal text={"No socket auth.Redirecting you to home page"} />
+      <LoadingModal text={"No socket auth.\nRedirecting you to home page"} />
     );
   } else {
     return children;

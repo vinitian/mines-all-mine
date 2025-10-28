@@ -229,7 +229,7 @@ export default function LobbyPage() {
       </div>
       {deletedRoomPopup && (
         <LoadingModal
-          text={"The host has deleted the room. Redirecting you to home page"}
+          text={"The host has deleted the room.\nRedirecting you to home page"}
         />
       )}
     </div>
