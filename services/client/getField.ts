@@ -1,5 +1,3 @@
-import { Cell, Field } from "@/services/game_logic";
-
 interface GetFieldRequest {
   user_id: string;
 }

@@ -104,8 +104,10 @@ export default function LobbyPage() {
       }
     });
 
+    // add players into array when they join
     // may need to leave when socket disconnect
     socket.on("currentPlayers", (currentPlayers: Player[]) => {
+      console.log("92-Received players:", currentPlayers);
       setPlayers(currentPlayers);
     });
 
@@ -125,6 +127,7 @@ export default function LobbyPage() {
       };
       updatePlayer();
     }
+
     // update player list in database when a player leaves
     socket.on("playerLeft", (PlayerID: string) => {
       if (socket.auth.userID == room?.host_id) {

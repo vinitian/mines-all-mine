@@ -1,14 +1,4 @@
-interface EditRoomRequest {
-  user_id: string;
-  name: string;
-  size: number;
-  bomb_count: number;
-  turn_limit: number;
-  player_limit: number;
-  chat_enabled: boolean;
-}
-
-export default async function editRoom(apiRequest: EditRoomRequest) {
+export default async function editRoom(apiRequest) {
   const baseUrl =
     typeof window === "undefined"
       ? process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3000"

@@ -1,5 +1,3 @@
-import { Cell, Field } from "@/services/game_logic";
-
 interface RevealCellRequest {
   user_id: string;
   index: number;

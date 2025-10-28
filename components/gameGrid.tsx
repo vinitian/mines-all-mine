@@ -1,19 +1,29 @@
 "use client";
 import React from "react";
-import { Bomb} from "lucide-react";
+import { Bomb } from "lucide-react";
 
-type CellStatus = {
-  type: 'hit' | 'miss';
-  hintNumber?: number;
-};
+type CellDisplayData = {
+  is_open: boolean;
+  index: number;
+  number: number;
+  bomb: boolean;
+}
+
+// type GameGridProps = {
+//   size: number;
+//   onPick: (i: number) => void;
+//   revealed: Record<number, "hit" | "miss">; 
+// };
 
 type GameGridProps = {
   size: number;
   onPick: (i: number) => void;
-  revealed: Record<number, CellStatus>; 
+  revealed: Record<number, CellDisplayData>;
 };
 
 export default function GameGrid({ size, onPick, revealed }: GameGridProps) {
+  console.log("GameGrid render");
+
   const cells = Array.from({ length: size * size }, (_, i) => i);
 
   const containerWidth = 400;
@@ -21,7 +31,7 @@ export default function GameGrid({ size, onPick, revealed }: GameGridProps) {
   const totalGapWidth = (size - 1) * gapSize;
   const cellSize = (containerWidth - totalGapWidth) / size;
 
-
+  //console.log(revealed, "<--dis is revealed");
   return (
     <div
       style={{
@@ -32,29 +42,29 @@ export default function GameGrid({ size, onPick, revealed }: GameGridProps) {
       }}
     >
       {cells.map((i) => {
-        const status = revealed[i];                
-        const isRevealed = status !== undefined;
+        const cellInfo = revealed[i];
+        const isRevealed = cellInfo.is_open;
+        const isBomb = cellInfo.bomb;
+        const number = cellInfo.number;
 
         const bg =
-          status && status.type === "hit" ? "#8499FF" :           
-          status && status.type === "miss" ? "#FFFFFF" :        
-          "#D4D4D4";                              
+          isRevealed && isBomb ? "#8499FF" :
+            isRevealed && (!isBomb) ? "#FFFFFF" :
+              "#D4D4D4";
 
-          const label =
-          status?.type === "hit" ? (
-            <Bomb size={cellSize * 0.5} color="white" />
-          ) : status?.type === "miss" && status.hintNumber && status.hintNumber > 0 ? (
-            <span style={{ 
-              fontSize: `${cellSize * 0.4}px`, 
-              fontWeight: 700,
-              color: getHintColor(status.hintNumber)
-            }}>
-              {status.hintNumber}
-            </span>
-          ) : (
-            ""
-          );
-          
+        const label =
+          isRevealed && isBomb ?
+            <Bomb size={cellSize * 0.5} color="white" /> :
+            isRevealed && (!isBomb) && (number != 0) ?
+              <span style={{
+                fontSize: `${cellSize * 0.4}px`,
+                fontWeight: 700,
+                color: getHintColor(number)
+              }}>
+                {number}
+              </span> :
+              "";
+
 
         return (
           <button
@@ -86,14 +96,14 @@ export default function GameGrid({ size, onPick, revealed }: GameGridProps) {
 
 function getHintColor(num: number): string {
   const colors: Record<number, string> = {
-    1: "#8499FF",  
-    2: "#2DDB81", 
-    3: "#F26690", 
+    1: "#8499FF",
+    2: "#2DDB81",
+    3: "#F26690",
     4: "#E496F5",
-    5: "#FEB943", 
-    6: "#52C2D8",  
-    7: "#9AC71F", 
-    8: "#D88928",  
+    5: "#FEB943",
+    6: "#52C2D8",
+    7: "#9AC71F",
+    8: "#D88928",
   };
   return colors[num] || "#000000";
 }
