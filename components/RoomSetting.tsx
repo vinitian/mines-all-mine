@@ -57,11 +57,13 @@ export default function RoomSettings({
   room,
   isHost,
   setLobbyRoomNameAction = () => {},
+  setLobbyChatEnableAction = () => {},
   handleLeaveRoomAction = () => {},
 }: {
   room: Room;
   isHost: boolean;
   setLobbyRoomNameAction?: React.Dispatch<React.SetStateAction<string>>;
+  setLobbyChatEnableAction?: React.Dispatch<React.SetStateAction<boolean>>;
   handleLeaveRoomAction?: () => void;
 }) {
   const [roomname, setRoomname] = useState(room.name);
@@ -212,6 +214,7 @@ export default function RoomSettings({
       setPlayerLimit(state.player_limit);
       setBombCount(state.density);
       setChatState(state.chat_enabled);
+      setLobbyChatEnableAction(state.chat_enabled);
     });
 
     return () => {
@@ -339,7 +342,10 @@ export default function RoomSettings({
               id="chat"
               value={chatState ? "enable" : "disable"}
               onChange={(e) =>
-                requestEditRoomSettings({ chat_enabled: e.target.value }, false)
+                requestEditRoomSettings(
+                  { chat_enabled: e.target.value == "enable" ? true : false },
+                  false
+                )
               }
               aria-label="Set to enable/disable chat"
               className="w-full"
