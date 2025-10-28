@@ -63,6 +63,7 @@ app.prepare().then(() => {
       // also know as timer in db?
       this.turn_limit = undefined;
       this.density = undefined; // for proporgation only
+      this.prev_winner = undefined;
     }
 
     updateRoomInDatabase(socket, reason = "unspecified") {
@@ -491,6 +492,12 @@ app.prepare().then(() => {
       //shuffle players
       //TODO make winner start first
       state.player_id_list = fisherYatesShuffle(state.player_id_list);
+      if (state.prev_winner) {
+        state.player_id_list = state.player_id_list.filter(
+          (p) => p.userID !== state.prev_winner
+        );
+        state.player_id_list = [state.prev_winner, ...state.player_id_list];
+      }
 
       console.log(
         `Game started: ${state.size}x${state.size}, ${state.bomb_count} bombs, ${state.turn_limit}s turns`
@@ -686,6 +693,7 @@ app.prepare().then(() => {
 
         state.game_started = false;
         const winners = computeWinners(state.scores);
+        state.prev_winner = winners[0];
 
         //broadcast to current room only?
         io.to(current_room_id).emit("gameOver", {
