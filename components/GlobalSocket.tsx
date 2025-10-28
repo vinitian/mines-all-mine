@@ -34,7 +34,7 @@ export default function GlobalSocket({
 
       {deletedRoomPopup && (
         <LoadingModal
-          text={"The server has restarted. Redirecting you to the homepage."}
+          text={"The server has restarted.\nRedirecting you to the homepage."}
         />
       )}
     </>

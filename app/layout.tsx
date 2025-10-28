@@ -4,6 +4,7 @@ import "./globals.css";
 import { SessionProvider } from "next-auth/react";
 import ChatContextObj from "@/components/ChatContext";
 import GlobalSocket from "@/components/GlobalSocket";
+import CheckAuth from "@/components/CheckAuth";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -21,9 +22,11 @@ export default function RootLayout({
     <html lang="en">
       <body className={inter.className}>
         <SessionProvider>
-          <GlobalSocket>
-            <ChatContextObj>{children}</ChatContextObj>
-          </GlobalSocket>
+          <CheckAuth>
+            <GlobalSocket>
+              <ChatContextObj>{children}</ChatContextObj>
+            </GlobalSocket>
+          </CheckAuth>
         </SessionProvider>
       </body>
     </html>

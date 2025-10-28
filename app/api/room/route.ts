@@ -74,6 +74,7 @@ export async function PATCH(request: NextRequest) {
 
     return NextResponse.json({ success: true, data: updateRoom });
   } catch (error: any) {
+    console.log("78-route ERROR", error);
     return NextResponse.json(
       { error: "Failed to update room information: " + error.message },
       { status: 500 }

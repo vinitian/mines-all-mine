@@ -6,7 +6,6 @@ import Image from "next/image";
 import { signIn, useSession } from "next-auth/react";
 import StatisticsButton from "@/components/StatisticsButton";
 import { useRouter } from "next/navigation";
-import createRoom from "@/services/client/createRoom";
 import handleSignOut from "@/services/client/handleSignOut";
 import DuplicateUserPopup from "@/components/DuplicateConnectedUserPopup";
 
@@ -51,12 +50,23 @@ export default function Home() {
     router.push("room");
   };
 
+  const requestCreateRoom = async (creatorData: object) => {
+    const promise: Promise<object> = new Promise((resolve, reject) => {
+      socket.emit("room:init", creatorData, (response: any) => {
+        resolve(response);
+      });
+    });
+    return promise;
+  };
+
   const handleSetAuthSuccessfulAck = async () => {
     try {
-      const response = await createRoom({
+      const creatorData = {
         id: socket.auth.userID!,
         username: username,
-      });
+      };
+      const response: any = await requestCreateRoom(creatorData);
+      socket.emit("joinRoom", response.data.id);
       router.push(`/lobby/${response.data.id}`);
       socket.off("setAuthSuccessfulAck");
     } catch (error: any) {

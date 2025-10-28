@@ -1,31 +1,30 @@
-//mineGameLogic.ts
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
 import socket from "@/socket";
 import { useRouter } from "next/navigation";
 
-type RevealMap = Record<
-  number,
-  {
-    type: "hit" | "miss";
-    hintNumber?: number;
-  }
->;
+type CellDisplayData = {
+  is_open: boolean;
+  index: number;
+  number: number;
+  bomb: boolean;
+};
+
+type RevealMap = Record<number, CellDisplayData>;
 
 type Winner = { id: string; score: number };
 
 export default function MineGameLogic() {
   const router = useRouter();
   const [size, setSize] = useState<number | null>(null);
-
   const [started, setStarted] = useState(false);
   const [gameOver, setGameOver] = useState(false);
   const [revealed, setRevealed] = useState<RevealMap>({});
   const [bombsInfo, setBombsInfo] = useState<{
     total: number;
     found: number;
-  } | null>(null);
+  } | null>(null); //total and found
   const [turnLimit, setTurnLimit] = useState<number>(0);
   const [winners, setWinners] = useState<Winner[] | null>(null);
   const [leaderboard, setLeaderboard] = useState<[string, number][]>([]);
@@ -38,13 +37,16 @@ export default function MineGameLogic() {
 
   const pickCell = useCallback(
     (i: number) => {
-      if (!started || gameOver || revealed[i]) return;
-
+      console.log(`picking cell index ${i}`);
+      if (!started || gameOver || revealed[i].is_open) {
+        console.log("Conditions not met", !started, gameOver, revealed[i]);
+        return;
+      }
       if (currentPlayer !== myId) {
         console.log("Not your turn!");
         return;
       }
-
+      console.log(`requesting pickCell ${i}`);
       socket.emit("pickCell", i);
     },
     [started, gameOver, revealed, currentPlayer, myId]
@@ -60,7 +62,18 @@ export default function MineGameLogic() {
   //     socket.emit('startGame', payload);
   //   }, []);
 
-  // socket thing
+  const resetLocal = useCallback(() => {
+    //setRevealed({}); ?/Todo come back to investigate
+    setBombsInfo(null);
+    setWinners(null);
+    setLeaderboard([]);
+    setGameOver(false);
+    console.log("set started resetLocal");
+    setStarted(false);
+    setTurnLimit(0);
+    setCurrentPlayer(null);
+    setTimeRemaining(10);
+  }, []);
 
   useEffect(() => {
     const onReady = (data: {
@@ -69,50 +82,46 @@ export default function MineGameLogic() {
       bombsFound: number;
       turnLimit?: number;
       currentPlayer?: string;
+      revealed: RevealMap;
     }) => {
       setBombsInfo({ total: data.bombsTotal, found: data.bombsFound });
-      setRevealed({});
+      setRevealed(data.revealed);
       setGameOver(false);
       setWinners(null);
       setLeaderboard([]);
       setSize(data.size);
       setTurnLimit(data.turnLimit ?? 10);
+      console.log("setting started to true");
       setStarted(true);
+      //console.log(started);
       if (data.currentPlayer) setCurrentPlayer(data.currentPlayer);
     };
 
     const onCell = (p: {
-      index: number;
-      hit: boolean;
-      hintNumber: number;
-      by: string;
+      revealMap: RevealMap;
       bombsFound: number;
       bombsTotal: number;
-      scores: Record<string, number>;
+      scores: Map<string, number>;
     }) => {
       setBombsInfo({ total: p.bombsTotal, found: p.bombsFound });
-      setRevealed((prev) => ({
-        ...prev,
-        [p.index]: {
-          type: p.hit ? "hit" : "miss",
-          hintNumber: p.hintNumber,
-        },
-      }));
+      setRevealed(p.revealMap);
     };
 
     const onOver = (p: {
       winners?: Winner[];
-      scores: Record<string, number>;
+      scores: Array<[string, number]>;
       size: number;
       bombCount: number;
     }) => {
       setGameOver(true);
+      console.log("set started onOver");
       setStarted(false);
       setCurrentPlayer(null);
+      const scores = new Map(p.scores);
 
       let w = Array.isArray(p.winners) ? p.winners : [];
       if (w.length === 0) {
-        const entries = Object.entries(p.scores);
+        const entries = Array.from(scores.entries());
         if (entries.length) {
           const max = Math.max(...entries.map(([, s]) => s));
           w = entries
@@ -121,7 +130,7 @@ export default function MineGameLogic() {
         }
       }
       setWinners(w);
-      setLeaderboard(Object.entries(p.scores).sort((a, b) => b[1] - a[1]));
+      setLeaderboard(Array.from(scores.entries()).sort((a, b) => b[1] - a[1]));
       setReturnCountdown(10);
       const intervalId = setInterval(() => {
         setReturnCountdown((prev) => {
