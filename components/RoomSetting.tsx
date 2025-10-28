@@ -66,7 +66,9 @@ export default function RoomSettings({
 }) {
   const [roomname, setRoomname] = useState(room.name);
   const [mapSize, setMapSize] = useState<MapSize>(room.size as MapSize);
-  const [bombCount, setBombCount] = useState<BombDensity>("medium"); // TODO: get bombDensity instead of bombCount from socket
+  const [bombCount, setBombCount] = useState<BombDensity>(
+    countToDensity(room.bomb_count, room.size)
+  );
   const [turnLimit, setTurnLimit] = useState<TurnLimit>(
     room.timer as TurnLimit
   );
@@ -125,17 +127,19 @@ export default function RoomSettings({
 
   // Send default state to server
   useEffect(() => {
-    requestEditRoomSettings(
-      {
-        size: mapSize,
-        bomb_count: bombs,
-        turn_limit: turnLimit,
-        player_limit: playerLimit,
-        chat_enabled: chatState,
-        name: roomname,
-      },
-      false
-    );
+    if (isHost) {
+      requestEditRoomSettings(
+        {
+          size: mapSize,
+          bomb_count: bombs,
+          turn_limit: turnLimit,
+          player_limit: playerLimit,
+          chat_enabled: chatState,
+          name: roomname,
+        },
+        false
+      );
+    }
   }, []);
 
   // useEffect(() => {
@@ -172,7 +176,8 @@ export default function RoomSettings({
         "room:update-settings",
         payload,
         updateDb,
-        (response: any) => { // callback
+        (response: any) => {
+          // callback
           console.log("Updating room setting");
           const state = response.state;
           setRoomname(state.name);
