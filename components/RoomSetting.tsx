@@ -179,20 +179,7 @@ export default function RoomSettings({
         (response: any) => {
           // callback
           console.log("Updating room setting");
-          const state = response.state;
-          setRoomname(state.name);
-          setMapSize(state.size);
-          setTurnLimit(state.turn_limit);
-          setPlayerLimit(state.player_limit);
-          setBombCount(state.density);
-          setChatState(state.chat_enabled);
           resolve(response);
-          // console.log(state);
-          // console.log("mapSize", mapSize);
-          // console.log("161-calling handleEditRoom. isHost is ", isHost);
-          // if (isHost) {
-          //   handleEditRoom(state); // current problem : stale state. maybe i have to put this func somewhere else
-          // }
         }
       );
     });
@@ -217,6 +204,7 @@ export default function RoomSettings({
     //   }
     // );
     socket.on("room:update-settings-success", (state) => {
+      console.log("207state", state);
       setRoomname(state.name);
       setLobbyRoomNameAction(state.name);
       setMapSize(state.size);

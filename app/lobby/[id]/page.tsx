@@ -59,6 +59,7 @@ export default function LobbyPage() {
       try {
         setLoading(true);
         const roomData = await getRoom(parseInt(roomId));
+        setLobbyRoomName(roomData.name);
         setRoom(roomData);
       } catch (error) {
         console.error("Error fetching room:", error);

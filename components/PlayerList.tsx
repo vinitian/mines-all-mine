@@ -17,12 +17,12 @@ export default function PlayerList({
 
   useEffect(() => {
     // listen setting update from server
-    socket.on("roomSettingsUpdate", ({ player_limit }) => {
+    socket.on("room:update-settings-success", ({ player_limit }) => {
       setPlayerLimit(player_limit);
     });
 
     return () => {
-      socket.off("roomSettingsUpdate");
+      socket.off("room:update-settings-success");
     };
   }, []);
 

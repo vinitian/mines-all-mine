@@ -431,9 +431,8 @@ app.prepare().then(() => {
       if ("turn_limit" in payload) {
         timer.max_time = payload.turn_limit;
       }
-      //update other players in the room
-      socket.to(current_room_id).emit("room:update-settings-success", state);
-      //update editor // TODO : who is editor? the host?
+      //update all players in the room
+      io.to(current_room_id).emit("room:update-settings-success", state);
       callback({ ok: true, state: state });
     });
 
