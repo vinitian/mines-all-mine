@@ -67,6 +67,7 @@ app.prepare().then(() => {
 
     updateRoomInDatabase(socket, reason = "unspecified") {
       //TODO link to database.
+      // TODO NEXT - IMPLEMENT server or client
       console.log("805-updateDatabase, state rn:", JSON.stringify(this));
       // return await editRoom({
       //   user_id: socket.data.userID,
