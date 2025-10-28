@@ -439,18 +439,22 @@ app.prepare().then(() => {
     //Initialize room
     // TODO: error handling
     socket.on("room:init", async (creatorData, callback) => {
-      const response = await createRoom({
-        id: creatorData.id,
-        username: creatorData.username,
-      });
-      //console.log(response);
-      const data = response.data;
-      createRoomObject(data.id, data.name, data.host_id);
-      createTimer(data.id, 10); // assuming 10 default, may need to change later, maybe useEffect will take care of this in roomsettings
-      // may be needed to set defaults?
-      //const state = getGameState(data.id, reason = "init values on create room")
-      // init state is defined at launch of room Setting
-      callback(response);
+      try {
+        const response = await createRoom({
+          id: creatorData.id,
+          username: creatorData.username,
+        });
+        //console.log(response);
+        const data = response.data;
+        createRoomObject(data.id, data.name, data.host_id);
+        createTimer(data.id, 10); // assuming 10 default, may need to change later, maybe useEffect will take care of this in roomsettings
+        // may be needed to set defaults?
+        //const state = getGameState(data.id, reason = "init values on create room")
+        // init state is defined at launch of room Setting
+        callback(response);
+      } catch (e) {
+        callback({ error: "Failed to create room" });
+      }
     });
 
     socket.on("startGame", (payload = {}) => {
