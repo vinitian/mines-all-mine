@@ -8,14 +8,13 @@ export async function GET(
 ) {
   const id = Number((await params).id);
 
-  console.log(`id test: ${id}`);
   try {
     const user = await prisma.user.findUnique({ where: { id } });
 
     return NextResponse.json({ success: true, data: user });
   } catch (error: any) {
     return NextResponse.json(
-      { success: false, error: error.message },
+      { error: "Failed to fetch user by ID: " + error },
       { status: 500 }
     );
   }

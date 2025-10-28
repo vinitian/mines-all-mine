@@ -2,7 +2,7 @@ interface CreateFieldRequest {
   id: string;
   sizex: number;
   sizey: number;
-  bombcount: number
+  bombcount: number;
 }
 
 export default async function createField(apiRequest: CreateFieldRequest) {
@@ -20,7 +20,7 @@ export default async function createField(apiRequest: CreateFieldRequest) {
   });
 
   if (!response.ok) {
-    return new Error("Failed to create field");
+    throw new Error("Failed to create field");
   }
 
   const result = await response.json();

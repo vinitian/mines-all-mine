@@ -3,7 +3,7 @@
 import { useContext, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Message, Room } from "@/interface";
-import { getRoom } from "@/services/client/roomService";
+import getRoom from "@/services/client/getRoom";
 import RoomSettings from "@/components/RoomSetting";
 import Chat from "@/components/Chat";
 import RoomName from "@/components/RoomName";
@@ -14,9 +14,12 @@ import { ChatContext } from "@/components/ChatContext";
 import updatePlayerList from "@/services/client/updatePlayerList";
 import PlayerList from "@/components/PlayerList";
 import { Player } from "@/interface";
+import CheckAuth from "@/components/CheckAuth";
+import Button from "@/components/Button";
 
 export default function LobbyPage() {
   const [room, setRoom] = useState<Room | null>(null);
+  const [lobbyRoomName, setLobbyRoomName] = useState("Room");
   const { messages, setMessages } = useContext(ChatContext);
   const [loading, setLoading] = useState(true);
   const params = useParams();
@@ -26,12 +29,11 @@ export default function LobbyPage() {
   const [players, setPlayers] = useState<Player[]>([]);
 
   const handleDeleteRoom = async () => {
-    if (!socket.auth.userID) {
-      return;
-    }
-    const response = await deleteRoom(parseInt(roomId));
-    if (response) {
+    try {
       handleKickAllPlayersInRoom();
+      await deleteRoom(parseInt(roomId));
+    } catch (error) {
+      console.error(error);
     }
   };
 
@@ -52,6 +54,24 @@ export default function LobbyPage() {
       console.log("TODO: select new host");
     }
   };
+
+  useEffect(() => {
+    const fetchRoom = async () => {
+      try {
+        setLoading(true);
+        const roomData = await getRoom(parseInt(roomId));
+        setRoom(roomData);
+      } catch (error) {
+        console.error("Error fetching room:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (roomId) {
+      fetchRoom();
+    }
+  }, [roomId]);
 
   useEffect(() => {
     // Listen for messages from the server
@@ -75,69 +95,88 @@ export default function LobbyPage() {
         router.replace("/");
       }, 3000);
     });
+
+    // player needs to go back to home page when kicked
+    socket.on("kickPlayer", (userID: string) => {
+      if (socket.auth.userID === userID) {
+        socket.emit("leaveRoom");
+        router.replace("/");
+      }
+    });
+
     // add players into array when they join
     // may need to leave when socket disconnect
     socket.on("currentPlayers", (currentPlayers: Player[]) => {
-      console.log("Received players:", currentPlayers);
+      console.log("92-Received players:", currentPlayers);
       setPlayers(currentPlayers);
     });
 
     // update player list in database
     socket.emit("joinRoom", parseInt(roomId));
-    const updatePlayer = async () => {
-      try {
-        const roomData = await updatePlayerList({
-          userId: socket.auth.userID,
-          roomId: parseInt(roomId),
-          addPlayer: true,
-        });
-      } catch (error) {
-        console.error("Error updating room:", error);
+    if (socket.auth.userID && room) {
+      const updatePlayer = async () => {
+        try {
+          await updatePlayerList({
+            userId: socket.auth.userID,
+            roomId: parseInt(roomId),
+            addPlayer: true,
+          });
+        } catch (error) {
+          console.error(error);
+        }
+      };
+      updatePlayer();
+    }
+
+    // update player list in database when a player leaves
+    socket.on("playerLeft", (PlayerID: string) => {
+      if (socket.auth.userID == room?.host_id) {
+        const updatePlayerLeave = async () => {
+          try {
+            await updatePlayerList({
+              userId: PlayerID,
+              roomId: parseInt(roomId),
+              addPlayer: false,
+            });
+          } catch (error) {
+            console.error(error);
+          }
+        };
+        updatePlayerLeave();
       }
-    };
-    updatePlayer();
+    });
+
+    //ISSUE: when the player is the last in the room and leaves, the database is not updated, "playerLeft" is not received. Use the same behavior of deleteRoom on last leave like in main branch.
 
     return () => {
       socket.off("message");
       socket.off("kickAllPlayersInRoom");
       socket.off("currentPlayers");
+      socket.off("playerLeft");
+      socket.off("kickPlayer");
     };
-  }, []);
-
-  useEffect(() => {
-    const fetchRoom = async () => {
-      try {
-        setLoading(true);
-        const roomData = await getRoom(parseInt(roomId));
-        setRoom(roomData);
-      } catch (error) {
-        console.error("Error fetching room:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (roomId) {
-      fetchRoom();
-    }
-  }, [roomId]);
+  }, [room]);
 
   if (loading) {
     return <LoadingModal text={"Loading room information"} />;
   }
   if (!room) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div>Room not found</div>
+      <div className="min-h-screen flex flex-col items-center justify-center m-8 gap-8">
+        <div className="text-h1">Room not found</div>
+        <div className="w-1/2">
+          <Button onClick={() => router.push("/")}>Return to Home</Button>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="flex flex-col px-[25px]">
+      <CheckAuth />
       <div className="flex flex-col gap-[25px] py-[25px] md:h-dvh">
         <RoomName
-          roomName={room.name}
+          roomName={lobbyRoomName}
           roomCode={room.id}
           trashVisible={room.host_id == socket.auth.userID}
           trashOnClickAction={handleDeleteRoom}
@@ -146,9 +185,9 @@ export default function LobbyPage() {
           <div className="flex flex-col gap-[20px] md:h-full md:w-1/2 md:max-w-[315px]">
             <div>
               <PlayerList
-                playerLimit={room.player_limit}
                 players={players}
-                hostID={room.host_id}
+                isHost={room.host_id == socket.auth.userID}
+                roomId={room.id}
               />
             </div>
 
@@ -156,7 +195,12 @@ export default function LobbyPage() {
               <Chat />
             </div>
           </div>
-          <RoomSettings roomId={parseInt(roomId)} roomName={room.name} handleLeaveRoomAction={handleLeaveRoom} />
+          <RoomSettings
+            room={room}
+            isHost={room.host_id == socket.auth.userID}
+            setLobbyRoomNameAction={setLobbyRoomName}
+            handleLeaveRoomAction={handleLeaveRoom}
+          />
         </div>
       </div>
       <div className="md:hidden w-full h-[60dvh]">
@@ -187,9 +231,7 @@ export default function LobbyPage() {
       </div>
       {deletedRoomPopup && (
         <LoadingModal
-          text={
-            "The host has deleted the room.\n\nRedirecting you to home page"
-          }
+          text={"The host has deleted the room. Redirecting you to home page"}
         />
       )}
     </div>

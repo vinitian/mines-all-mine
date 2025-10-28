@@ -1,6 +1,5 @@
-// roomSetting.tsx
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import socket from "@/socket";
 import editRoom from "@/services/client/editRoom";
@@ -37,7 +36,10 @@ function countToDensity(count: number, size: number): BombDensity {
   let closest: BombDensity = "medium";
   let minDiff = Infinity;
 
-  for (const [density, ratio] of Object.entries(ratios) as [BombDensity, number][]) {
+  for (const [density, ratio] of Object.entries(ratios) as [
+    BombDensity,
+    number
+  ][]) {
     const ratioCount = Math.max(1, Math.floor(cells * ratio));
     const diff = Math.abs(count - ratioCount);
     if (diff < minDiff) {
@@ -52,60 +54,26 @@ function countToDensity(count: number, size: number): BombDensity {
 // single global room for testing
 
 export default function RoomSettings({
-  roomId,
-  roomName,
-  handleLeaveRoomAction = () => { },
+  room,
+  isHost,
+  setLobbyRoomNameAction = () => {},
+  handleLeaveRoomAction = () => {},
 }: {
-  roomId: number;
-  roomName: string;
+  room: Room;
+  isHost: boolean;
+  setLobbyRoomNameAction?: React.Dispatch<React.SetStateAction<string>>;
   handleLeaveRoomAction?: () => void;
 }) {
-  const [roomname, setRoomname] = useState(roomName);
+  const [roomname, setRoomname] = useState(room.name);
   const [mapSize, setMapSize] = useState<MapSize>(8);
   const [bombCount, setBombCount] = useState<BombDensity>("medium");
   const [turnLimit, setTurnLimit] = useState<TurnLimit>(10);
   const [playerLimit, setPlayerLimit] = useState<PlayerLimit>(2);
-  const [isConnected, setIsConnected] = useState(false);
   const [chatState, setChatState] = useState<boolean>(true);
   const router = useRouter();
   const [showCountdown, setShowCountdown] = useState(false);
-  const [isHost, setIsHost] = useState(false);
-  const [roomData, setRoomData] = useState<Room | null>(null); //???
   const bombs = densityToCount(bombCount, mapSize);
-
-  const handleStartClick = () => {
-    setShowCountdown(true);
-  };
-
-  useEffect(() => {
-    // Check if already connected
-    if (socket.connected) {
-      setIsConnected(true);
-    }
-
-    // Connect if not connected
-    if (!socket.connected) {
-      socket.connect();
-    }
-
-    const onConnect = () => {
-      console.log("Socket connected!");
-      setIsConnected(true);
-    };
-
-    const onDisconnect = () => {
-      console.log("Socket disconnected!");
-      setIsConnected(false);
-    };
-
-    socket.on("connect", onConnect);
-    socket.on("disconnect", onDisconnect);
-
-    return () => {
-      socket.off("connect", onConnect);
-      socket.off("disconnect", onDisconnect);
-    };
-  }, []);
+  const [firstUpdate, setFirstUpdate] = useState(true);
 
   useEffect(() => {
     const onReady = (data: any) => {
@@ -120,56 +88,108 @@ export default function RoomSettings({
     };
   }, [router]);
 
-  //edit room (depricated)
-  // useEffect(() => {
-  //   handleEditRoom();
-  // }, [mapSize, bombCount, turnLimit, playerLimit, chatState]);
-
-  const handleEditRoom = async () => {
-    if (!socket.auth.userID) {
-      return;
-    }
-    // TODO fix this to update via server? also batch to when starting game?
+  const handleEditRoom = async (state) => {
     const bombs = densityToCount(bombCount, mapSize);
     // update room settings in database
-    const response = await editRoom({
-      user_id: socket.auth.userID,
-      name: roomname,
-      size: mapSize,
-      bomb_count: bombs,
-      turn_limit: turnLimit,
-      player_limit: playerLimit,
-      chat_enabled: chatState,
-    });
-
-    const newRoomSettings = {
-      name: roomname,
-      size: mapSize,
-      bomb_density: bombCount,
-      timer: turnLimit,
-      player_limit: playerLimit,
-      chat_enabled: chatState,
-    };
-    // emit setting update to server
-    socket.emit("room:settings-updated", {
-      roomID: roomId,
-      settings: newRoomSettings,
-    });
+    try {
+      const response = await editRoom({
+        user_id: socket.auth.userID,
+        name: roomname,
+        size: mapSize,
+        bomb_count: bombs,
+        turn_limit: turnLimit,
+        player_limit: playerLimit,
+        chat_enabled: chatState,
+      });
+      const newRoomSettings = {
+        name: roomname,
+        size: mapSize,
+        bomb_density: bombCount,
+        timer: turnLimit,
+        player_limit: playerLimit,
+        chat_enabled: chatState,
+      };
+      // emit setting update to server
+      socket.emit("room:settings-updated", {
+        roomID: room.id,
+        settings: newRoomSettings,
+      });
+    } catch (e) {
+      console.log(e);
+    }
   };
-  //TODO: generate placement
-  // done? 
 
   // Send default state to server
   useEffect(() => {
-    requestEditRoomSettings({
-      size: mapSize,
-      bomb_count: bombs,
-      turn_limit: turnLimit,
-      player_limit: playerLimit,
-      chat_enabled: chatState,
-      name: roomname,
-    }, false);
-  }, [])
+    requestEditRoomSettings(
+      {
+        size: mapSize,
+        bomb_count: bombs,
+        turn_limit: turnLimit,
+        player_limit: playerLimit,
+        chat_enabled: chatState,
+        name: roomname,
+      },
+      false
+    );
+  }, []);
+
+  // useEffect(() => {
+  //   if (firstUpdate) {
+  //     setFirstUpdate(false);
+  //     return;
+  //   }
+  //   if (isHost) {
+  //     console.log("182-calling handleEditRoom()..");
+  //     handleEditRoom();
+  //   }
+  //   // eslint-disable-next-line react-hooks/exhaustive-deps
+  // }, [mapSize, bombCount, turnLimit, playerLimit, chatState]);
+
+  const handleStartGame = async () => {
+    if (!mapSize) return;
+    if (!socket.connected) {
+      console.error("Socket not connected!");
+      return;
+    }
+    setShowCountdown(true);
+  };
+
+  const requestEditRoomSettings = async (
+    payload: object,
+    updateDb: boolean
+  ) => {
+    console.log("201-room setting change requested consisting of", payload);
+    const promise: Promise<object> = new Promise((resolve, reject) => {
+      if (!socket.auth.userID) {
+        reject({ ok: false, error: "Failed auth" });
+      }
+      socket.emit(
+        "room:update-settings",
+        payload,
+        updateDb,
+        (response: any) => { // callback
+          console.log("Updating room setting");
+          const state = response.state;
+          setRoomname(state.name);
+          setMapSize(state.size);
+          setTurnLimit(state.turn_limit);
+          setPlayerLimit(state.player_limit);
+          setBombCount(state.density);
+          setChatState(state.chat_enabled);
+          resolve(response);
+          // console.log(state);
+          // console.log("mapSize", mapSize);
+          // console.log("161-calling handleEditRoom. isHost is ", isHost);
+          // if (isHost) {
+          //   handleEditRoom(state); // current problem : stale state. maybe i have to put this func somewhere else
+          // }
+        }
+      );
+    });
+
+    return promise;
+  };
 
   useEffect(() => {
     // listen setting update from server
@@ -189,6 +209,7 @@ export default function RoomSettings({
     // );
     socket.on("room:update-settings-success", (state) => {
       setRoomname(state.name);
+      setLobbyRoomNameAction(state.name);
       setMapSize(state.size);
       setTurnLimit(state.turn_limit);
       setPlayerLimit(state.player_limit);
@@ -198,73 +219,9 @@ export default function RoomSettings({
 
     return () => {
       //socket.off("roomSettingsUpdate");
-      socket.off("room:update-settings-success")
+      socket.off("room:update-settings-success");
     };
   }, []);
-
-  useEffect(() => {
-    const checkIfHost = async () => {
-      if (!socket.auth.userID) return;
-
-      try {
-        const response = await fetch(`/api/room?room_id=${roomId}`);
-        const result = await response.json();
-        console.log("DATA", result.data);
-
-        if (result.success && result.data) {
-          setRoomData(result.data);
-          console.log(
-            "my userID:",
-            socket.auth.userID,
-            "| host id:",
-            result.data.host_id
-          );
-
-          if (result.data.host_id == socket.auth.userID) {
-            setIsHost(true);
-          }
-        }
-      } catch (error) {
-        console.error("Failed to check host status:", error);
-        setIsHost(false);
-      }
-    };
-
-    checkIfHost();
-  }, [socket.auth.userID]);
-
-  const handleStartGame = async () => {
-    if (!mapSize) return;
-    if (!socket.connected) {
-      console.error("Socket not connected!");
-      return;
-    }
-    setShowCountdown(true);
-  };
-
-  const requestEditRoomSettings = async (payload: object, updateDb: boolean) => {
-    console.log("room setting change requested cosnsiting of");
-    console.log(payload);
-    const promise: Promise<object> = new Promise((resolve, reject) => {
-      if (!socket.auth.userID) {
-        reject({ ok: false, error: "Failed auth" });
-      }
-      socket.emit("room:update-settings", payload, updateDb, (response: any) => {
-        console.log("Updating room setting");
-        const state = response.state;
-        setRoomname(state.name);
-        setMapSize(state.size);
-        setTurnLimit(state.turn_limit);
-        setPlayerLimit(state.player_limit);
-        setBombCount(state.density);
-        setChatState(state.chat_enabled);
-        resolve(response);
-        console.log(state);
-      });
-    }
-    );
-    return (promise);
-  };
 
   return (
     <div
@@ -276,8 +233,10 @@ export default function RoomSettings({
         {isHost ? (
           <Input
             value={roomname}
-            onChange={(e) => requestEditRoomSettings({ name: e.target.value }, false)}
-            onBlur={(e) => requestEditRoomSettings({ name: e.target.value }, false)}
+            onChange={(e) => {
+              setRoomname(e.target.value);
+            }}
+            onBlur={() => requestEditRoomSettings({ name: roomname }, false)}
           />
         ) : (
           <div className="text-xl">{roomname || "Unnamed"}</div>
@@ -288,41 +247,17 @@ export default function RoomSettings({
         <div className="text-h3">Map size</div>
         {isHost ? (
           <div className="flex flex-wrap gap-[6px]">
-            <Button
-              onClick={() => requestEditRoomSettings({ size: 6 }, false)}
-              textColor={mapSize === 6 ? "" : "text-black"}
-              className={`w-min ${mapSize === 6 ? "" : "bg-white"}`}
-            >
-              6×6
-            </Button>
-            <Button
-              onClick={() => requestEditRoomSettings({ size: 8 }, false)}
-              textColor={mapSize === 8 ? "" : "text-black"}
-              className={`w-min ${mapSize === 8 ? "" : "bg-white"}`}
-            >
-              8×8
-            </Button>
-            <Button
-              onClick={() => requestEditRoomSettings({ size: 10 }, false)}
-              textColor={mapSize === 10 ? "" : "text-black"}
-              className={`w-min ${mapSize === 10 ? "" : "bg-white"}`}
-            >
-              10×10
-            </Button>
-            <Button
-              onClick={() => requestEditRoomSettings({ size: 20 }, false)}
-              textColor={mapSize === 20 ? "" : "text-black"}
-              className={`w-min ${mapSize === 20 ? "" : "bg-white"}`}
-            >
-              20×20
-            </Button>
-            <Button
-              onClick={() => requestEditRoomSettings({ size: 30 }, false)}
-              textColor={mapSize === 30 ? "" : "text-black"}
-              className={`w-min ${mapSize === 30 ? "" : "bg-white"}`}
-            >
-              30×30
-            </Button>
+            {[6, 8, 10, 20, 30].map((size) => (
+              <Button
+                onClick={() => requestEditRoomSettings({ size: size }, false)}
+                className={`w-min ${
+                  mapSize === size ? "text-white" : "bg-white text-black"
+                }`}
+                key={size}
+              >
+                {size}×{size}
+              </Button>
+            ))}
           </div>
         ) : (
           <div className="text-xl -mt-2.5">
@@ -340,21 +275,20 @@ export default function RoomSettings({
           >
             <select
               value={playerLimit}
-              onChange={
-                (e) => requestEditRoomSettings({ player_limit: Number(e.target.value) }, false)
+              onChange={(e) =>
+                requestEditRoomSettings(
+                  { player_limit: Number(e.target.value) },
+                  false
+                )
               }
               aria-label="Set the maximum number of players for the game."
               className="w-full"
             >
-              <option value={2}>2</option>
-              <option value={3}>3</option>
-              <option value={4}>4</option>
-              <option value={5}>5</option>
-              <option value={6}>6</option>
-              <option value={7}>7</option>
-              <option value={8}>8</option>
-              <option value={9}>9</option>
-              <option value={10}>10</option>
+              {[2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
+                <option key={n} value={n}>
+                  {n}
+                </option>
+              ))}
             </select>
           </div>
         ) : (
@@ -363,7 +297,7 @@ export default function RoomSettings({
       </div>
 
       <div className="flex flex-col">
-        <div className="text-h3">Number of mines</div>
+        <div className="text-h3">Amount of mines</div>
         {isHost ? (
           <div
             className="w-full border-2 border-border rounded-2xl px-4 py-2 placeholder-gray-400 text-h4 focus:outline-none focus:border-[#3728BE]
@@ -372,7 +306,18 @@ export default function RoomSettings({
             <select
               id="num-bombs"
               value={bombCount}
-              onChange={(e) => requestEditRoomSettings({ bomb_count: densityToCount(e.target.value as BombDensity, mapSize), density: e.target.value }, false)}
+              onChange={(e) =>
+                requestEditRoomSettings(
+                  {
+                    bomb_count: densityToCount(
+                      e.target.value as BombDensity,
+                      mapSize
+                    ),
+                    density: e.target.value,
+                  },
+                  false
+                )
+              }
               aria-label="Set the amount of bomb density you want for the game."
               className="w-full"
             >
@@ -382,7 +327,7 @@ export default function RoomSettings({
             </select>
           </div>
         ) : (
-          <div className="text-xl -mt-2.5">{bombs}</div>
+          <div className="text-xl -mt-2.5">{bombCount}</div>
         )}
       </div>
 
@@ -396,7 +341,9 @@ export default function RoomSettings({
             <select
               id="chat"
               value={chatState ? "enable" : "disable"}
-              onChange={(e) => requestEditRoomSettings({ chat_enabled: e.target.value }, false)}
+              onChange={(e) =>
+                requestEditRoomSettings({ chat_enabled: e.target.value }, false)
+              }
               aria-label="Set to enable/disable chat"
               className="w-full"
             >
@@ -420,8 +367,11 @@ export default function RoomSettings({
           >
             <select
               value={turnLimit}
-              onChange={
-                (e) => requestEditRoomSettings({ turn_limit: Number(e.target.value) as 0 | 10 | 20 | 30 }, false)
+              onChange={(e) =>
+                requestEditRoomSettings(
+                  { turn_limit: Number(e.target.value) as TurnLimit },
+                  false
+                )
               }
               aria-label="Timer"
               className="w-full"
@@ -442,23 +392,15 @@ export default function RoomSettings({
       <div
         className={`flex gap-5 ${!isHost ? "justify-end" : "justify-between"}`}
       >
-        {isHost ? (
-          <>
-            <Button
-              onClick={() => handleLeaveRoomAction()}
-              className="bg-red"
-            >
-              Leave Room
-            </Button>
-
-            <Button onClick={handleStartGame}>Start Game</Button>
-          </>
-        ) : (
-          <Button
-            onClick={() => handleLeaveRoomAction()}
-            className="bg-red"
-          >
-            Leave Room
+        <Button
+          onClick={() => handleLeaveRoomAction()}
+          className="bg-red text-white"
+        >
+          Leave Room
+        </Button>
+        {isHost && (
+          <Button onClick={handleStartGame} className="text-white">
+            Start Game
           </Button>
         )}
 
@@ -475,15 +417,17 @@ export default function RoomSettings({
               chatEnabled: chatState,
             });
 
-
-            const ack: any = await requestEditRoomSettings({
-              size: mapSize,
-              bomb_count: bombs,
-              turn_limit: turnLimit,
-              player_limit: playerLimit,
-              chat_enabled: chatState,
-              name: roomname,
-            }, true);
+            const ack: any = await requestEditRoomSettings(
+              {
+                size: mapSize,
+                bomb_count: bombs,
+                turn_limit: turnLimit,
+                player_limit: playerLimit,
+                chat_enabled: chatState,
+                name: roomname,
+              },
+              true
+            );
 
             if (!ack?.ok) {
               console.error("Failed to save settings:", ack?.error);
@@ -522,6 +466,6 @@ export default function RoomSettings({
           }}
         />
       </div>
-    </div >
+    </div>
   );
 }

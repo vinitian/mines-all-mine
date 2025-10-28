@@ -1,16 +1,11 @@
-interface CreateRoomRequest {
-  id: string;
-  username: string;
-}
-
-export default async function createRoom(apiRequest: CreateRoomRequest) {
+export default async function editRoom(apiRequest) {
   const baseUrl =
     typeof window === "undefined"
       ? process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3000"
       : "";
 
   const response = await fetch(`${baseUrl}/api/room`, {
-    method: "POST",
+    method: "PATCH",
     body: JSON.stringify(apiRequest),
     headers: {
       "Content-Type": "application/json",
@@ -18,10 +13,7 @@ export default async function createRoom(apiRequest: CreateRoomRequest) {
   });
 
   if (!response.ok) {
-    throw new Error("Failed to create room");
+    throw new Error("Failed to edit room:");
   }
-
-  const result = await response.json();
-  console.log("Room created successfully", result);
-  return result;
+  return await response.json();
 }

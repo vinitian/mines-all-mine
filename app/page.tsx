@@ -6,7 +6,6 @@ import Image from "next/image";
 import { signIn, useSession } from "next-auth/react";
 import StatisticsButton from "@/components/StatisticsButton";
 import { useRouter } from "next/navigation";
-import createRoom from "@/services/client/createRoom";
 import handleSignOut from "@/services/client/handleSignOut";
 import DuplicateUserPopup from "@/components/DuplicateConnectedUserPopup";
 
@@ -28,22 +27,12 @@ export default function Home() {
       userID: userIdInLocal
         ? userIdInLocal
         : session && session.user
-          ? session.user.email
-          : "",
+        ? session.user.email
+        : "",
       username: username,
     };
 
     socket.disconnect().connect();
-    socket.on("session", ({ userID, username }) => {
-      // set auth for client for the next reconnection attempts
-      socket.auth = {
-        userID: userID,
-        username: username,
-      };
-      localStorage.setItem("userID", userID);
-      console.log("39-connectSocket auth", socket.auth);
-      socket.emit("setAuthSuccessful");
-    });
   };
 
   const handleJoinRoom = () => {
@@ -61,7 +50,32 @@ export default function Home() {
     router.push("room");
   };
 
-  const handleCreateRoom = async () => {
+  const requestCreateRoom = async (creatorData: object) => {
+    const promise: Promise<object> = new Promise((resolve, reject) => {
+      socket.emit("room:init", creatorData, (response: any) => {
+        resolve(response);
+      });
+    });
+    return promise;
+  };
+
+  const handleSetAuthSuccessfulAck = async () => {
+    try {
+      const creatorData = {
+        id: socket.auth.userID!,
+        username: username,
+      };
+      const response: any = await requestCreateRoom(creatorData);
+      socket.emit("joinRoom", response.data.id);
+      router.push(`/lobby/${response.data.id}`);
+      socket.off("setAuthSuccessfulAck");
+    } catch (error: any) {
+      console.error(error);
+      setErrorMessage(error.message);
+    }
+  };
+
+  const handleCreateRoom = () => {
     if (!username || !username.trim()) {
       setErrorMessage("Please enter your username first!");
       return;
@@ -73,31 +87,8 @@ export default function Home() {
     }
     setErrorMessage(undefined);
     connectSocket();
-    socket.on("setAuthSuccessfulAck", async () => {
-      // const response = await createRoom({
-      //   id: socket.auth.userID!,
-      //   username: username,
-      // });
-      const creatorData = {
-        id: socket.auth.userID!,
-        username: username,
-      };
-      const response: any = await requestCreateRoom(creatorData);
-      socket.emit("joinRoom", response.data.id);
-      router.push(`/lobby/${response.data.id}`);
-    });
+    socket.on("setAuthSuccessfulAck", handleSetAuthSuccessfulAck);
   };
-
-  const requestCreateRoom = async (creatorData: object) => {
-    const promise: Promise<object> = new Promise((resolve, reject) => {
-      socket.emit("room:init", creatorData, (response: any) => {
-        resolve(response);
-      });
-    }
-    );
-    return (promise);
-  }
-
 
   // Hide error when user starts typing
   const handleUsernameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -107,20 +98,35 @@ export default function Home() {
     }
   };
 
+  const handleDuplicateConnectedUser = () => {
+    setShowDuplicateUserPopup(true);
+  };
+
+  const handleSession = ({
+    userID,
+    username,
+  }: {
+    userID: string;
+    username: string;
+  }) => {
+    // set auth for client for the next reconnection attempts
+    socket.auth = {
+      userID: userID,
+      username: username,
+    };
+    localStorage.setItem("userID", userID);
+    console.log("connectSocket auth", socket.auth);
+    socket.emit("setAuthSuccessful");
+  };
+
   useEffect(() => {
-    const userID = localStorage.getItem("userID");
-    console.log("localstorage userID:", userID);
-    if (userID) {
-      socket.auth = { userID };
-      socket.connect();
-      socket.on("duplicateConnectedUser", () => {
-        setShowDuplicateUserPopup(true);
-      });
-      socket.on("session", ({ userID, username }) => {
-        socket.auth = { userID, username }; // set auth for client
-        setUsername(username);
-      });
-    }
+    socket.on("duplicateConnectedUser", handleDuplicateConnectedUser);
+    socket.on("session", handleSession);
+    return () => {
+      socket.off("duplicateConnectedUser");
+      socket.off("session");
+      socket.off("setAuthSuccessfulAck");
+    };
   }, []);
 
   // when user logs in, change username to their google name

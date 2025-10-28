@@ -1,5 +1,3 @@
-import {Cell, Field} from "@/services/game_logic";
-
 interface GetFieldRequest {
   user_id: string;
 }
@@ -19,6 +17,6 @@ export default async function editField(apiRequest: GetFieldRequest) {
   });
 
   if (!response.ok) {
-    return new Error("Failed to get field");
+    throw new Error("Failed to get field");
   }
 }
