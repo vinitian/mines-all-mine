@@ -1,23 +1,29 @@
+"use client";
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import socket from "@/socket";
 import LoadingModal from "@/components/LoadingModal";
 
-export default function CheckAuth() {
+export default function CheckAuth({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+  const pathname = usePathname();
+  const needRedirect =
+    (!socket.auth || !socket.connected) &&
+    pathname !== "/" &&
+    !pathname.startsWith("/invite");
 
   useEffect(() => {
-    if (!socket.auth || !socket.connected) {
+    if (needRedirect) {
       router.push("/");
     }
-  }, [router]);
+  });
 
   // Remove the direct navigation and just show loading
-  if (!socket.auth || !socket.connected) {
+  if (needRedirect) {
     return (
-      <LoadingModal text={"No socket auth. Redirecting you to home page"} />
+      <LoadingModal text={"No socket auth.Redirecting you to home page"} />
     );
   } else {
-    return null;
+    return children;
   }
 }
