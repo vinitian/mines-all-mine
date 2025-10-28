@@ -14,7 +14,6 @@ import { ChatContext } from "@/components/ChatContext";
 import updatePlayerList from "@/services/client/updatePlayerList";
 import PlayerList from "@/components/PlayerList";
 import { Player } from "@/interface";
-import CheckAuth from "@/components/CheckAuth";
 import Button from "@/components/Button";
 
 export default function LobbyPage() {
@@ -173,7 +172,6 @@ export default function LobbyPage() {
 
   return (
     <div className="flex flex-col px-[25px]">
-      <CheckAuth />
       <div className="flex flex-col gap-[25px] py-[25px] md:h-dvh">
         <RoomName
           roomName={lobbyRoomName}
@@ -231,7 +229,7 @@ export default function LobbyPage() {
       </div>
       {deletedRoomPopup && (
         <LoadingModal
-          text={"The host has deleted the room. Redirecting you to home page"}
+          text={"The host has deleted the room.\nRedirecting you to home page"}
         />
       )}
     </div>
