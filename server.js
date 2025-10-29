@@ -707,7 +707,8 @@ app.prepare().then(() => {
         });
         setTimeout(() => {
           resetGame(state, timer); // เริ่มใหม่ตาหน้า <- added parameters for this func
-          io.emit("returnToLobby", { reason: "gameEnded" }); // TODO: no .to(room)??
+          console.log(`Sending return to lobby to room with id ${current_room_id}`);
+          io.to(current_room_id).emit("returnToLobby", { reason: "gameEnded" }); // TODO: no .to(room)?? Probably needed so added
         }, 10000);
 
         return;
