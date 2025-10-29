@@ -19,6 +19,7 @@ import Button from "@/components/Button";
 export default function LobbyPage() {
   const [room, setRoom] = useState<Room | null>(null);
   const [lobbyRoomName, setLobbyRoomName] = useState("Room");
+  const [lobbyChatEnable, setLobbyChatEnable] = useState(true);
   const { messages, setMessages } = useContext(ChatContext);
   const [loading, setLoading] = useState(true);
   const params = useParams();
@@ -59,6 +60,8 @@ export default function LobbyPage() {
       try {
         setLoading(true);
         const roomData = await getRoom(parseInt(roomId));
+        setLobbyRoomName(roomData.name);
+        setLobbyChatEnable(roomData.chat_enabled);
         setRoom(roomData);
       } catch (error) {
         console.error("Error fetching room:", error);
@@ -181,29 +184,34 @@ export default function LobbyPage() {
         />
         <div className="flex flex-col md:flex-row gap-[20px] h-10/12 md:h-9/12">
           <div className="flex flex-col gap-[20px] md:h-full md:w-1/2 md:max-w-[315px]">
-            <div>
+            <div className={lobbyChatEnable ? "" : "md:h-full"}>
               <PlayerList
                 players={players}
                 isHost={room.host_id == socket.auth.userID}
-                roomId={room.id}
+                room={room}
               />
             </div>
 
-            <div className="hidden md:block w-full h-full">
-              <Chat />
-            </div>
+            {lobbyChatEnable && (
+              <div className="hidden md:block w-full h-full">
+                <Chat />
+              </div>
+            )}
           </div>
           <RoomSettings
             room={room}
             isHost={room.host_id == socket.auth.userID}
             setLobbyRoomNameAction={setLobbyRoomName}
+            setLobbyChatEnableAction={setLobbyChatEnable}
             handleLeaveRoomAction={handleLeaveRoom}
           />
         </div>
       </div>
-      <div className="md:hidden w-full h-[60dvh]">
-        <Chat />
-      </div>
+      {lobbyChatEnable && (
+        <div className="md:hidden w-full h-[60dvh]">
+          <Chat />
+        </div>
+      )}
       <div className="md:hidden flex w-full my-6 justify-center">
         {room.host_id == socket.auth.userID && (
           <svg

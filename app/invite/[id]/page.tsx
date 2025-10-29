@@ -40,16 +40,6 @@ export default function InvitePage() {
     };
 
     socket.disconnect().connect();
-    socket.on("session", ({ userID, username }) => {
-      // set auth for client for the next reconnection attempts
-      socket.auth = {
-        userID: userID,
-        username: username,
-      };
-      localStorage.setItem("userID", userID);
-      console.log("invite/id-connectSocket auth", socket.auth);
-      socket.emit("setAuthSuccessful");
-    });
   };
 
   const handleJoinRoom = () => {
@@ -75,19 +65,34 @@ export default function InvitePage() {
     }
   };
 
+  const handleDuplicateConnectedUser = () => {
+    setShowDuplicateUserPopup(true);
+  };
+
+  const handleSession = ({
+    userID,
+    username,
+  }: {
+    userID: string;
+    username: string;
+  }) => {
+    // set auth for client for the next reconnection attempts
+    socket.auth = {
+      userID: userID,
+      username: username,
+    };
+    localStorage.setItem("userID", userID);
+    console.log("connectSocket auth", socket.auth);
+    socket.emit("setAuthSuccessful");
+  };
+
   useEffect(() => {
-    const userID = localStorage.getItem("userID");
-    if (userID) {
-      socket.auth = { userID };
-      socket.connect();
-      socket.on("duplicateConnectedUser", () => {
-        setShowDuplicateUserPopup(true);
-      });
-      socket.on("session", ({ userID, username }) => {
-        socket.auth = { userID, username }; // set auth for client
-        setUsername(username);
-      });
-    }
+    socket.on("duplicateConnectedUser", handleDuplicateConnectedUser);
+    socket.on("session", handleSession);
+    return () => {
+      socket.off("duplicateConnectedUser");
+      socket.off("session");
+    };
   }, []);
 
   // when user logs in, change username to their google name
@@ -180,10 +185,21 @@ export default function InvitePage() {
         </div>
 
         <button
-          onClick={handleJoinRoom}
-          className="w-full bg-blue text-white text-h3 border-2 border-border rounded-2xl py-2 hover:bg-[#7388ee] transition-colors duration-200 flex justify-center mt-4 cursor-pointer"
+          onClick={(e) => {
+            if (room.player_id_list.length >= room.player_limit) return; // block full rooms
+            handleJoinRoom();
+          }}
+          disabled={room.player_id_list.length >= room.player_limit}
+          className={`w-full text-h3 border-2 rounded-2xl px-6 py-2 mt-4 transition-colors duration-200 whitespace-nowrap flex-shrink-0
+                          ${
+                            room.player_id_list.length >= room.player_limit
+                              ? "bg-gray-300 border-gray-dark text-gray-600 cursor-not-allowed"
+                              : "bg-[#8499FF] hover:bg-[#7388ee] border-border text-white cursor-pointer"
+                          }`}
         >
-          Join Room
+          {room.player_id_list.length >= room.player_limit
+            ? "Room Full"
+            : "Join Room"}
         </button>
 
         {session ? (

@@ -162,8 +162,7 @@ export default function Room() {
                   return (
                     <div
                       key={room.id}
-                      className="bg-white border-1 rounded-2xl p-4 transition-shadow cursor-pointer"
-                      onClick={() => handleJoinRoom(room.id)}
+                      className="bg-white border-1 rounded-2xl p-4 transition-shadow"
                     >
                       <div className="flex justify-between items-start mb-2">
                         <h3 className="text-h2 font-bold text-gray-800">
@@ -207,16 +206,15 @@ export default function Room() {
                       <div className="mt-3 flex justify-center">
                         <button
                           onClick={(e) => {
-                            e.stopPropagation();
                             if (isFull) return; // block full rooms
                             handleJoinRoom(room.id);
                           }}
                           disabled={isFull}
-                          className={`w-full text-h3 border-2 rounded-2xl px-6 py-2 transition-colors duration-200 whitespace-nowrap flex-shrink-0 cursor-pointer
+                          className={`w-full text-h3 border-2 rounded-2xl px-6 py-2 transition-colors duration-200 whitespace-nowrap flex-shrink-0
                           ${
                             isFull
                               ? "bg-gray-300 border-gray-dark text-gray-600 cursor-not-allowed"
-                              : "bg-[#8499FF] hover:bg-[#7388ee] border-border text-white "
+                              : "bg-[#8499FF] hover:bg-[#7388ee] border-border text-white cursor-pointer"
                           }`}
                         >
                           {isFull ? "Room Full" : "Join"}

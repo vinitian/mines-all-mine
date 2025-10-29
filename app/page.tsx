@@ -66,13 +66,14 @@ export default function Home() {
         username: username,
       };
       const response: any = await requestCreateRoom(creatorData);
+      if (response.error) throw new Error(response.error);
       socket.emit("joinRoom", response.data.id);
       router.push(`/lobby/${response.data.id}`);
-      socket.off("setAuthSuccessfulAck");
     } catch (error: any) {
-      console.error(error);
+      // console.error(error);
       setErrorMessage(error.message);
     }
+    socket.off("setAuthSuccessfulAck");
   };
 
   const handleCreateRoom = () => {

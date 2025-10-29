@@ -431,27 +431,30 @@ app.prepare().then(() => {
       if ("turn_limit" in payload) {
         timer.max_time = payload.turn_limit;
       }
-      //update other players in the room
-      socket.to(current_room_id).emit("room:update-settings-success", state);
-      //update editor // TODO : who is editor? the host?
+      //update all players in the room
+      io.to(current_room_id).emit("room:update-settings-success", state);
       callback({ ok: true, state: state });
     });
 
     //Initialize room
     // TODO: error handling
     socket.on("room:init", async (creatorData, callback) => {
-      const response = await createRoom({
-        id: creatorData.id,
-        username: creatorData.username,
-      });
-      //console.log(response);
-      const data = response.data;
-      createRoomObject(data.id, data.name, data.host_id);
-      createTimer(data.id, 10); // assuming 10 default, may need to change later, maybe useEffect will take care of this in roomsettings
-      // may be needed to set defaults?
-      //const state = getGameState(data.id, reason = "init values on create room")
-      // init state is defined at launch of room Setting
-      callback(response);
+      try {
+        const response = await createRoom({
+          id: creatorData.id,
+          username: creatorData.username,
+        });
+        //console.log(response);
+        const data = response.data;
+        createRoomObject(data.id, data.name, data.host_id);
+        createTimer(data.id, 10); // assuming 10 default, may need to change later, maybe useEffect will take care of this in roomsettings
+        // may be needed to set defaults?
+        //const state = getGameState(data.id, reason = "init values on create room")
+        // init state is defined at launch of room Setting
+        callback(response);
+      } catch (e) {
+        callback({ error: "Failed to create room" });
+      }
     });
 
     socket.on("startGame", (payload = {}) => {

@@ -57,18 +57,26 @@ export default function RoomSettings({
   room,
   isHost,
   setLobbyRoomNameAction = () => {},
+  setLobbyChatEnableAction = () => {},
   handleLeaveRoomAction = () => {},
 }: {
   room: Room;
   isHost: boolean;
   setLobbyRoomNameAction?: React.Dispatch<React.SetStateAction<string>>;
+  setLobbyChatEnableAction?: React.Dispatch<React.SetStateAction<boolean>>;
   handleLeaveRoomAction?: () => void;
 }) {
   const [roomname, setRoomname] = useState(room.name);
-  const [mapSize, setMapSize] = useState<MapSize>(8);
-  const [bombCount, setBombCount] = useState<BombDensity>("medium");
-  const [turnLimit, setTurnLimit] = useState<TurnLimit>(10);
-  const [playerLimit, setPlayerLimit] = useState<PlayerLimit>(2);
+  const [mapSize, setMapSize] = useState<MapSize>(room.size as MapSize);
+  const [bombCount, setBombCount] = useState<BombDensity>(
+    countToDensity(room.bomb_count, room.size)
+  );
+  const [turnLimit, setTurnLimit] = useState<TurnLimit>(
+    room.timer as TurnLimit
+  );
+  const [playerLimit, setPlayerLimit] = useState<PlayerLimit>(
+    room.player_limit as PlayerLimit
+  );
   const [chatState, setChatState] = useState<boolean>(true);
   const router = useRouter();
   const [showCountdown, setShowCountdown] = useState(false);
@@ -121,17 +129,19 @@ export default function RoomSettings({
 
   // Send default state to server
   useEffect(() => {
-    requestEditRoomSettings(
-      {
-        size: mapSize,
-        bomb_count: bombs,
-        turn_limit: turnLimit,
-        player_limit: playerLimit,
-        chat_enabled: chatState,
-        name: roomname,
-      },
-      false
-    );
+    if (isHost) {
+      requestEditRoomSettings(
+        {
+          size: mapSize,
+          bomb_count: bombs,
+          turn_limit: turnLimit,
+          player_limit: playerLimit,
+          chat_enabled: chatState,
+          name: roomname,
+        },
+        false
+      );
+    }
   }, []);
 
   // useEffect(() => {
@@ -168,22 +178,10 @@ export default function RoomSettings({
         "room:update-settings",
         payload,
         updateDb,
-        (response: any) => { // callback
+        (response: any) => {
+          // callback
           console.log("Updating room setting");
-          const state = response.state;
-          setRoomname(state.name);
-          setMapSize(state.size);
-          setTurnLimit(state.turn_limit);
-          setPlayerLimit(state.player_limit);
-          setBombCount(state.density);
-          setChatState(state.chat_enabled);
           resolve(response);
-          // console.log(state);
-          // console.log("mapSize", mapSize);
-          // console.log("161-calling handleEditRoom. isHost is ", isHost);
-          // if (isHost) {
-          //   handleEditRoom(state); // current problem : stale state. maybe i have to put this func somewhere else
-          // }
         }
       );
     });
@@ -208,6 +206,7 @@ export default function RoomSettings({
     //   }
     // );
     socket.on("room:update-settings-success", (state) => {
+      console.log("207state", state);
       setRoomname(state.name);
       setLobbyRoomNameAction(state.name);
       setMapSize(state.size);
@@ -215,6 +214,7 @@ export default function RoomSettings({
       setPlayerLimit(state.player_limit);
       setBombCount(state.density);
       setChatState(state.chat_enabled);
+      setLobbyChatEnableAction(state.chat_enabled);
     });
 
     return () => {
@@ -342,7 +342,10 @@ export default function RoomSettings({
               id="chat"
               value={chatState ? "enable" : "disable"}
               onChange={(e) =>
-                requestEditRoomSettings({ chat_enabled: e.target.value }, false)
+                requestEditRoomSettings(
+                  { chat_enabled: e.target.value == "enable" ? true : false },
+                  false
+                )
               }
               aria-label="Set to enable/disable chat"
               className="w-full"
