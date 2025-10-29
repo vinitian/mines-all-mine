@@ -370,47 +370,6 @@ app.prepare().then(() => {
       io.to(room_id).emit("kickPlayer", user_id);
     });
 
-    // runs every adjustment (depricated)
-    socket.on("room:settings-updated", (data) => {
-      console.log(data.settings.bomb_density);
-      io.to(data.roomID).emit("roomSettingsUpdate", {
-        name: data.settings.name,
-        size: data.settings.size,
-        bomb_density: data.settings.bomb_density,
-        timer: data.settings.timer,
-        player_limit: data.settings.player_limit,
-        chat_enabled: data.settings.chat_enabled,
-      });
-    });
-
-    // runs on start game (depricated)
-    socket.on("settings:update", (payload, cb) => {
-      try {
-        const { size, bombCount, turnLimit } = payload || {};
-
-        if (state.game_started) {
-          console.log("Game in progress, resetting...");
-          resetGame(state, timer);
-        }
-
-        if (size) state.size = Number(size);
-        if (typeof bombCount === "number") state.bomb_count = bombCount;
-        if (typeof turnLimit === "number") state.turn_limit = turnLimit;
-
-        //broadcast to current room only?
-
-        io.to(current_room_id).emit("settings:updated", {
-          size: state.size,
-          bombCount: state.bomb_count,
-          turnLimit: state.turn_limit ?? 10,
-        });
-
-        cb?.({ ok: true });
-      } catch (err) {
-        cb?.({ ok: false, error: String(err?.message || err) });
-      }
-    });
-
     socket.on("room:update-settings", (payload, updateDb, callback) => {
       console.log("Room setting update request received");
       // TODO handle timer
@@ -539,8 +498,11 @@ app.prepare().then(() => {
     //Room Management
 
     socket.on("joinRoom", (room_id) => {
+      console.log("501-socket.rooms:", socket.rooms);
+      console.log("502-roomPlayers", roomPlayers);
       socket.rooms.forEach((room) => {
-        // TODO
+        // TODO: this method is called every time new player is joins room, which doesn't make sense
+
         if (room !== socket.id) {
           socket.leave(room);
           // leave room
@@ -549,6 +511,7 @@ app.prepare().then(() => {
               (p) => p.userID !== socket.data.userID
             );
 
+            console.log("514-weird join");
             io.to(room).emit("currentPlayers", roomPlayers[room]);
           }
         }
@@ -574,10 +537,12 @@ app.prepare().then(() => {
         state.player_id_list.push(socket.data.userID);
       }
 
+      console.log("540-normal join");
       io.to(room_id).emit("currentPlayers", roomPlayers[room_id]);
 
       console.log(
-        `[ JOIN ] ${newPlayer.userID} joined. current players in ${room_id}: ${roomPlayers[room_id]}`
+        `[ JOIN ] ${newPlayer.userID} joined. current players in ${room_id}:`,
+        roomPlayers[room_id]
       );
 
       //tracking player room and setting state

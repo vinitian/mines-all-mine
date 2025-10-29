@@ -191,20 +191,6 @@ export default function RoomSettings({
 
   useEffect(() => {
     // listen setting update from server
-
-    // old version depricated
-    // socket.on(
-    //   "roomSettingsUpdate",
-    //   ({ name, size, bomb_density, timer, player_limit, chat_enabled }) => {
-    //     console.log("receive", name);
-    //     setRoomname(name);
-    //     setMapSize(size);
-    //     setTurnLimit(timer);
-    //     setPlayerLimit(player_limit);
-    //     setBombCount(bomb_density);
-    //     setChatState(chat_enabled);
-    //   }
-    // );
     socket.on("room:update-settings-success", (state) => {
       console.log("207state", state);
       setRoomname(state.name);
@@ -218,7 +204,6 @@ export default function RoomSettings({
     });
 
     return () => {
-      //socket.off("roomSettingsUpdate");
       socket.off("room:update-settings-success");
     };
   }, []);
