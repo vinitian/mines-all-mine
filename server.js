@@ -413,7 +413,11 @@ app.prepare().then(() => {
     });
 
     socket.on("room:update-settings", (payload, updateDb, callback) => {
-      console.log(`Room setting update request received from ${current_room_id} with payload ${JSON.stringify(payload)}`);
+      console.log(
+        `Room setting update request received from ${current_room_id} with payload ${JSON.stringify(
+          payload
+        )}`
+      );
       // TODO handle timer
       // migrate timer
       // TODO not implemeted yet
@@ -493,7 +497,10 @@ app.prepare().then(() => {
       //shuffle players
       //TODO make winner start first
       state.player_id_list = fisherYatesShuffle(state.player_id_list);
-      if (state.prev_winner && state.player_id_list.includes(state.prev_winner)) {
+      if (
+        state.prev_winner &&
+        state.player_id_list.includes(state.prev_winner)
+      ) {
         console.log(`putting previous winner ${state.prev_winner} first`);
         state.player_id_list = state.player_id_list.filter(
           (p) => p !== state.prev_winner
@@ -706,9 +713,9 @@ app.prepare().then(() => {
           bombCount: state.bomb_count,
         });
         setTimeout(() => {
-          resetGame(state, timer); // เริ่มใหม่ตาหน้า <- added parameters for this func
           console.log(`Sending return to lobby to room with id ${current_room_id}`);
           io.to(current_room_id).emit("returnToLobby", { reason: "gameEnded" }); // TODO: no .to(room)?? Probably needed so added
+          resetGame(state, timer); // เริ่มใหม่ตาหน้า <- added parameters for this func
         }, 10000);
 
         return;
