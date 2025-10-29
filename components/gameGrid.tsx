@@ -7,12 +7,12 @@ type CellDisplayData = {
   index: number;
   number: number;
   bomb: boolean;
-}
+};
 
 // type GameGridProps = {
 //   size: number;
 //   onPick: (i: number) => void;
-//   revealed: Record<number, "hit" | "miss">; 
+//   revealed: Record<number, "hit" | "miss">;
 // };
 
 type GameGridProps = {
@@ -31,7 +31,10 @@ export default function GameGrid({ size, onPick, revealed }: GameGridProps) {
   const totalGapWidth = (size - 1) * gapSize;
   const cellSize = (containerWidth - totalGapWidth) / size;
 
-  //console.log(revealed, "<--dis is revealed");
+  // console.log(revealed, "<--dis is revealed");
+  if (Object.keys(revealed).length <= 0) {
+    return <div>revealed have no value</div>;
+  }
   return (
     <div
       style={{
@@ -48,23 +51,28 @@ export default function GameGrid({ size, onPick, revealed }: GameGridProps) {
         const number = cellInfo.number;
 
         const bg =
-          isRevealed && isBomb ? "#8499FF" :
-            isRevealed && (!isBomb) ? "#FFFFFF" :
-              "#D4D4D4";
+          isRevealed && isBomb
+            ? "#8499FF"
+            : isRevealed && !isBomb
+            ? "#FFFFFF"
+            : "#D4D4D4";
 
         const label =
-          isRevealed && isBomb ?
-            <Bomb size={cellSize * 0.5} color="white" /> :
-            isRevealed && (!isBomb) && (number != 0) ?
-              <span style={{
+          isRevealed && isBomb ? (
+            <Bomb size={cellSize * 0.5} color="white" />
+          ) : isRevealed && !isBomb && number != 0 ? (
+            <span
+              style={{
                 fontSize: `${cellSize * 0.4}px`,
                 fontWeight: 700,
-                color: getHintColor(number)
-              }}>
-                {number}
-              </span> :
-              "";
-
+                color: getHintColor(number),
+              }}
+            >
+              {number}
+            </span>
+          ) : (
+            ""
+          );
 
         return (
           <button
