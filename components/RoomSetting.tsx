@@ -81,7 +81,6 @@ export default function RoomSettings({
   const router = useRouter();
   const [showCountdown, setShowCountdown] = useState(false);
   const bombs = densityToCount(bombCount, mapSize);
-  const [firstUpdate, setFirstUpdate] = useState(true);
 
   useEffect(() => {
     const onReady = (data: any) => {
