@@ -134,37 +134,6 @@ export default function RoomSettings({
     }
   }, [showCountdown, countdownSeconds]);
 
-  const handleEditRoom = async (state) => {
-    const bombs = densityToCount(bombCount, mapSize);
-    // update room settings in database
-    try {
-      const response = await editRoom({
-        user_id: socket.auth.userID,
-        name: roomname,
-        size: mapSize,
-        bomb_count: bombs,
-        turn_limit: turnLimit,
-        player_limit: playerLimit,
-        chat_enabled: chatState,
-      });
-      const newRoomSettings = {
-        name: roomname,
-        size: mapSize,
-        bomb_density: bombCount,
-        timer: turnLimit,
-        player_limit: playerLimit,
-        chat_enabled: chatState,
-      };
-      // emit setting update to server
-      socket.emit("room:settings-updated", {
-        roomID: room.id,
-        settings: newRoomSettings,
-      });
-    } catch (e) {
-      console.log(e);
-    }
-  };
-
   // Send default state to server
   useEffect(() => {
     if (isHost) {
@@ -181,18 +150,6 @@ export default function RoomSettings({
       );
     }
   }, []);
-
-  // useEffect(() => {
-  //   if (firstUpdate) {
-  //     setFirstUpdate(false);
-  //     return;
-  //   }
-  //   if (isHost) {
-  //     console.log("182-calling handleEditRoom()..");
-  //     handleEditRoom();
-  //   }
-  //   // eslint-disable-next-line react-hooks/exhaustive-deps
-  // }, [mapSize, bombCount, turnLimit, playerLimit, chatState]);
 
   const handleStartGame = async () => {
     if (!mapSize) return;
@@ -234,20 +191,6 @@ export default function RoomSettings({
 
   useEffect(() => {
     // listen setting update from server
-
-    // old version depricated
-    // socket.on(
-    //   "roomSettingsUpdate",
-    //   ({ name, size, bomb_density, timer, player_limit, chat_enabled }) => {
-    //     console.log("receive", name);
-    //     setRoomname(name);
-    //     setMapSize(size);
-    //     setTurnLimit(timer);
-    //     setPlayerLimit(player_limit);
-    //     setBombCount(bomb_density);
-    //     setChatState(chat_enabled);
-    //   }
-    // );
     socket.on("room:update-settings-success", (state) => {
       console.log("207state", state);
       setRoomname(state.name);
@@ -261,9 +204,7 @@ export default function RoomSettings({
     });
 
     return () => {
-      //socket.off("roomSettingsUpdate");
       socket.off("room:update-settings-success");
-      // socket.off("game:countdown", onCountdown);
       if (countdownTimerRef.current) clearInterval(countdownTimerRef.current);
     };
   }, []);
