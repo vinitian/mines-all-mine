@@ -204,8 +204,8 @@ app.prepare().then(() => {
       auth.userID && auth.userID.trim()
         ? auth.userID
         : user && user.userID
-          ? user.userID
-          : randomId();
+        ? user.userID
+        : randomId();
     socket.data.username =
       auth.username && auth.username.trim() ? auth.username : user.username;
     userStore.saveUser(socket.data.userID, {
@@ -371,47 +371,6 @@ app.prepare().then(() => {
       io.to(room_id).emit("kickPlayer", user_id);
     });
 
-    // runs every adjustment (depricated)
-    socket.on("room:settings-updated", (data) => {
-      //console.log(data.settings.bomb_density);
-      io.to(data.roomID).emit("roomSettingsUpdate", {
-        name: data.settings.name,
-        size: data.settings.size,
-        bomb_density: data.settings.bomb_density,
-        timer: data.settings.timer,
-        player_limit: data.settings.player_limit,
-        chat_enabled: data.settings.chat_enabled,
-      });
-    });
-
-    // runs on start game (depricated)
-    socket.on("settings:update", (payload, cb) => {
-      try {
-        const { size, bombCount, turnLimit } = payload || {};
-
-        if (state.game_started) {
-          console.log("Game in progress, resetting...");
-          resetGame(state, timer);
-        }
-
-        if (size) state.size = Number(size);
-        if (typeof bombCount === "number") state.bomb_count = bombCount;
-        if (typeof turnLimit === "number") state.turn_limit = turnLimit;
-
-        //broadcast to current room only?
-
-        io.to(current_room_id).emit("settings:updated", {
-          size: state.size,
-          bombCount: state.bomb_count,
-          turnLimit: state.turn_limit ?? 10,
-        });
-
-        cb?.({ ok: true });
-      } catch (err) {
-        cb?.({ ok: false, error: String(err?.message || err) });
-      }
-    });
-
     socket.on("room:update-settings", (payload, updateDb, callback) => {
       console.log(
         `Room setting update request received from ${current_room_id} with payload ${JSON.stringify(
@@ -549,20 +508,22 @@ app.prepare().then(() => {
     //Room Management
 
     socket.on("joinRoom", (room_id) => {
-      socket.rooms.forEach((room) => {
-        // TODO
-        if (room !== socket.id) {
-          socket.leave(room);
-          // leave room
-          if (roomPlayers[room]) {
-            roomPlayers[room] = roomPlayers[room].filter(
-              (p) => p.userID !== socket.data.userID
-            );
+      // // check if player is in another room. if so, leave that room and join the new room
+      // // deprecated as we implemented leave room on disconnect
+      // socket.rooms.forEach((room) => {
+      //   if (room !== socket.id) {
+      //     socket.leave(room);
+      //     // leave room
+      //     if (roomPlayers[room]) {
+      //       roomPlayers[room] = roomPlayers[room].filter(
+      //         (p) => p.userID !== socket.data.userID
+      //       );
 
-            io.to(room).emit("currentPlayers", roomPlayers[room]);
-          }
-        }
-      });
+      //       console.log("514-weird join");
+      //       io.to(room).emit("currentPlayers", roomPlayers[room]);
+      //     }
+      //   }
+      // });
 
       socket.join(room_id);
       // if room doesn't exist
@@ -587,7 +548,8 @@ app.prepare().then(() => {
       io.to(room_id).emit("currentPlayers", roomPlayers[room_id]);
 
       console.log(
-        `[ JOIN ] ${newPlayer.userID} joined. current players in ${room_id}: ${roomPlayers[room_id]}`
+        `[ JOIN ] ${newPlayer.userID} joined. current players in ${room_id}:`,
+        roomPlayers[room_id]
       );
 
       //tracking player room and setting state
@@ -716,7 +678,9 @@ app.prepare().then(() => {
           bombCount: state.bomb_count,
         });
         setTimeout(() => {
-          console.log(`Sending return to lobby to room with id ${current_room_id}`);
+          console.log(
+            `Sending return to lobby to room with id ${current_room_id}`
+          );
           io.to(current_room_id).emit("returnToLobby", { reason: "gameEnded" }); // TODO: no .to(room)?? Probably needed so added
           resetGame(state, timer); // เริ่มใหม่ตาหน้า <- added parameters for this func
         }, 10000);
