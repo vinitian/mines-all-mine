@@ -498,24 +498,22 @@ app.prepare().then(() => {
     //Room Management
 
     socket.on("joinRoom", (room_id) => {
-      console.log("501-socket.rooms:", socket.rooms);
-      console.log("502-roomPlayers", roomPlayers);
-      socket.rooms.forEach((room) => {
-        // TODO: this method is called every time new player is joins room, which doesn't make sense
+      // // check if player is in another room. if so, leave that room and join the new room
+      // // deprecated as we implemented leave room on disconnect
+      // socket.rooms.forEach((room) => {
+      //   if (room !== socket.id) {
+      //     socket.leave(room);
+      //     // leave room
+      //     if (roomPlayers[room]) {
+      //       roomPlayers[room] = roomPlayers[room].filter(
+      //         (p) => p.userID !== socket.data.userID
+      //       );
 
-        if (room !== socket.id) {
-          socket.leave(room);
-          // leave room
-          if (roomPlayers[room]) {
-            roomPlayers[room] = roomPlayers[room].filter(
-              (p) => p.userID !== socket.data.userID
-            );
-
-            console.log("514-weird join");
-            io.to(room).emit("currentPlayers", roomPlayers[room]);
-          }
-        }
-      });
+      //       console.log("514-weird join");
+      //       io.to(room).emit("currentPlayers", roomPlayers[room]);
+      //     }
+      //   }
+      // });
 
       socket.join(room_id);
       // if room doesn't exist
@@ -537,7 +535,6 @@ app.prepare().then(() => {
         state.player_id_list.push(socket.data.userID);
       }
 
-      console.log("540-normal join");
       io.to(room_id).emit("currentPlayers", roomPlayers[room_id]);
 
       console.log(
