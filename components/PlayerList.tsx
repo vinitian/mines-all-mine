@@ -8,10 +8,12 @@ export default function PlayerList({
   players,
   roomId,
   isHost,
+  hostId,
 }: {
   players: Player[];
   roomId: number;
   isHost: boolean;
+  hostId: string;
 }) {
   const [playerLimit, setPlayerLimit] = useState<number>(2);
 
@@ -41,12 +43,18 @@ export default function PlayerList({
       </div>
       <div className="text-h3">
         {players.map((player: Player) => {
+          const isPlayerHost = player.userID === hostId;
           return (
             <div
               key={player.userID}
               className="flex justify-between items-baseline"
             >
-              <span>- {player.username}</span>
+              <span>
+                - {player.username}{" "}
+                {isPlayerHost && (
+                  <span className="ml-1 text-gray-dark"> (host)</span>
+                )}
+              </span>
 
               {isHost && player.userID !== socket.auth.userID && (
                 <span className="px-2">

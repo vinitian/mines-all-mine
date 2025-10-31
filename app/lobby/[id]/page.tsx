@@ -186,6 +186,7 @@ export default function LobbyPage() {
                 players={players}
                 isHost={room.host_id == socket.auth.userID}
                 roomId={room.id}
+                hostId={room.host_id}
               />
             </div>
 
@@ -235,3 +236,10 @@ export default function LobbyPage() {
     </div>
   );
 }
+
+//TODO: assign new host when current host leaves:
+
+// -> client sends hostLeave event when host leaves along with roomId
+// -> server handle hostleave event and assign new host
+// -> server emit new host_id to all clients in the room
+// -> clients update their state accordingly
