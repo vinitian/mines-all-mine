@@ -133,22 +133,22 @@ app.prepare().then(() => {
       if (this.interval) {
         this.reset();
       }
-      if (this.on_run) this.on_run();
-      console.log("timer starting");
-      clearInterval(this.interval);
-      this.interval = setInterval(() => {
-        console.log(this.time_remaining);
-        this.time_remaining = this.time_remaining - 1;
-        if (this.on_run) this.on_run();
-        if (this.time_remaining <= 0) {
-          try {
-            if (this.on_complete) this.on_complete();
-            //this.reset();
-          } catch (error) {
-            console.log("Timer error", error);
+      if (this.max_time != 0) {
+        this.on_run();
+        console.log(`room id ${this.room_id} timer starting`);
+        clearInterval(this.interval);
+        this.interval = setInterval(() => {
+          this.time_remaining = this.time_remaining - 1;
+          this.on_run();
+          if (this.time_remaining <= 0) {
+            this.on_complete();
           }
-        }
-      }, 1000);
+        }, 1000);
+      } else {
+        this.on_run();
+        console.log(`room id ${this.room_id} timer starting (unlimited mode)`);
+        clearInterval(this.interval);
+      }
     }
     reset() {
       if (this.interval) {
@@ -157,6 +157,7 @@ app.prepare().then(() => {
         this.time_remaining = this.max_time;
       }
       this.time_remaining = this.max_time;
+      console.log(`room id ${this.room_id} timer resetting`);
     }
   }
 
@@ -370,49 +371,12 @@ app.prepare().then(() => {
       io.to(room_id).emit("kickPlayer", user_id);
     });
 
-    // runs every adjustment (depricated)
-    socket.on("room:settings-updated", (data) => {
-      console.log(data.settings.bomb_density);
-      io.to(data.roomID).emit("roomSettingsUpdate", {
-        name: data.settings.name,
-        size: data.settings.size,
-        bomb_density: data.settings.bomb_density,
-        timer: data.settings.timer,
-        player_limit: data.settings.player_limit,
-        chat_enabled: data.settings.chat_enabled,
-      });
-    });
-
-    // runs on start game (depricated)
-    socket.on("settings:update", (payload, cb) => {
-      try {
-        const { size, bombCount, turnLimit } = payload || {};
-
-        if (state.game_started) {
-          console.log("Game in progress, resetting...");
-          resetGame(state, timer);
-        }
-
-        if (size) state.size = Number(size);
-        if (typeof bombCount === "number") state.bomb_count = bombCount;
-        if (typeof turnLimit === "number") state.turn_limit = turnLimit;
-
-        //broadcast to current room only?
-
-        io.to(current_room_id).emit("settings:updated", {
-          size: state.size,
-          bombCount: state.bomb_count,
-          turnLimit: state.turn_limit ?? 10,
-        });
-
-        cb?.({ ok: true });
-      } catch (err) {
-        cb?.({ ok: false, error: String(err?.message || err) });
-      }
-    });
-
     socket.on("room:update-settings", (payload, updateDb, callback) => {
-      console.log("Room setting update request received");
+      console.log(
+        `Room setting update request received from ${current_room_id} with payload ${JSON.stringify(
+          payload
+        )}`
+      );
       // TODO handle timer
       // migrate timer
       // TODO not implemeted yet
@@ -431,27 +395,30 @@ app.prepare().then(() => {
       if ("turn_limit" in payload) {
         timer.max_time = payload.turn_limit;
       }
-      //update other players in the room
-      socket.to(current_room_id).emit("room:update-settings-success", state);
-      //update editor // TODO : who is editor? the host?
+      //update all players in the room
+      io.to(current_room_id).emit("room:update-settings-success", state);
       callback({ ok: true, state: state });
     });
 
     //Initialize room
     // TODO: error handling
     socket.on("room:init", async (creatorData, callback) => {
-      const response = await createRoom({
-        id: creatorData.id,
-        username: creatorData.username,
-      });
-      //console.log(response);
-      const data = response.data;
-      createRoomObject(data.id, data.name, data.host_id);
-      createTimer(data.id, 10); // assuming 10 default, may need to change later, maybe useEffect will take care of this in roomsettings
-      // may be needed to set defaults?
-      //const state = getGameState(data.id, reason = "init values on create room")
-      // init state is defined at launch of room Setting
-      callback(response);
+      try {
+        const response = await createRoom({
+          id: creatorData.id,
+          username: creatorData.username,
+        });
+        //console.log(response);
+        const data = response.data;
+        createRoomObject(data.id, data.name, data.host_id);
+        createTimer(data.id, 10); // assuming 10 default, may need to change later, maybe useEffect will take care of this in roomsettings
+        // may be needed to set defaults?
+        //const state = getGameState(data.id, reason = "init values on create room")
+        // init state is defined at launch of room Setting
+        callback(response);
+      } catch (e) {
+        callback({ error: "Failed to create room" });
+      }
     });
 
     socket.on("startGame", (payload = {}) => {
@@ -492,11 +459,16 @@ app.prepare().then(() => {
       //shuffle players
       //TODO make winner start first
       state.player_id_list = fisherYatesShuffle(state.player_id_list);
-      if (state.prev_winner) {
+      if (
+        state.prev_winner &&
+        state.player_id_list.includes(state.prev_winner)
+      ) {
+        console.log(`putting previous winner ${state.prev_winner} first`);
         state.player_id_list = state.player_id_list.filter(
-          (p) => p.userID !== state.prev_winner
+          (p) => p !== state.prev_winner
         );
         state.player_id_list = [state.prev_winner, ...state.player_id_list];
+        console.log(`new player order ${state.player_id_list}`);
       }
 
       console.log(
@@ -511,7 +483,7 @@ app.prepare().then(() => {
       );
       console.log("starting game with current player", currentPlayer);
 
-      console.log("startGame map:ready emit");
+      //console.log("startGame map:ready emit");
       io.to(current_room_id).emit("map:ready", {
         size: state.size,
         bombsTotal: state.bomb_count,
@@ -536,20 +508,22 @@ app.prepare().then(() => {
     //Room Management
 
     socket.on("joinRoom", (room_id) => {
-      socket.rooms.forEach((room) => {
-        // TODO
-        if (room !== socket.id) {
-          socket.leave(room);
-          // leave room
-          if (roomPlayers[room]) {
-            roomPlayers[room] = roomPlayers[room].filter(
-              (p) => p.userID !== socket.data.userID
-            );
+      // // check if player is in another room. if so, leave that room and join the new room
+      // // deprecated as we implemented leave room on disconnect
+      // socket.rooms.forEach((room) => {
+      //   if (room !== socket.id) {
+      //     socket.leave(room);
+      //     // leave room
+      //     if (roomPlayers[room]) {
+      //       roomPlayers[room] = roomPlayers[room].filter(
+      //         (p) => p.userID !== socket.data.userID
+      //       );
 
-            io.to(room).emit("currentPlayers", roomPlayers[room]);
-          }
-        }
-      });
+      //       console.log("514-weird join");
+      //       io.to(room).emit("currentPlayers", roomPlayers[room]);
+      //     }
+      //   }
+      // });
 
       socket.join(room_id);
       // if room doesn't exist
@@ -574,7 +548,8 @@ app.prepare().then(() => {
       io.to(room_id).emit("currentPlayers", roomPlayers[room_id]);
 
       console.log(
-        `[ JOIN ] ${newPlayer.userID} joined. current players in ${room_id}: ${roomPlayers[room_id]}`
+        `[ JOIN ] ${newPlayer.userID} joined. current players in ${room_id}:`,
+        roomPlayers[room_id]
       );
 
       //tracking player room and setting state
@@ -693,7 +668,7 @@ app.prepare().then(() => {
 
         state.game_started = false;
         const winners = computeWinners(state.scores);
-        state.prev_winner = winners[0];
+        state.prev_winner = winners[0].id;
 
         //broadcast to current room only?
         io.to(current_room_id).emit("gameOver", {
@@ -703,8 +678,11 @@ app.prepare().then(() => {
           bombCount: state.bomb_count,
         });
         setTimeout(() => {
-          resetGame(); // เริ่มใหม่ตาหน้า
-          io.emit("returnToLobby", { reason: "gameEnded" }); // TODO: no .to(room)??
+          console.log(
+            `Sending return to lobby to room with id ${current_room_id}`
+          );
+          io.to(current_room_id).emit("returnToLobby", { reason: "gameEnded" }); // TODO: no .to(room)?? Probably needed so added
+          resetGame(state, timer); // เริ่มใหม่ตาหน้า <- added parameters for this func
         }, 10000);
 
         return;
@@ -915,9 +893,6 @@ app.prepare().then(() => {
     console.log(`Starting new turn because reason ${reason}`);
     timer.reset(); // migrate timer (Done)
     state.current_turn = state.current_turn + 1;
-    //console.log("121", state.player_id_list, state.current_turn)
-    //console.log(state);
-    console.log(timer);
     const { id: currentPlayer, index: currentIndex } = findCurrentPlayer(
       state.player_id_list,
       state.current_turn
@@ -928,9 +903,8 @@ app.prepare().then(() => {
       reason,
     });
     if (state.game_started) {
-      console.log("Timer Restarting");
+      //console.log("Timer Restarting");
       timer.start();
-      console.log("999", timer);
     }
   }
 

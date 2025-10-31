@@ -57,18 +57,26 @@ export default function RoomSettings({
   room,
   isHost,
   setLobbyRoomNameAction = () => {},
+  setLobbyChatEnableAction = () => {},
   handleLeaveRoomAction = () => {},
 }: {
   room: Room;
   isHost: boolean;
   setLobbyRoomNameAction?: React.Dispatch<React.SetStateAction<string>>;
+  setLobbyChatEnableAction?: React.Dispatch<React.SetStateAction<boolean>>;
   handleLeaveRoomAction?: () => void;
 }) {
   const [roomname, setRoomname] = useState(room.name);
-  const [mapSize, setMapSize] = useState<MapSize>(8);
-  const [bombCount, setBombCount] = useState<BombDensity>("medium");
-  const [turnLimit, setTurnLimit] = useState<TurnLimit>(10);
-  const [playerLimit, setPlayerLimit] = useState<PlayerLimit>(2);
+  const [mapSize, setMapSize] = useState<MapSize>(room.size as MapSize);
+  const [bombCount, setBombCount] = useState<BombDensity>(
+    countToDensity(room.bomb_count, room.size)
+  );
+  const [turnLimit, setTurnLimit] = useState<TurnLimit>(
+    room.timer as TurnLimit
+  );
+  const [playerLimit, setPlayerLimit] = useState<PlayerLimit>(
+    room.player_limit as PlayerLimit
+  );
   const [chatState, setChatState] = useState<boolean>(true);
   const router = useRouter();
   const [showCountdown, setShowCountdown] = useState(false);
@@ -88,63 +96,22 @@ export default function RoomSettings({
     };
   }, [router]);
 
-  const handleEditRoom = async (state) => {
-    const bombs = densityToCount(bombCount, mapSize);
-    // update room settings in database
-    try {
-      const response = await editRoom({
-        user_id: socket.auth.userID,
-        name: roomname,
-        size: mapSize,
-        bomb_count: bombs,
-        turn_limit: turnLimit,
-        player_limit: playerLimit,
-        chat_enabled: chatState,
-      });
-      const newRoomSettings = {
-        name: roomname,
-        size: mapSize,
-        bomb_density: bombCount,
-        timer: turnLimit,
-        player_limit: playerLimit,
-        chat_enabled: chatState,
-      };
-      // emit setting update to server
-      socket.emit("room:settings-updated", {
-        roomID: room.id,
-        settings: newRoomSettings,
-      });
-    } catch (e) {
-      console.log(e);
-    }
-  };
-
   // Send default state to server
   useEffect(() => {
-    requestEditRoomSettings(
-      {
-        size: mapSize,
-        bomb_count: bombs,
-        turn_limit: turnLimit,
-        player_limit: playerLimit,
-        chat_enabled: chatState,
-        name: roomname,
-      },
-      false
-    );
+    if (isHost) {
+      requestEditRoomSettings(
+        {
+          size: mapSize,
+          bomb_count: bombs,
+          turn_limit: turnLimit,
+          player_limit: playerLimit,
+          chat_enabled: chatState,
+          name: roomname,
+        },
+        false
+      );
+    }
   }, []);
-
-  // useEffect(() => {
-  //   if (firstUpdate) {
-  //     setFirstUpdate(false);
-  //     return;
-  //   }
-  //   if (isHost) {
-  //     console.log("182-calling handleEditRoom()..");
-  //     handleEditRoom();
-  //   }
-  //   // eslint-disable-next-line react-hooks/exhaustive-deps
-  // }, [mapSize, bombCount, turnLimit, playerLimit, chatState]);
 
   const handleStartGame = async () => {
     if (!mapSize) return;
@@ -168,22 +135,10 @@ export default function RoomSettings({
         "room:update-settings",
         payload,
         updateDb,
-        (response: any) => { // callback
+        (response: any) => {
+          // callback
           console.log("Updating room setting");
-          const state = response.state;
-          setRoomname(state.name);
-          setMapSize(state.size);
-          setTurnLimit(state.turn_limit);
-          setPlayerLimit(state.player_limit);
-          setBombCount(state.density);
-          setChatState(state.chat_enabled);
           resolve(response);
-          // console.log(state);
-          // console.log("mapSize", mapSize);
-          // console.log("161-calling handleEditRoom. isHost is ", isHost);
-          // if (isHost) {
-          //   handleEditRoom(state); // current problem : stale state. maybe i have to put this func somewhere else
-          // }
         }
       );
     });
@@ -193,21 +148,8 @@ export default function RoomSettings({
 
   useEffect(() => {
     // listen setting update from server
-
-    // old version depricated
-    // socket.on(
-    //   "roomSettingsUpdate",
-    //   ({ name, size, bomb_density, timer, player_limit, chat_enabled }) => {
-    //     console.log("receive", name);
-    //     setRoomname(name);
-    //     setMapSize(size);
-    //     setTurnLimit(timer);
-    //     setPlayerLimit(player_limit);
-    //     setBombCount(bomb_density);
-    //     setChatState(chat_enabled);
-    //   }
-    // );
     socket.on("room:update-settings-success", (state) => {
+      console.log("207state", state);
       setRoomname(state.name);
       setLobbyRoomNameAction(state.name);
       setMapSize(state.size);
@@ -215,10 +157,10 @@ export default function RoomSettings({
       setPlayerLimit(state.player_limit);
       setBombCount(state.density);
       setChatState(state.chat_enabled);
+      setLobbyChatEnableAction(state.chat_enabled);
     });
 
     return () => {
-      //socket.off("roomSettingsUpdate");
       socket.off("room:update-settings-success");
     };
   }, []);
@@ -342,7 +284,10 @@ export default function RoomSettings({
               id="chat"
               value={chatState ? "enable" : "disable"}
               onChange={(e) =>
-                requestEditRoomSettings({ chat_enabled: e.target.value }, false)
+                requestEditRoomSettings(
+                  { chat_enabled: e.target.value == "enable" ? true : false },
+                  false
+                )
               }
               aria-label="Set to enable/disable chat"
               className="w-full"
@@ -439,30 +384,6 @@ export default function RoomSettings({
               bombCount: densityToCount(bombCount, mapSize),
               turnLimit,
             });
-
-            // socket.emit(
-            //   "settings:update",
-            //   {
-            //     size: mapSize,
-            //     bombCount: bombs,
-            //     turnLimit,
-            //     playerLimit,
-            //     chatEnabled: chatState,
-            //     roomName: roomname,
-            //   },
-            //   (ack: any) => {
-            //     if (!ack?.ok) {
-            //       console.error("Failed to save settings:", ack?.error);
-            //       return;
-            //     }
-
-            //     socket.emit("startGame", {
-            //       size: mapSize,
-            //       bombCount: densityToCount(bombCount, mapSize),
-            //       turnLimit,
-            //     });
-            //   }
-            // );
           }}
         />
       </div>

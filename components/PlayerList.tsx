@@ -2,35 +2,35 @@
 
 import { useEffect, useState } from "react";
 import socket from "@/socket";
-import { Player } from "@/interface";
+import { Player, Room } from "@/interface";
 
 export default function PlayerList({
   players,
-  roomId,
+  room,
   isHost,
   hostId,
 }: {
   players: Player[];
-  roomId: number;
+  room: Room;
   isHost: boolean;
   hostId: string;
 }) {
-  const [playerLimit, setPlayerLimit] = useState<number>(2);
+  const [playerLimit, setPlayerLimit] = useState<number>(room.player_limit);
 
   useEffect(() => {
     // listen setting update from server
-    socket.on("roomSettingsUpdate", ({ player_limit }) => {
+    socket.on("room:update-settings-success", ({ player_limit }) => {
       setPlayerLimit(player_limit);
     });
 
     return () => {
-      socket.off("roomSettingsUpdate");
+      socket.off("room:update-settings-success");
     };
   }, []);
 
   const handleKickPlayer = (playerID: string) => {
     console.log("Kicking player with ID:", playerID);
-    socket.emit("kickPlayer", roomId, playerID);
+    socket.emit("kickPlayer", room.id, playerID);
   };
 
   return (
