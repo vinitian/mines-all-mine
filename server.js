@@ -220,6 +220,15 @@ app.prepare().then(() => {
 
   io.on("connection", (socket) => {
     console.log("User connected", socket.data.userID);
+    socket.on("game:request-countdown", ({ roomID, seconds }) => {
+  
+      // synchronized start time
+      const startAt = Date.now() + seconds * 1000;
+  
+      // broadcast to everyone in the room
+      io.to(roomID).emit("game:countdown", { seconds, startAt, roomID });
+  
+    });
 
     userStore.saveUser(socket.data.userID, {
       username: socket.data.username,

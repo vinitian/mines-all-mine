@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import socket from "@/socket";
 import editRoom from "@/services/client/editRoom";
@@ -82,6 +82,31 @@ export default function RoomSettings({
   const [showCountdown, setShowCountdown] = useState(false);
   const bombs = densityToCount(bombCount, mapSize);
   const [firstUpdate, setFirstUpdate] = useState(true);
+  const [countdownSeconds, setCountdownSeconds] = useState(3);
+  const [totalSeconds, setTotalSeconds] = useState(3);
+  const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const onCountdown = useCallback(
+    ({ seconds, startAt }: { seconds: number; startAt: number }) => {
+      setTotalSeconds(seconds);
+
+      const tick = () => {
+        const msLeft = startAt - Date.now();
+        const sLeft = Math.max(0, Math.ceil(msLeft / 1000));
+        setCountdownSeconds(sLeft);
+        if (sLeft <= 0 && countdownTimerRef.current) {
+          clearInterval(countdownTimerRef.current);
+          countdownTimerRef.current = null;
+        }
+      };
+
+      if (countdownTimerRef.current) clearInterval(countdownTimerRef.current);
+      tick();
+      countdownTimerRef.current = setInterval(tick, 200);
+      setShowCountdown(true);
+    },
+    []
+  );
 
   useEffect(() => {
     const onReady = (data: any) => {
@@ -95,6 +120,19 @@ export default function RoomSettings({
       socket.off("map:ready", onReady);
     };
   }, [router]);
+
+  useEffect(() => {
+    socket.on("game:countdown", onCountdown);
+    return () => {
+      socket.off("game:countdown", onCountdown);
+      if (countdownTimerRef.current) clearInterval(countdownTimerRef.current);
+    };
+  }, [onCountdown]);
+  useEffect(() => {
+    if (showCountdown && countdownSeconds <= 0) {
+      setShowCountdown(false);
+    }
+  }, [showCountdown, countdownSeconds]);
 
   // Send default state to server
   useEffect(() => {
@@ -119,7 +157,12 @@ export default function RoomSettings({
       console.error("Socket not connected!");
       return;
     }
-    setShowCountdown(true);
+    const seconds = 3;
+    socket.emit("game:request-countdown", {
+      roomID: room.id,
+      seconds,
+    });
+    //setShowCountdown(true);
   };
 
   const requestEditRoomSettings = async (
@@ -162,6 +205,7 @@ export default function RoomSettings({
 
     return () => {
       socket.off("room:update-settings-success");
+      if (countdownTimerRef.current) clearInterval(countdownTimerRef.current);
     };
   }, []);
 
@@ -351,39 +395,33 @@ export default function RoomSettings({
 
         <CountdownModal
           open={showCountdown}
-          seconds={3}
+          totalSeconds={totalSeconds}
+          remainingSeconds={countdownSeconds}
           onComplete={async () => {
-            const bombs = densityToCount(bombCount, mapSize);
-            console.log("Starting game with settings:", {
-              size: mapSize,
-              bombCount: bombs,
-              turnLimit,
-              playerLimit,
-              chatEnabled: chatState,
-            });
-
-            const ack: any = await requestEditRoomSettings(
-              {
+            // Host starts the game (or move this to server for perfect sync)
+            if (isHost) {
+              const bombs = densityToCount(bombCount, mapSize);
+              const ack: any = await requestEditRoomSettings(
+                {
+                  size: mapSize,
+                  bomb_count: bombs,
+                  turn_limit: turnLimit,
+                  player_limit: playerLimit,
+                  chat_enabled: chatState,
+                  name: roomname,
+                },
+                true
+              );
+              if (!ack?.ok) {
+                console.error("Failed to save settings:", ack?.error);
+                return;
+              }
+              socket.emit("startGame", {
                 size: mapSize,
-                bomb_count: bombs,
-                turn_limit: turnLimit,
-                player_limit: playerLimit,
-                chat_enabled: chatState,
-                name: roomname,
-              },
-              true
-            );
-
-            if (!ack?.ok) {
-              console.error("Failed to save settings:", ack?.error);
-              return;
+                bombCount: densityToCount(bombCount, mapSize),
+                turnLimit,
+              });
             }
-
-            socket.emit("startGame", {
-              size: mapSize,
-              bombCount: densityToCount(bombCount, mapSize),
-              turnLimit,
-            });
           }}
         />
       </div>
