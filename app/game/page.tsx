@@ -1,7 +1,6 @@
 "use client";
 import GameGrid from "@/components/gameGrid";
 import MineGameLogic from "../shared/mineGameLogic";
-import "./page.css";
 import Link from "next/link";
 import WelcomeMessage from "@/components/WelcomeMessage";
 
@@ -26,7 +25,7 @@ export default function GamePage() {
 
   // REMOVED duplicate return - fixed syntax error
   return (
-    <div className="game-div-container  bg-gradient-to-b from-[#fffff5] from-30% via-[#ddf7ff] via-71% to-[#dde4ff] to-100% flex items-center justify-center p-4">
+    <div className="bg-gradient-to-b from-[#fffff5] from-30% via-[#ddf7ff] via-71% to-[#dde4ff] to-100% flex items-center justify-center p-4">
       {started && <WelcomeMessage />}
       {/* later {started && <WelcomeMessage text={`Welcome to Mines all Mine, ${nickname}!`} />} */}
 
@@ -38,7 +37,7 @@ export default function GamePage() {
           Home
         </Link>
 
-        <div className="bomb-count-div flex items-center gap-2">
+        <div className="flex items-center gap-2">
           {turnLimit > 0 && <div>Time per turn: {turnLimit} seconds</div>}
           {bombsInfo && (
             <span className="ml-3">
