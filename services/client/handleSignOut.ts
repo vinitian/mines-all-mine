@@ -2,7 +2,7 @@ import socket from "@/socket";
 import { signOut } from "next-auth/react";
 
 export default function handleSignOut() {
-  localStorage.removeItem("sessionID");
+  localStorage.removeItem("userID");
   signOut();
   socket.disconnect();
 }
