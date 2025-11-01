@@ -52,6 +52,7 @@ export default function LobbyPage() {
     // TODO: select new host
     if (room && room.host_id == socket.auth.userID) {
       console.log("TODO: select new host");
+      socket.emit("hostLeave", parseInt(roomId));
     }
   };
 
@@ -149,6 +150,13 @@ export default function LobbyPage() {
     });
 
     //ISSUE: when the player is the last in the room and leaves, the database is not updated, "playerLeft" is not received. Use the same behavior of deleteRoom on last leave like in main branch.
+
+    socket.on("hostChanged", (newHostId: string) => {
+      //update room state with new host ID
+      if (room) {
+        setRoom({ ...room, host_id: newHostId });
+      }
+    });
 
     return () => {
       socket.off("message");

@@ -6,14 +6,12 @@ import { Player, Room } from "@/interface";
 
 export default function PlayerList({
   players,
-  room,
   isHost,
-  hostId,
+  room,
 }: {
   players: Player[];
-  room: Room;
   isHost: boolean;
-  hostId: string;
+  room: Room;
 }) {
   const [playerLimit, setPlayerLimit] = useState<number>(room.player_limit);
 
@@ -43,7 +41,7 @@ export default function PlayerList({
       </div>
       <div className="text-h3">
         {players.map((player: Player) => {
-          const isPlayerHost = player.userID === hostId;
+          const isPlayerHost = player.userID === room.host_id;
           return (
             <div
               key={player.userID}

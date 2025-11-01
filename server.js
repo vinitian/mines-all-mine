@@ -593,6 +593,38 @@ app.prepare().then(() => {
       timer = undefined;
     });
 
+    function assignNewHost(room_id) {
+      if (!roomPlayers[room_id] || roomPlayers[room_id].length === 0) {
+        return null; // no players left
+      }
+      // randomly select new host from remaining players
+      const newHost =
+        roomPlayers[room_id][
+          Math.floor(Math.random() * roomPlayers[room_id].length)
+        ];
+      return newHost;
+    }
+
+    socket.on("hostLeave", (room_id) => {
+      const newHost = assignNewHost(room_id);
+      console.log("New host assigned:", newHost);
+
+      if (newHost) {
+        console.log(`New host for room ${room_id} is ${newHost.userID}`);
+        io.to(room_id).emit("hostChanged", newHost.userID);
+        // update state
+        const state = getGameState(room_id, "host leaving");
+        state.host_id = newHost.userID;
+
+        //update new host in database
+        try {
+          state.updateRoomInDatabase(socket, "host leaving");
+        } catch (error) {
+          console.log(error);
+        }
+      }
+    });
+
     socket.on("resetNotice", () => {
       console.log("Reset Complete!");
       io.emit("serverRestarts");
