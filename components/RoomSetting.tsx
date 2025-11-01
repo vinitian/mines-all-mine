@@ -83,15 +83,14 @@ export default function RoomSettings({
   const bombs = densityToCount(bombCount, mapSize);
 
   useEffect(() => {
-    const onReady = (data: any) => {
-      console.log("navigating", data);
+    const onToGamePage = () => {
       router.push("/game");
     };
 
-    socket.once("map:ready", onReady);
+    socket.once("toGamePage", onToGamePage);
 
     return () => {
-      socket.off("map:ready", onReady);
+      socket.off("toGamePage", onToGamePage);
     };
   }, [router]);
 

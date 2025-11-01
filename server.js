@@ -475,7 +475,7 @@ app.prepare().then(() => {
         `Game started: ${state.size}x${state.size}, ${state.bomb_count} bombs, ${state.turn_limit}s turns`
       );
 
-      // change to room level (chganged)
+      // change to room level (changed)
       state.current_turn = 0;
       const { id: currentPlayer, index: currentIndex } = findCurrentPlayer(
         state.player_id_list,
@@ -483,15 +483,7 @@ app.prepare().then(() => {
       );
       console.log("starting game with current player", currentPlayer);
 
-      //console.log("startGame map:ready emit");
-      io.to(current_room_id).emit("map:ready", {
-        size: state.size,
-        bombsTotal: state.bomb_count,
-        bombsFound: 0,
-        turnLimit: state.turn_limit,
-        currentPlayer: currentPlayer,
-        revealed: field.export_display_data(),
-      });
+      io.to(current_room_id).emit("toGamePage"); // redirect player to game page
 
       console.log(
         `Turn changed to player ${currentPlayer} for reason gameStart`
