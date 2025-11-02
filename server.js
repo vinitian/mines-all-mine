@@ -66,20 +66,17 @@ app.prepare().then(() => {
       this.prev_winner = undefined;
     }
 
-    updateRoomInDatabase(socket, reason = "unspecified") {
-      //TODO link to database.
-      // TODO NEXT - IMPLEMENT server or client
-      console.log("805-updateDatabase, state rn:", JSON.stringify(this));
-      // return await editRoom({
-      //   user_id: socket.data.userID,
-      //   name: this.name,
-      //   size: this.size,
-      //   bomb_count: this.bomb_count,
-      //   turn_limit: this.turn_limit,
-      //   player_limit: this.player_limit,
-      //   chat_enabled: this.chat_enabled,
-      // });
-      console.log(`updating database for ${reason} reason`);
+    async updateRoomInDatabase(userID, reason = "unspecified") {
+      await editRoom({
+        user_id: userID,
+        name: this.name,
+        size: this.size,
+        bomb_count: this.bomb_count,
+        turn_limit: this.turn_limit,
+        player_limit: this.player_limit,
+        chat_enabled: this.chat_enabled,
+      });
+      console.log(`updated database for ${reason} reason`);
       return;
     }
     loadDatabase() {
@@ -378,7 +375,7 @@ app.prepare().then(() => {
       io.to(room_id).emit("kickPlayer", user_id);
     });
 
-    socket.on("room:update-settings", (payload, updateDb, callback) => {
+    socket.on("room:update-settings", (payload, callback) => {
       console.log(
         `Room setting update request received from ${current_room_id} with payload ${JSON.stringify(
           payload
@@ -389,15 +386,13 @@ app.prepare().then(() => {
       // TODO not implemeted yet
       state.update(payload);
 
-      if (updateDb) {
-        try {
-          state.updateRoomInDatabase(state, socket);
-        } catch (error) {
-          console.log(error);
-        }
-        // TODO: improve error handling. should we handle here, or inside updateDatabase?
-        // TODO: return fail if unable to update DB and revert socket state too
+      try {
+        state.updateRoomInDatabase(socket.data.userID);
+      } catch (error) {
+        console.log(error);
       }
+      // TODO: improve error handling. should we handle here, or inside updateDatabase?
+      // TODO: return fail if unable to update DB and revert socket state too
 
       if ("turn_limit" in payload) {
         timer.max_time = payload.turn_limit;
