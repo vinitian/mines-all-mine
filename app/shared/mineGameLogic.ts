@@ -17,6 +17,8 @@ type Winner = { id: string; score: number };
 
 export default function MineGameLogic() {
   const router = useRouter();
+  const [roomId, setRoomId] = useState<number>(0);
+  const [roomName, setRoomName] = useState("");
   const [size, setSize] = useState<number | null>(null);
   const [started, setStarted] = useState(false);
   const [gameOver, setGameOver] = useState(false);
@@ -26,6 +28,7 @@ export default function MineGameLogic() {
     found: number;
   } | null>(null); //total and found
   const [turnLimit, setTurnLimit] = useState<number>(0);
+  const [chatEnabled, setChatEnabled] = useState(true);
   const [winners, setWinners] = useState<Winner[] | null>(null);
   const [leaderboard, setLeaderboard] = useState<[string, number][]>([]);
 
@@ -39,7 +42,7 @@ export default function MineGameLogic() {
     (i: number) => {
       console.log(`picking cell index ${i}`);
       if (!started || gameOver || revealed[i].is_open) {
-        console.log("Conditions not met", !started, gameOver, revealed[i]);
+        // console.log("Conditions not met", !started, gameOver, revealed[i]);
         return;
       }
       if (currentPlayer !== myId) {
@@ -77,13 +80,19 @@ export default function MineGameLogic() {
 
   useEffect(() => {
     const onReady = (data: {
+      roomId: number;
+      roomName: string;
       size: number;
       bombsTotal: number;
       bombsFound: number;
       turnLimit?: number;
+      chatEnabled: boolean;
       currentPlayer?: string;
       revealed: RevealMap;
     }) => {
+      // console.log("61-map:ready mineGameLogic", data);
+      setRoomId(data.roomId);
+      setRoomName(data.roomName);
       setBombsInfo({ total: data.bombsTotal, found: data.bombsFound });
       setRevealed(data.revealed);
       setGameOver(false);
@@ -91,6 +100,7 @@ export default function MineGameLogic() {
       setLeaderboard([]);
       setSize(data.size);
       setTurnLimit(data.turnLimit ?? 10);
+      setChatEnabled(data.chatEnabled);
       console.log("setting started to true");
       setStarted(true);
       //console.log(started);
@@ -218,6 +228,8 @@ export default function MineGameLogic() {
   }, [router]);
 
   return {
+    roomId,
+    roomName,
     size,
     setSize,
     started,
@@ -227,6 +239,7 @@ export default function MineGameLogic() {
     winners,
     leaderboard,
     turnLimit,
+    chatEnabled,
     currentPlayer,
     players,
     timeRemaining,

@@ -333,10 +333,13 @@ app.prepare().then(() => {
         const hits = field.get_hit_count();
 
         socket.emit("map:ready", {
+          roomId: state.id,
+          roomName: state.name,
           size: state.size,
           bombsTotal: state.bomb_count,
           bombsFound: hits,
           turnLimit: state.turn_limit ?? 10,
+          chatEnabled: state.chat_enabled,
           currentPlayer: currentPlayer || null,
           revealed: field.export_display_data(),
         });
@@ -445,6 +448,10 @@ app.prepare().then(() => {
       state.placement = field.field;
 
       state.scores = new Map();
+      roomPlayers[current_room_id].forEach((player) => {
+        state.scores.set(player.userID, 0);
+      });
+
       state.game_started = true;
 
       // shuffle players. the winner of the previous game starts first
@@ -474,6 +481,19 @@ app.prepare().then(() => {
       console.log("starting game with current player", currentPlayer);
 
       io.to(current_room_id).emit("toGamePage"); // redirect player to game page
+
+      // this is just like emitting `currentPlayers` but with scores
+      socket.on("requestPlayerListOnStartGame", () => {
+        console.log("483-request from game page!");
+        roomPlayers[current_room_id].forEach((player) => {
+          player.score = state.scores.get(player.userID) || 0;
+        });
+        console.log("491", roomPlayers[current_room_id]);
+        io.to(current_room_id).emit(
+          "playerListOnStartGame",
+          roomPlayers[current_room_id]
+        );
+      });
 
       console.log(
         `Turn changed to player ${currentPlayer} for reason gameStart`
@@ -808,6 +828,9 @@ app.prepare().then(() => {
     field.generate_field([state.size, state.size], state.bomb_count);
     state.placement = field.field;
     state.scores = new Map();
+    roomPlayers[state.id].forEach((player) => {
+      state.scores.set(player.userID, 0);
+    });
     state.current_turn = 0;
     state.player_id_list = fisherYatesShuffle(state.player_id_list);
     // console.log("825-resetted state", state);

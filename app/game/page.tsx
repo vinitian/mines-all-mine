@@ -1,11 +1,19 @@
 "use client";
 import GameGrid from "@/components/gameGrid";
 import MineGameLogic from "../shared/mineGameLogic";
-import Link from "next/link";
 import WelcomeMessage from "@/components/WelcomeMessage";
+import RoomName from "@/components/RoomName";
+import InGamePlayerList from "@/components/InGamePlayerList";
+import { useEffect, useState } from "react";
+import socket from "@/socket";
+import { PlayerWithScore } from "@/interface";
+import Chat from "@/components/Chat";
+import { Bomb, Hourglass } from "lucide-react";
 
 export default function GamePage() {
   const {
+    roomId,
+    roomName,
     size,
     started,
     gameOver,
@@ -14,6 +22,7 @@ export default function GamePage() {
     winners,
     leaderboard,
     turnLimit,
+    chatEnabled,
     currentPlayer,
     players,
     timeRemaining,
@@ -23,76 +32,61 @@ export default function GamePage() {
     returnCountdown,
   } = MineGameLogic();
 
-  // REMOVED duplicate return - fixed syntax error
+  const [playerWithUsername, setPlayersWithUsername] = useState<
+    PlayerWithScore[]
+  >([]);
+
+  useEffect(() => {
+    socket.emit("requestPlayerListOnStartGame");
+    socket.on("playerListOnStartGame", (players: PlayerWithScore[]) => {
+      // console.log("34-Players in room:", players);
+      setPlayersWithUsername(players);
+    });
+
+    return () => {
+      socket.off("requestPlayerListOnStartGame");
+      socket.off("playerListOnStartGame");
+    };
+  }, [players]);
+
   return (
-    <div className="bg-gradient-to-b from-[#fffff5] from-30% via-[#ddf7ff] via-71% to-[#dde4ff] to-100% flex items-center justify-center p-4">
+    <div className="m-4 flex flex-col md:flex-row items-center justify-center p-4 gap-6 md:gap-4">
       {started && <WelcomeMessage />}
       {/* later {started && <WelcomeMessage text={`Welcome to Mines all Mine, ${nickname}!`} />} */}
 
-      <h1 className="absolute text-3xl text-semibold top-[2%] left-[2%]">
-        Room 1
-      </h1>
-      <div id="game-div">
-        <Link href="/" className="cta">
-          Home
-        </Link>
-
-        <div className="flex items-center gap-2">
-          {turnLimit > 0 && <div>Time per turn: {turnLimit} seconds</div>}
-          {bombsInfo && (
-            <span className="ml-3">
-              Bombs: {bombsInfo.found} / {bombsInfo.total}
-            </span>
-          )}
-        </div>
-
-        {started && !gameOver && (
-          <div
-            className="turn-info"
-            style={{
-              padding: "10px",
-              margin: "10px 0",
-              background: isMyTurn ? "#4CAF50" : "#f0f0f0",
-              color: isMyTurn ? "white" : "black",
-              borderRadius: "5px",
-              fontWeight: "bold",
-            }}
-          >
-            {isMyTurn ? (
-              <>
-                YOUR TURN!
-                {turnLimit > 0 && ` (${timeRemaining}s remaining)`}
-              </>
-            ) : (
-              <>
-                Waiting for Player {currentPlayer?.slice(-4)}'s turn
-                {turnLimit > 0 && ` (${timeRemaining}s remaining)`}
-              </>
+      {/* left pane */}
+      <div className="h-full w-full flex flex-col gap-4">
+        <RoomName roomName={roomName} roomCode={roomId} trashVisible={false} />
+        <div className="h-full flex flex-col bg-white p-5 rounded-lg border gap-5">
+          {/* Timer & Bombs found */}
+          <div className=" h-fit flex items-center justify-center gap-2 text-h3">
+            {turnLimit > 0 && (
+              <div>
+                <Hourglass /> <span>{timeRemaining}s</span>
+              </div>
+            )}
+            {bombsInfo && (
+              <div className="flex items-center gap-2">
+                <Bomb className="text-gray-dark" />
+                <span>
+                  {bombsInfo.found} / {bombsInfo.total}
+                </span>
+              </div>
             )}
           </div>
-        )}
+          {/* <div className="md:flex md:h--full max-h-[500px] flex-none mb-2 justify-center bg-amber-200 p-5 aspect-square">FOR FLEXBOX SIZING TEST</div> */}
+          <GameGrid size={size!} onPickAction={pickCell} revealed={revealed} />
+        </div>
+      </div>
 
-        {players.length > 0 && (
-          <div style={{ margin: "10px 0", fontSize: "14px" }}>
-            <strong>Players ({players.length}):</strong>{" "}
-            {players.map((p) => (
-              <span
-                key={p}
-                style={{
-                  marginRight: "8px",
-                  fontWeight: p === myId ? "bold" : "normal",
-                  color: p === currentPlayer ? "#4CAF50" : "inherit",
-                }}
-              >
-                {p.slice(-4)}
-                {p === myId ? " (You)" : ""}
-                {p === currentPlayer ? " 👈" : ""}
-              </span>
-            ))}
-          </div>
-        )}
-
-        <GameGrid size={size!} onPick={pickCell} revealed={revealed} />
+      {/* right pane */}
+      <div className="w-full md:w-1/3 h-fit md:h-full flex flex-col gap-4">
+        <InGamePlayerList
+          players={playerWithUsername}
+          myId={myId}
+          currentPlayer={currentPlayer || ""}
+        />
+        {chatEnabled && <Chat />}
 
         {gameOver && (
           <div className="result-div">
