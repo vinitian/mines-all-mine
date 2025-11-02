@@ -66,20 +66,17 @@ app.prepare().then(() => {
       this.prev_winner = undefined;
     }
 
-    updateRoomInDatabase(socket, reason = "unspecified") {
-      //TODO link to database.
-      // TODO NEXT - IMPLEMENT server or client
-      console.log("805-updateDatabase, state rn:", JSON.stringify(this));
-      // return await editRoom({
-      //   user_id: socket.data.userID,
-      //   name: this.name,
-      //   size: this.size,
-      //   bomb_count: this.bomb_count,
-      //   turn_limit: this.turn_limit,
-      //   player_limit: this.player_limit,
-      //   chat_enabled: this.chat_enabled,
-      // });
-      console.log(`updating database for ${reason} reason`);
+    async updateRoomInDatabase(userID, reason = "unspecified") {
+      await editRoom({
+        user_id: userID,
+        name: this.name,
+        size: this.size,
+        bomb_count: this.bomb_count,
+        turn_limit: this.turn_limit,
+        player_limit: this.player_limit,
+        chat_enabled: this.chat_enabled,
+      });
+      console.log(`updated database for ${reason} reason`);
       return;
     }
     loadDatabase() {
@@ -221,13 +218,11 @@ app.prepare().then(() => {
   io.on("connection", (socket) => {
     console.log("User connected", socket.data.userID);
     socket.on("game:request-countdown", ({ roomID, seconds }) => {
-  
       // synchronized start time
       const startAt = Date.now() + seconds * 1000;
-  
+
       // broadcast to everyone in the room
       io.to(roomID).emit("game:countdown", { seconds, startAt, roomID });
-  
     });
 
     userStore.saveUser(socket.data.userID, {
@@ -380,7 +375,7 @@ app.prepare().then(() => {
       io.to(room_id).emit("kickPlayer", user_id);
     });
 
-    socket.on("room:update-settings", (payload, updateDb, callback) => {
+    socket.on("room:update-settings", (payload, callback) => {
       console.log(
         `Room setting update request received from ${current_room_id} with payload ${JSON.stringify(
           payload
@@ -391,15 +386,13 @@ app.prepare().then(() => {
       // TODO not implemeted yet
       state.update(payload);
 
-      if (updateDb) {
-        try {
-          state.updateRoomInDatabase(state, socket);
-        } catch (error) {
-          console.log(error);
-        }
-        // TODO: improve error handling. should we handle here, or inside updateDatabase?
-        // TODO: return fail if unable to update DB and revert socket state too
+      try {
+        state.updateRoomInDatabase(socket.data.userID);
+      } catch (error) {
+        console.log(error);
       }
+      // TODO: improve error handling. should we handle here, or inside updateDatabase?
+      // TODO: return fail if unable to update DB and revert socket state too
 
       if ("turn_limit" in payload) {
         timer.max_time = payload.turn_limit;
@@ -587,6 +580,49 @@ app.prepare().then(() => {
             io.to(room).emit("currentPlayers", roomPlayers[room]);
             // tell other players that a player has left
             io.to(room).emit("playerLeft", socket.data.userID);
+          }
+        }
+        if (state.game_started) {
+          const { id: currentPlayer, index: currentIndex } = findCurrentPlayer(
+            state.player_id_list,
+            state.current_turn
+          );
+          const playerIndex = state.player_id_list.indexOf(socket.data.userID);
+          let newCurrentPlayer;
+          let leftIsCurrentPlayer;
+          if (currentPlayer == socket.data.userID) {
+            // is current player
+            ({ id: newCurrentPlayer } = findCurrentPlayer(
+              state.player_id_list,
+              state.current_turn + 1
+            ));
+            leftIsCurrentPlayer = true;
+          } else {
+            // is not current player
+            newCurrentPlayer = currentPlayer;
+            leftIsCurrentPlayer = false;
+          }
+
+          console.log(state.player_id_list);
+          state.player_id_list = state.player_id_list.filter(
+            (p) => p !== socket.data.userID
+          );
+
+          state.current_turn = state.player_id_list.indexOf(newCurrentPlayer);
+
+          //emit only if player is in room?
+          if (current_room_id) {
+            io.to(current_room_id).emit("playersUpdated", {
+              players: state.player_id_list,
+              currentPlayer: newCurrentPlayer,
+            });
+          }
+          if (
+            leftIsCurrentPlayer &&
+            state.game_started &&
+            state.player_id_list.length > 0
+          ) {
+            nextTurn(current_room_id, state, timer, "playerLeft");
           }
         }
       });
@@ -791,7 +827,7 @@ app.prepare().then(() => {
         let leftIsCurrentPlayer;
         if (currentPlayer == socket.data.userID) {
           // is current player
-          ({ id: newCurrentPlayer, index: _ } = findCurrentPlayer(
+          ({ id: newCurrentPlayer } = findCurrentPlayer(
             state.player_id_list,
             state.current_turn + 1
           ));
@@ -801,7 +837,9 @@ app.prepare().then(() => {
           newCurrentPlayer = currentPlayer;
           leftIsCurrentPlayer = false;
         }
-        state.player_id_list.splice(playerIndex, 1);
+        state.player_id_list = state.player_id_list.filter(
+          (p) => p !== socket.data.userID
+        );
 
         state.current_turn = state.player_id_list.indexOf(newCurrentPlayer);
 

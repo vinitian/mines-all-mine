@@ -3,9 +3,14 @@ import GameGrid from "@/components/gameGrid";
 import MineGameLogic from "../shared/mineGameLogic";
 import "./page.css";
 import Link from "next/link";
+import socket from "@/socket";
 import WelcomeMessage from "@/components/WelcomeMessage";
+import { useEffect } from "react";
+import Button from "@/components/Button";
+import { useRouter } from "next/navigation";
 
 export default function GamePage() {
+  const router = useRouter();
   const {
     size,
     started,
@@ -24,6 +29,11 @@ export default function GamePage() {
     returnCountdown,
   } = MineGameLogic();
 
+  const onLeaveRoom = async () => {
+    socket.emit("leaveRoom");
+    router.push("/");
+  };
+
   // REMOVED duplicate return - fixed syntax error
   return (
     <div className="game-div-container  bg-gradient-to-b from-[#fffff5] from-30% via-[#ddf7ff] via-71% to-[#dde4ff] to-100% flex items-center justify-center p-4">
@@ -34,9 +44,7 @@ export default function GamePage() {
         Room 1
       </h1>
       <div id="game-div">
-        <Link href="/" className="cta">
-          Home
-        </Link>
+        <Button onClick={onLeaveRoom}>Home</Button>
 
         <div className="bomb-count-div flex items-center gap-2">
           {turnLimit > 0 && <div>Time per turn: {turnLimit} seconds</div>}
