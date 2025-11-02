@@ -69,7 +69,7 @@ app.prepare().then(() => {
     updateRoomInDatabase(socket, reason = "unspecified") {
       //TODO link to database.
       // TODO NEXT - IMPLEMENT server or client
-      console.log("805-updateDatabase, state rn:", JSON.stringify(this));
+
       // return await editRoom({
       //   user_id: socket.data.userID,
       //   name: this.name,
@@ -98,8 +98,8 @@ app.prepare().then(() => {
 
   function getGameState(room_id, reason = "unspecified") {
     console.log(
-      `getting data of room id ${room_id} for ${reason} reason`,
-      JSON.stringify(roomData[room_id]["state"])
+      `getting data of room id ${room_id} for ${reason} reason`
+      // JSON.stringify(roomData[room_id]["state"])
     );
     return roomData[room_id]["state"];
   }
@@ -157,7 +157,7 @@ app.prepare().then(() => {
         this.time_remaining = this.max_time;
       }
       this.time_remaining = this.max_time;
-      console.log(`room id ${this.room_id} timer resetting`);
+      // console.log(`room id ${this.room_id} timer resetting`);
     }
   }
 
@@ -444,20 +444,10 @@ app.prepare().then(() => {
       field.generate_field([state.size, state.size], state.bomb_count);
       state.placement = field.field;
 
-      // TODO depricate, remove dependence
-      // state.bombs = new Set();
-      // for (let i = 0; i < state.field.field.length; i++) {
-      //   if (state.field.field[i].bomb) {
-      //     state.bombs.add(i);
-      //   }
-      // }
-
-      // state.found = new Set();
       state.scores = new Map();
       state.game_started = true;
 
-      //shuffle players
-      //TODO make winner start first
+      // shuffle players. the winner of the previous game starts first
       state.player_id_list = fisherYatesShuffle(state.player_id_list);
       if (
         state.prev_winner &&
@@ -591,7 +581,7 @@ app.prepare().then(() => {
     });
 
     socket.on("pickCell", (index) => {
-      console.log(`Picking cell at index ${index}`);
+      // console.log(`Picking cell at index ${index}`);
       if (!state.game_started) {
         socket.emit("error", { message: "Game hasn't started yet" });
         return;
@@ -617,7 +607,7 @@ app.prepare().then(() => {
       const [y, x] = field.index_to_coordinate(index); // needed to swap this
       const [flag, success] = field.open_cell(x, y);
 
-      console.log(`Picking cell at (${x},${y})`);
+      // console.log(`Picking cell at (${x},${y})`);
 
       const hit = flag == Field.open_cell_flags.BOMB;
 
@@ -820,7 +810,8 @@ app.prepare().then(() => {
     state.scores = new Map();
     state.current_turn = 0;
     state.player_id_list = fisherYatesShuffle(state.player_id_list);
-    console.log("825-resetted state", state);
+    // console.log("825-resetted state", state);
+
     // if (state.turnTimer) { // migrate timer (Done)
     //   clearInterval(state.turnTimer);
     //   state.turnTimer = null;
