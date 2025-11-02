@@ -221,13 +221,11 @@ app.prepare().then(() => {
   io.on("connection", (socket) => {
     console.log("User connected", socket.data.userID);
     socket.on("game:request-countdown", ({ roomID, seconds }) => {
-  
       // synchronized start time
       const startAt = Date.now() + seconds * 1000;
-  
+
       // broadcast to everyone in the room
       io.to(roomID).emit("game:countdown", { seconds, startAt, roomID });
-  
     });
 
     userStore.saveUser(socket.data.userID, {
@@ -589,6 +587,49 @@ app.prepare().then(() => {
             io.to(room).emit("playerLeft", socket.data.userID);
           }
         }
+        if (state.game_started) {
+          const { id: currentPlayer, index: currentIndex } = findCurrentPlayer(
+            state.player_id_list,
+            state.current_turn
+          );
+          const playerIndex = state.player_id_list.indexOf(socket.data.userID);
+          let newCurrentPlayer;
+          let leftIsCurrentPlayer;
+          if (currentPlayer == socket.data.userID) {
+            // is current player
+            ({ id: newCurrentPlayer } = findCurrentPlayer(
+              state.player_id_list,
+              state.current_turn + 1
+            ));
+            leftIsCurrentPlayer = true;
+          } else {
+            // is not current player
+            newCurrentPlayer = currentPlayer;
+            leftIsCurrentPlayer = false;
+          }
+
+          console.log(state.player_id_list);
+          state.player_id_list = state.player_id_list.filter(
+            (p) => p !== socket.data.userID
+          );
+
+          state.current_turn = state.player_id_list.indexOf(newCurrentPlayer);
+
+          //emit only if player is in room?
+          if (current_room_id) {
+            io.to(current_room_id).emit("playersUpdated", {
+              players: state.player_id_list,
+              currentPlayer: newCurrentPlayer,
+            });
+          }
+          if (
+            leftIsCurrentPlayer &&
+            state.game_started &&
+            state.player_id_list.length > 0
+          ) {
+            nextTurn(current_room_id, state, timer, "playerLeft");
+          }
+        }
       });
 
       console.log(
@@ -759,7 +800,7 @@ app.prepare().then(() => {
         let leftIsCurrentPlayer;
         if (currentPlayer == socket.data.userID) {
           // is current player
-          ({ id: newCurrentPlayer, index: _ } = findCurrentPlayer(
+          ({ id: newCurrentPlayer } = findCurrentPlayer(
             state.player_id_list,
             state.current_turn + 1
           ));
@@ -769,7 +810,9 @@ app.prepare().then(() => {
           newCurrentPlayer = currentPlayer;
           leftIsCurrentPlayer = false;
         }
-        state.player_id_list.splice(playerIndex, 1);
+        state.player_id_list = state.player_id_list.filter(
+          (p) => p !== socket.data.userID
+        );
 
         state.current_turn = state.player_id_list.indexOf(newCurrentPlayer);
 
