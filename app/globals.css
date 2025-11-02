@@ -46,6 +46,7 @@ body {
     #dde4ff 100%
   );
   font-family: Helvetica, sans-serif;
+  background-attachment: fixed;
 }
 
 .cta {
