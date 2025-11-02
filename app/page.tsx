@@ -8,6 +8,7 @@ import StatisticsButton from "@/components/StatisticsButton";
 import { useRouter } from "next/navigation";
 import handleSignOut from "@/services/client/handleSignOut";
 import DuplicateUserPopup from "@/components/DuplicateConnectedUserPopup";
+import LoadingModal from "@/components/LoadingModal";
 
 export default function Home() {
   const { data: session } = useSession(); // Auth.js session
@@ -19,6 +20,7 @@ export default function Home() {
     undefined
   );
   const [showDuplicateUserPopup, setShowDuplicateUserPopup] = useState(false);
+  const [showCreatingRoomPopup, setShowCreatingRoomPopup] = useState(false);
   const router = useRouter();
 
   const connectSocket = () => {
@@ -74,6 +76,7 @@ export default function Home() {
       setErrorMessage(error.message);
     }
     socket.off("setAuthSuccessfulAck");
+    setShowCreatingRoomPopup(false);
   };
 
   const handleCreateRoom = () => {
@@ -86,6 +89,7 @@ export default function Home() {
       setErrorMessage("Username must be 12 characters or less!");
       return;
     }
+    setShowCreatingRoomPopup(true);
     setErrorMessage(undefined);
     connectSocket();
     socket.on("setAuthSuccessfulAck", handleSetAuthSuccessfulAck);
@@ -211,6 +215,7 @@ export default function Home() {
         )}
       </div>
       {showDuplicateUserPopup && <DuplicateUserPopup />}
+      {showCreatingRoomPopup && <LoadingModal text="Creating a room" />}
     </div>
   );
 }
