@@ -14,23 +14,33 @@ export default function Room() {
   const [roomCode, setRoomCode] = useState("");
   const [error, setError] = useState("");
   const [checkingRoom, setCheckingRoom] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const router = useRouter();
 
+  const fetchRooms = async () => {
+    try {
+      const roomsData = await getRooms();
+      setRooms(roomsData);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
   useEffect(() => {
-    const fetchRooms = async () => {
-      try {
-        setLoading(true);
-        const roomsData = await getRooms();
-        setRooms(roomsData);
-      } catch (error) {
-        console.error(error);
-      } finally {
-        setLoading(false);
-      }
+    const loadRooms = async () => {
+      setLoading(true);
+      await fetchRooms();
+      setLoading(false);
     };
 
-    fetchRooms();
+    loadRooms();
   }, []);
+
+  const handleRefreshRooms = async () => {
+    setRefreshing(true);
+    await fetchRooms();
+    setRefreshing(false);
+  };
 
   const handleJoinRoom = (roomId: number) => {
     console.log(`Joining room ${roomId}`);
@@ -136,7 +146,33 @@ export default function Room() {
 
           {/* Room list section */}
           <div>
-            <h2 className="mb-4 text-h4 sm:text-h3 xl:text-h2">Room List</h2>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-h4 sm:text-h3 xl:text-h2">Room List</h2>
+              <button
+                onClick={handleRefreshRooms}
+                disabled={refreshing}
+                className="flex items-center gap-2 bg-[#8499FF] text-white text-h4 border-2 border-border rounded-2xl px-4 py-2 hover:bg-[#7388ee] transition-colors duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className={`${refreshing ? "animate-spin" : ""}`}
+                >
+                  <path d="M21 2v6h-6" />
+                  <path d="M3 12a9 9 0 0 1 15-6.7L21 8" />
+                  <path d="M3 22v-6h6" />
+                  <path d="M21 12a9 9 0 0 1-15 6.7L3 16" />
+                </svg>
+                {refreshing ? "Refreshing..." : "Refresh"}
+              </button>
+            </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               {loading ? (
