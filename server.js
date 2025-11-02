@@ -66,20 +66,17 @@ app.prepare().then(() => {
       this.prev_winner = undefined;
     }
 
-    updateRoomInDatabase(socket, reason = "unspecified") {
-      //TODO link to database.
-      // TODO NEXT - IMPLEMENT server or client
-      console.log("805-updateDatabase, state rn:", JSON.stringify(this));
-      // return await editRoom({
-      //   user_id: socket.data.userID,
-      //   name: this.name,
-      //   size: this.size,
-      //   bomb_count: this.bomb_count,
-      //   turn_limit: this.turn_limit,
-      //   player_limit: this.player_limit,
-      //   chat_enabled: this.chat_enabled,
-      // });
-      console.log(`updating database for ${reason} reason`);
+    async updateRoomInDatabase(userID, reason = "unspecified") {
+      await editRoom({
+        user_id: userID,
+        name: this.name,
+        size: this.size,
+        bomb_count: this.bomb_count,
+        turn_limit: this.turn_limit,
+        player_limit: this.player_limit,
+        chat_enabled: this.chat_enabled,
+      });
+      console.log(`updated database for ${reason} reason`);
       return;
     }
     loadDatabase() {
@@ -391,7 +388,7 @@ app.prepare().then(() => {
 
       if (updateDb) {
         try {
-          state.updateRoomInDatabase(state, socket);
+          state.updateRoomInDatabase(socket.data.userID);
         } catch (error) {
           console.log(error);
         }
