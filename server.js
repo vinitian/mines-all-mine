@@ -279,9 +279,9 @@ app.prepare().then(() => {
 
     // TODO investigate
 
-    const { id: currentPlayer, index: currentIndex } = state
+    const currentPlayer = state
       ? findCurrentPlayer(state.player_id_list, state.current_turn)
-      : { id: undefined, index: undefined };
+      : undefined;
 
     io.emit("playersUpdated", {
       players: Array.from(sockets.keys()),
@@ -315,7 +315,7 @@ app.prepare().then(() => {
     // }
 
     socket.on("requestState", () => {
-      const { id: currentPlayer, index: currentIndex } = findCurrentPlayer(
+      const currentPlayer = findCurrentPlayer(
         state.player_id_list,
         state.current_turn
       );
@@ -477,7 +477,7 @@ app.prepare().then(() => {
 
       // change to room level (changed)
       state.current_turn = 0;
-      const { id: currentPlayer, index: currentIndex } = findCurrentPlayer(
+      const currentPlayer = findCurrentPlayer(
         state.player_id_list,
         state.current_turn
       );
@@ -597,7 +597,7 @@ app.prepare().then(() => {
         return;
       }
 
-      const { id: currentPlayer, index: currentIndex } = findCurrentPlayer(
+      const currentPlayer = findCurrentPlayer(
         state.player_id_list,
         state.current_turn
       );
@@ -726,7 +726,7 @@ app.prepare().then(() => {
 
       // TODO still broken needs fixing
       // remove player
-      const { id: currentPlayer, index: currentIndex } = findCurrentPlayer(
+      const currentPlayer = findCurrentPlayer(
         state.player_id_list,
         state.current_turn
       );
@@ -742,10 +742,10 @@ app.prepare().then(() => {
         let leftIsCurrentPlayer;
         if (currentPlayer == socket.data.userID) {
           // is current player
-          ({ id: newCurrentPlayer, index: _ } = findCurrentPlayer(
+          newCurrentPlayer = findCurrentPlayer(
             state.player_id_list,
             state.current_turn + 1
-          ));
+          );
           leftIsCurrentPlayer = true;
         } else {
           // is not current player
@@ -874,10 +874,7 @@ app.prepare().then(() => {
   //convert from current turn to old turn index
   function findCurrentPlayer(players, current_turn) {
     const index = current_turn % players.length;
-    return {
-      id: players[index],
-      index: index,
-    };
+    return players[index];
   }
 
   //TODO redo this remove current_turn_index
@@ -885,7 +882,7 @@ app.prepare().then(() => {
     console.log(`Starting new turn because reason ${reason}`);
     timer.reset(); // migrate timer (Done)
     state.current_turn = state.current_turn + 1;
-    const { id: currentPlayer, index: currentIndex } = findCurrentPlayer(
+    const currentPlayer = findCurrentPlayer(
       state.player_id_list,
       state.current_turn
     );
