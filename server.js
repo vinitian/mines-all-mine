@@ -375,7 +375,7 @@ app.prepare().then(() => {
       io.to(room_id).emit("kickPlayer", user_id);
     });
 
-    socket.on("room:update-settings", (payload, updateDb, callback) => {
+    socket.on("room:update-settings", (payload, callback) => {
       console.log(
         `Room setting update request received from ${current_room_id} with payload ${JSON.stringify(
           payload
@@ -386,15 +386,13 @@ app.prepare().then(() => {
       // TODO not implemeted yet
       state.update(payload);
 
-      if (updateDb) {
-        try {
-          state.updateRoomInDatabase(socket.data.userID);
-        } catch (error) {
-          console.log(error);
-        }
-        // TODO: improve error handling. should we handle here, or inside updateDatabase?
-        // TODO: return fail if unable to update DB and revert socket state too
+      try {
+        state.updateRoomInDatabase(socket.data.userID);
+      } catch (error) {
+        console.log(error);
       }
+      // TODO: improve error handling. should we handle here, or inside updateDatabase?
+      // TODO: return fail if unable to update DB and revert socket state too
 
       if ("turn_limit" in payload) {
         timer.max_time = payload.turn_limit;
