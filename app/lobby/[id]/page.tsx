@@ -44,6 +44,7 @@ export default function LobbyPage() {
   const handleLeaveRoom = async () => {
     socket.emit("leaveRoom");
     router.push("/");
+    setMessages([]);
     if (players.length <= 1) {
       // if player is the only one left, delete the room
       await deleteRoom(+roomId);
@@ -92,6 +93,7 @@ export default function LobbyPage() {
     socket.on("kickAllPlayersInRoom", () => {
       socket.emit("leaveRoom");
       setDeletedRoomPopup(true);
+      setMessages([]);
       setTimeout(() => {
         setDeletedRoomPopup(false);
         router.replace("/");
@@ -101,8 +103,7 @@ export default function LobbyPage() {
     // player needs to go back to home page when kicked
     socket.on("kickPlayer", (userID: string) => {
       if (socket.auth.userID === userID) {
-        socket.emit("leaveRoom");
-        router.replace("/");
+        handleLeaveRoom();
       }
     });
 
