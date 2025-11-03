@@ -8,12 +8,6 @@ type CellDisplayData = {
   bomb: boolean;
 };
 
-// type GameGridProps = {
-//   size: number;
-//   onPick: (i: number) => void;
-//   revealed: Record<number, "hit" | "miss">;
-// };
-
 type GameGridProps = {
   size: number;
   onPickAction: (i: number) => void;
@@ -35,19 +29,17 @@ export default function GameGrid({
   const cellSize = (containerWidth - totalGapWidth) / size;
 
   if (Object.keys(revealed).length <= 0) {
-    return <div>revealed have no value</div>;
+    return (
+      <div>
+        Error loading game grid: <pre>revealed</pre> has no value
+      </div>
+    );
   }
   return (
-    // TODO: fix problem with flexbox sizing
-    <div className="md:flex md:h-full max-h-[700px] flex-none mb-2 justify-center bg-amber-200">
+    // still has ui bug on flexbox e.g. try screen size 900 x 790
+    <div className="flex flex-grow justify-center items-center align-center">
       <div
-        // style={{
-        //   display: "grid",
-        //   gridTemplateColumns: `repeat(${size}, ${cellSize}px)`,
-        //   gap: `${gapSize}px`,
-        //   width: `${containerWidth}px`,
-        // }}
-        className={`grid gap-1 grid-cols-${size} aspect-square bg-purple`}
+        className={`md:h-full w-full md:w-fit aspect-square grid gap-1 grid-cols-${size} `}
       >
         {cells.map((i) => {
           const cellInfo = revealed[i];
@@ -94,6 +86,8 @@ export default function GameGrid({
                 alignItems: "center",
                 justifyContent: "center",
                 aspectRatio: 1 / 1,
+                minHeight: "10px",
+                minWidth: "10px",
               }}
               aria-label={`${i}th cell`}
             >

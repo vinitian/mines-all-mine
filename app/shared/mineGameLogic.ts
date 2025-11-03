@@ -36,6 +36,9 @@ export default function MineGameLogic() {
   const [players, setPlayers] = useState<string[]>([]);
   const [timeRemaining, setTimeRemaining] = useState<number>(10);
   const [returnCountdown, setReturnCountdown] = useState<number | null>(null);
+  const [scores, setScores] = useState<Map<string, number>>(
+    new Map<string, number>()
+  );
   const myId = socket.auth.userID;
 
   const pickCell = useCallback(
@@ -76,6 +79,7 @@ export default function MineGameLogic() {
     setTurnLimit(0);
     setCurrentPlayer(null);
     setTimeRemaining(10);
+    setScores(new Map<string, number>());
   }, []);
 
   useEffect(() => {
@@ -90,7 +94,6 @@ export default function MineGameLogic() {
       currentPlayer?: string;
       revealed: RevealMap;
     }) => {
-      // console.log("61-map:ready mineGameLogic", data);
       setRoomId(data.roomId);
       setRoomName(data.roomName);
       setBombsInfo({ total: data.bombsTotal, found: data.bombsFound });
@@ -111,10 +114,16 @@ export default function MineGameLogic() {
       revealMap: RevealMap;
       bombsFound: number;
       bombsTotal: number;
-      scores: Map<string, number>;
+      scores: Array<[string, number]>;
     }) => {
       setBombsInfo({ total: p.bombsTotal, found: p.bombsFound });
       setRevealed(p.revealMap);
+
+      const newMap = new Map<string, number>();
+      p.scores.forEach((user) => {
+        newMap.set(user[0], user[1]);
+      });
+      setScores(newMap);
     };
 
     const onOver = (p: {
@@ -247,5 +256,6 @@ export default function MineGameLogic() {
     isMyTurn: currentPlayer === myId,
     pickCell,
     returnCountdown,
+    scores,
   };
 }

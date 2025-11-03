@@ -655,7 +655,7 @@ app.prepare().then(() => {
         revealMap: field.export_display_data(),
         bombsFound: hits,
         bombsTotal: state.bomb_count,
-        scores: state.scores,
+        scores: Array.from(state.scores.entries()),
       });
 
       // end game scenario

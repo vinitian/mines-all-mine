@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { PlayerWithScore } from "@/interface";
-import { Bomb, ArrowLeft } from "lucide-react";
+import { Bomb, ArrowDown } from "lucide-react";
 
 export default function InGamePlayerList({
   players,
@@ -14,7 +14,7 @@ export default function InGamePlayerList({
   currentPlayer: string;
 }) {
   return (
-    <div className="flex flex-col w-full h-full text-h3 rounded-lg border bg-white p-4 gap-1">
+    <div className="flex flex-col text-h3 rounded-lg border bg-white p-4 gap-1">
       {players.map((player: PlayerWithScore) => {
         const isCurrentPlayer = player.userID === currentPlayer;
         return (
@@ -33,14 +33,16 @@ export default function InGamePlayerList({
             />
 
             <div
-              className={`flex gap-1 items-center ${
+              className={`flex flex-wrap gap-1 text-wrap wrap-anywhere items-center ${
                 isCurrentPlayer ? "font-bold text-green" : ""
               }`}
             >
               <span>{player.username}</span>
               {/* {isHost && <span> (Host)</span>} */}
               {myId === player.userID && <span> (You)</span>}
-              {isCurrentPlayer && <ArrowLeft />}
+              {isCurrentPlayer && (
+                <ArrowDown className="animate-bounce rotate-90" /> // Use ArrowDown then rotate instead of ArrowLeft so we can use animate-bounce
+              )}
             </div>
           </div>
         );
