@@ -248,7 +248,7 @@ export default function LobbyPage() {
       {kickedPopup && (
         <LoadingModal
           text={
-            "You were removed by the host.\nRedirecting you to the home page…"
+            "You were removed by the host.\nRedirecting you to the home page"
           }
         />
       )}
