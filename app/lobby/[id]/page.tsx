@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useContext, useEffect, useState, useRef } from "react";
+import { useContext, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Message, Room } from "@/interface";
 import getRoom from "@/services/client/getRoom";
@@ -28,7 +28,6 @@ export default function LobbyPage() {
   const router = useRouter();
   const [players, setPlayers] = useState<Player[]>([]);
   const [kickedPopup, setKickedPopup] = useState(false);
-  const redirectedRef = useRef(false);
 
   const handleDeleteRoom = async () => {
     try {
@@ -101,12 +100,10 @@ export default function LobbyPage() {
     });
 
     // player needs to go back to home page when kicked
-    socket.on("kickPlayer", (userID: string, reason?: string) => {
+    socket.on("kickPlayer", (userID: string) => {
       if (socket.auth.userID === userID) {
-        if (redirectedRef.current) return;
         setKickedPopup(true);
         socket.emit("leaveRoom");
-        redirectedRef.current = true;
         setTimeout(() => {
           setKickedPopup(false);
           router.replace("/");
