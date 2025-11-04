@@ -27,6 +27,7 @@ export default function LobbyPage() {
   const [deletedRoomPopup, setDeletedRoomPopup] = useState(false);
   const router = useRouter();
   const [players, setPlayers] = useState<Player[]>([]);
+  const [kickedPopup, setKickedPopup] = useState(false);
 
   const handleDeleteRoom = async () => {
     try {
@@ -101,8 +102,12 @@ export default function LobbyPage() {
     // player needs to go back to home page when kicked
     socket.on("kickPlayer", (userID: string) => {
       if (socket.auth.userID === userID) {
+        setKickedPopup(true);
         socket.emit("leaveRoom");
-        router.replace("/");
+        setTimeout(() => {
+          setKickedPopup(false);
+          router.replace("/");
+        }, 3000);
       }
     });
 
@@ -238,6 +243,13 @@ export default function LobbyPage() {
       {deletedRoomPopup && (
         <LoadingModal
           text={"The host has deleted the room.\nRedirecting you to home page"}
+        />
+      )}
+      {kickedPopup && (
+        <LoadingModal
+          text={
+            "You were removed by the host.\nRedirecting you to the home page"
+          }
         />
       )}
     </div>
