@@ -132,7 +132,7 @@ export default function GamePage() {
       {/* Winners popup */}
       {gameOver && (
         <div className="h-screen flex flex-col items-center justify-center backdrop-blur-sm bg-black/30 fixed inset-0">
-          <div className="p-5 w-3/4 max-w-100 h-84 bg-white rounded-2xl shadow flex flex-col gap-5 justify-center text-center whitespace-pre-line">
+          <div className="p-5 w-3/4 max-w-100 bg-white rounded-2xl shadow flex flex-col gap-5 justify-center text-center whitespace-pre-line">
             <div className="rounded-lg p-4 text-h4 text-center bg-green text-white">
               {winnersWithUsername.length ? (
                 winnersWithUsername.length === 1 ? (
@@ -148,8 +148,7 @@ export default function GamePage() {
                         winnersWithUsername
                           .slice(0, -1)
                           .map((w) => w.username)
-                          .join(", ")
-                          .slice(0, -1)[0] // remove the last space
+                          .join(", ") // remove the last space
                       }
                     </strong>
                     {" and "}
@@ -168,17 +167,17 @@ export default function GamePage() {
             </div>
             {playersWithUsername.slice().sort((a, b) => b.score - a.score)
               .length > 0 && (
-              <ul className="list-disc list-inside text-sm text-left">
-                {playersWithUsername
-                  .slice()
-                  .sort((a, b) => b.score - a.score)
-                  .map((p) => (
-                    <li key={p.userID}>
-                      {p.username} — {p.score}
-                    </li>
-                  ))}
-              </ul>
-            )}
+                <ul className="list-disc list-inside text-sm text-left">
+                  {playersWithUsername
+                    .slice()
+                    .sort((a, b) => b.score - a.score)
+                    .map((p) => (
+                      <li key={p.userID}>
+                        {p.username} — {p.score}
+                      </li>
+                    ))}
+                </ul>
+              )}
             {typeof returnCountdown === "number" && (
               <div className="mt-3 text-body font-bold text-white bg-black/50 px-2 py-3 rounded-md ">
                 Returning to lobby in {returnCountdown}s...
