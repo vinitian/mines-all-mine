@@ -51,7 +51,7 @@ export default function RoomName({
   }, []);
 
   return (
-    <div className="rounded-lg border bg-white p-4 w-full">
+    <div className="rounded-lg border bg-white flex p-4 w-full">
       <div className="flex flex-col grow items-center md:items-start">
         <div className="text-h1/tight">{roomName}</div>
         <div className="text-h3/tight  text-gray-dark flex gap-[10px] items-center">
