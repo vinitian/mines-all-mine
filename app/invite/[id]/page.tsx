@@ -34,8 +34,8 @@ export default function InvitePage() {
       userID: userIdInLocal
         ? userIdInLocal
         : session && session.user
-          ? session.user.email
-          : "",
+        ? session.user.email
+        : "",
       username: username,
     };
 
@@ -189,15 +189,21 @@ export default function InvitePage() {
             if (room.player_id_list.length >= room.player_limit) return; // block full rooms
             handleJoinRoom();
           }}
-          disabled={room.player_id_list.length >= room.player_limit}
+          disabled={
+            room.player_id_list.length >= room.player_limit || room.game_started
+          }
           className={`w-full text-h3 border-2 rounded-2xl px-6 py-2 mt-4 transition-colors duration-200 whitespace-nowrap flex-shrink-0
-                          ${room.player_id_list.length >= room.player_limit
-              ? "bg-gray-300 border-gray-dark text-gray-600 cursor-not-allowed"
-              : "bg-[#8499FF] hover:bg-[#7388ee] border-border text-white cursor-pointer"
-            }`}
+                          ${
+                            room.player_id_list.length >= room.player_limit ||
+                            room.game_started
+                              ? "bg-gray-300 border-gray-dark text-gray-600 cursor-not-allowed"
+                              : "bg-[#8499FF] hover:bg-[#7388ee] border-border text-white cursor-pointer"
+                          }`}
         >
           {room.player_id_list.length >= room.player_limit
             ? "Room Full"
+            : room.game_started
+            ? "Game has already started"
             : "Join Room"}
         </button>
 

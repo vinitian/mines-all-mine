@@ -31,6 +31,54 @@ export async function GET(
   }
 }
 
+// update room
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const data = await request.json();
+  const {
+    name,
+    size,
+    host_id,
+    bomb_count,
+    turn_limit,
+    player_limit,
+    chat_enabled,
+    game_started,
+  } = data;
+
+  try {
+    const roomId = parseInt((await params).id);
+    if (isNaN(roomId)) {
+      return NextResponse.json({ error: "Invalid room ID" }, { status: 400 });
+    }
+
+    const updateRoom = await prisma.room.update({
+      where: {
+        id: roomId,
+      },
+      data: {
+        name: name,
+        size: size,
+        host_id: host_id,
+        bomb_count: bomb_count,
+        timer: turn_limit,
+        player_limit: player_limit,
+        chat_enabled: chat_enabled,
+        game_started: game_started,
+      },
+    });
+
+    return NextResponse.json({ success: true, data: updateRoom });
+  } catch (error: any) {
+    return NextResponse.json(
+      { error: "Failed to update room information: " + error.message },
+      { status: 500 }
+    );
+  }
+}
+
 // Delete room by room ID
 export async function DELETE(
   request: NextRequest,

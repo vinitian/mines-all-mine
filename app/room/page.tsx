@@ -71,6 +71,11 @@ export default function Room() {
         return;
       }
 
+      if (roomData.game_started) {
+        setError("That room's game has already started");
+        return;
+      }
+
       router.push(`/lobby/${roomId}`);
     } catch (error) {
       console.error("Error checking room:", error);
@@ -237,18 +242,22 @@ export default function Room() {
                       <div className="mt-3 flex justify-center">
                         <button
                           onClick={(e) => {
-                            if (isFull) return; // block full rooms
+                            if (isFull || room.game_started) return; // block full rooms
                             handleJoinRoom(room.id);
                           }}
-                          disabled={isFull}
+                          disabled={isFull || room.game_started}
                           className={`w-full text-h3 border-2 rounded-2xl px-6 py-2 transition-colors duration-200 whitespace-nowrap flex-shrink-0
                           ${
-                            isFull
+                            isFull || room.game_started
                               ? "bg-gray-300 border-gray-dark text-gray-600 cursor-not-allowed"
                               : "bg-[#8499FF] hover:bg-[#7388ee] border-border text-white cursor-pointer"
                           }`}
                         >
-                          {isFull ? "Room Full" : "Join"}
+                          {isFull
+                            ? "Room Full"
+                            : room.game_started
+                            ? "Game has already started"
+                            : "Join"}
                         </button>
                       </div>
                     </div>

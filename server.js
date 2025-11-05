@@ -67,15 +67,15 @@ app.prepare().then(() => {
     }
 
     async updateRoomInDatabase(reason = "unspecified") {
-      await editRoom({
-        id: this.id,
+      await editRoom(this.id, {
         name: this.name,
+        host_id: this.host_id,
         size: this.size,
         bomb_count: this.bomb_count,
         turn_limit: this.turn_limit,
         player_limit: this.player_limit,
         chat_enabled: this.chat_enabled,
-        host_id: this.host_id,
+        game_started: this.game_started,
       });
       console.log(`updated database for ${reason} reason`);
       return;
@@ -503,6 +503,8 @@ app.prepare().then(() => {
 
       //startTurnTimer(); //migrate timer
       timer.start();
+
+      state.updateRoomInDatabase("game start"); // set game_started to true in database
     });
 
     // this is just like emitting `currentPlayers` but with scores
