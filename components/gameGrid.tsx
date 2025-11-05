@@ -1,5 +1,6 @@
 "use client";
 import { Bomb } from "lucide-react";
+import { useEffect, useState } from "react";
 
 type CellDisplayData = {
   is_open: boolean;
@@ -28,6 +29,13 @@ export default function GameGrid({
   const totalGapWidth = (size - 1) * gapSize;
   const cellSize = (containerWidth - totalGapWidth) / size;
 
+  const [realSize, setRealSize] = useState<number>(6);
+  useEffect(() => {
+    if (size) {
+      setRealSize(size);
+    }
+  }, [size]);
+
   if (Object.keys(revealed).length <= 0) {
     return (
       <div>
@@ -35,11 +43,19 @@ export default function GameGrid({
       </div>
     );
   }
+
+  if (!size) {
+    return <p>Loading board...</p>;
+  }
   return (
     // still has ui bug on flexbox e.g. try screen size 900 x 790
     <div className="flex flex-grow justify-center items-center align-center">
       <div
-        className={`md:h-full w-full md:w-fit aspect-square grid gap-1 grid-cols-${size} `}
+        style={{
+          display: "grid",
+          gridTemplateColumns: `repeat(${realSize}, minmax(0, 1fr))`,
+        }}
+        className={`md:h-full w-full md:w-fit md:max-w-[700px] aspect-square gap-1`}
       >
         {cells.map((i) => {
           const cellInfo = revealed[i];
