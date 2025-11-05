@@ -1,12 +1,14 @@
 "use client";
 import GameGrid from "@/components/gameGrid";
 import MineGameLogic from "../shared/mineGameLogic";
-import "./page.css";
-import Link from "next/link";
-import socket from "@/socket";
 import WelcomeMessage from "@/components/WelcomeMessage";
-import { useContext, useEffect } from "react";
-import Button from "@/components/Button";
+import RoomName from "@/components/RoomName";
+import InGamePlayerList from "@/components/InGamePlayerList";
+import { useEffect, useState, useContext } from "react";
+import socket from "@/socket";
+import { PlayerWithScore } from "@/interface";
+import Chat from "@/components/Chat";
+import { Bomb, Hourglass } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { ChatContext } from "@/components/ChatContext";
 
@@ -14,6 +16,8 @@ export default function GamePage() {
   const router = useRouter();
   const { messages, setMessages } = useContext(ChatContext);
   const {
+    roomId,
+    roomName,
     size,
     started,
     gameOver,
@@ -22,6 +26,7 @@ export default function GamePage() {
     winners,
     leaderboard,
     turnLimit,
+    chatEnabled,
     currentPlayer,
     players,
     timeRemaining,
@@ -29,121 +34,173 @@ export default function GamePage() {
     isMyTurn,
     pickCell,
     returnCountdown,
+    scores,
   } = MineGameLogic();
 
-  const onLeaveRoom = async () => {
-    socket.emit("leaveRoom");
-    router.push("/");
-    setMessages([]);
-  };
+  const [playerWithUsername, setPlayersWithUsername] = useState<
+    PlayerWithScore[]
+  >([]);
 
-  // REMOVED duplicate return - fixed syntax error
+  useEffect(() => {
+    socket.emit("requestPlayerListOnStartGame");
+    socket.on("playerListOnStartGame", (players: PlayerWithScore[]) => {
+      // console.log("34-Players in room:", players);
+      setPlayersWithUsername(players);
+    });
+
+    return () => {
+      socket.off("requestPlayerListOnStartGame");
+      socket.off("playerListOnStartGame");
+    };
+  }, [players]);
+
+  useEffect(() => {
+    const newPlayersWithUserName = playerWithUsername.map((p) => {
+      return {
+        userID: p.userID,
+        username: p.username,
+        score: scores.get ? scores.get(p.userID) || p.score : p.score,
+      };
+    });
+    setPlayersWithUsername(newPlayersWithUserName);
+  }, [scores]);
+
   return (
-    <div className="game-div-container  bg-gradient-to-b from-[#fffff5] from-30% via-[#ddf7ff] via-71% to-[#dde4ff] to-100% flex items-center justify-center p-4">
-      {started && <WelcomeMessage />}
-      {/* later {started && <WelcomeMessage text={`Welcome to Mines all Mine, ${nickname}!`} />} */}
-
-      <h1 className="absolute text-3xl text-semibold top-[2%] left-[2%]">
-        Room 1
-      </h1>
-      <div id="game-div">
-        <Button onClick={onLeaveRoom}>Home</Button>
-
-        <div className="bomb-count-div flex items-center gap-2">
-          {turnLimit > 0 && <div>Time per turn: {turnLimit} seconds</div>}
-          {bombsInfo && (
-            <span className="ml-3">
-              Bombs: {bombsInfo.found} / {bombsInfo.total}
-            </span>
-          )}
+    <div className="h-lvh">
+      <div className="md:h-full h-fit flex flex-col md:flex-row items-center justify-center p-4 gap-4">
+        {/* left pane */}
+        <div className="flex flex-col w-full md:h-full h-fit gap-4">
+          <RoomName
+            roomName={roomName}
+            roomCode={roomId}
+            trashVisible={false}
+          />
+          {/* Main tile with GameGrid */}
+          <div className="rounded-lg border bg-white flex flex-col gap-4 p-4 w-full h-full">
+            {/* Timer & Bombs found */}
+            <div className="w-full h-fit flex items-center justify-center gap-6 text-h3">
+              {turnLimit > 0 && (
+                <div className="flex items-center gap-2">
+                  <Hourglass className="text-gray-dark" />{" "}
+                  <span>{timeRemaining}s</span>
+                </div>
+              )}
+              {bombsInfo && (
+                <div className="flex items-center gap-2">
+                  <Bomb className="text-gray-dark" />
+                  <span>
+                    {bombsInfo.found} / {bombsInfo.total}
+                  </span>
+                </div>
+              )}
+            </div>
+            <GameGrid
+              size={size!}
+              onPickAction={pickCell}
+              revealed={revealed}
+            />
+          </div>
         </div>
 
-        {started && !gameOver && (
-          <div
-            className="turn-info"
-            style={{
-              padding: "10px",
-              margin: "10px 0",
-              background: isMyTurn ? "#4CAF50" : "#f0f0f0",
-              color: isMyTurn ? "white" : "black",
-              borderRadius: "5px",
-              fontWeight: "bold",
-            }}
-          >
-            {isMyTurn ? (
-              <>
-                YOUR TURN!
-                {turnLimit > 0 && ` (${timeRemaining}s remaining)`}
-              </>
-            ) : (
-              <>
-                Waiting for Player {currentPlayer?.slice(-4)}'s turn
-                {turnLimit > 0 && ` (${timeRemaining}s remaining)`}
-              </>
-            )}
-          </div>
-        )}
-
-        {players.length > 0 && (
-          <div style={{ margin: "10px 0", fontSize: "14px" }}>
-            <strong>Players ({players.length}):</strong>{" "}
-            {players.map((p) => (
-              <span
-                key={p}
-                style={{
-                  marginRight: "8px",
-                  fontWeight: p === myId ? "bold" : "normal",
-                  color: p === currentPlayer ? "#4CAF50" : "inherit",
-                }}
-              >
-                {p.slice(-4)}
-                {p === myId ? " (You)" : ""}
-                {p === currentPlayer ? " 👈" : ""}
-              </span>
-            ))}
-          </div>
-        )}
-
-        <GameGrid size={size!} onPick={pickCell} revealed={revealed} />
-
-        {gameOver && (
-          <div className="result-div">
-            {typeof returnCountdown === "number" && (
-              <div className="mt-3 text-body font-bold text-white bg-black/65 px-2 py-3 rounded-md ">
-                Returning to lobby in {returnCountdown}s...
-              </div>
-            )}
-
-            {winners?.length ? (
-              winners.length === 1 ? (
-                <>
-                  Winner: <strong>{winners[0].id.slice(-4)}</strong> with{" "}
-                  <strong>{winners[0].score}</strong> bombs!
-                </>
-              ) : (
-                <>
-                  Tie:{" "}
-                  <strong>
-                    {winners.map((w) => w.id.slice(-4)).join(", ")}
-                  </strong>{" "}
-                  with <strong>{winners[0].score}</strong> bombs!
-                </>
-              )
-            ) : (
-              "All bombs found!"
-            )}
-            {leaderboard.length > 0 && (
-              <ul className="score-div list-disc list-inside text-sm">
-                {leaderboard.map(([id, score]) => (
-                  <li key={id}>
-                    {id.slice(-4)} — {score}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        )}
+        {/* right pane */}
+        <div className="flex flex-col gap-4 md:w-fit md:min-w-1/3 w-full h-full">
+          <InGamePlayerList
+            players={playerWithUsername}
+            myId={myId}
+            currentPlayer={currentPlayer || ""}
+          />
+          {chatEnabled && <Chat />}
+        </div>
       </div>
     </div>
+    // <div className="h-lvh bg-amber-200">
+    //   <div className="bg-purple h-full flex-grow m-4 flex flex-col md:flex-row items-center justify-center p-4 gap-6 md:gap-4">
+    //     {/* left pane */}
+    //     <div className="bg-green h-full w-full flex flex-col gap-4">
+    //       <RoomName
+    //         roomName={roomName}
+    //         roomCode={roomId}
+    //         trashVisible={false}
+    //       />
+    //       <div>
+    //         {/* Timer & Bombs found */}
+    //         <p>hi</p>
+    //         {/* <div className=" h-fit flex items-center justify-center gap-2 text-h3">
+    //           {turnLimit > 0 && (
+    //             <div>
+    //               <Hourglass /> <span>{timeRemaining}s</span>
+    //             </div>
+    //           )}
+    //           {bombsInfo && (
+    //             <div className="flex items-center gap-2">
+    //               <Bomb className="text-gray-dark" />
+    //               <span>
+    //                 {bombsInfo.found} / {bombsInfo.total}
+    //               </span>
+    //             </div>
+    //           )}
+    //         </div> */}
+    //         {/* {started && <WelcomeMessage />} */}
+
+    //         {/* <div className="md:flex md:h--full max-h-[500px] flex-none mb-2 justify-center bg-amber-200 p-5 aspect-square">FOR FLEXBOX SIZING TEST</div> */}
+    //         {/* <GameGrid
+    //           size={size!}
+    //           onPickAction={pickCell}
+    //           revealed={revealed}
+    //         /> */}
+    //       </div>
+    //     </div>
+
+    //     {/* right pane */}
+    //     <div className="min-w-[370px] h-full flex flex-col gap-4">
+    //       <div className="flex-none">
+    //         <InGamePlayerList
+    //           players={playerWithUsername}
+    //           myId={myId}
+    //           currentPlayer={currentPlayer || ""}
+    //         />
+    //       </div>
+    //       {chatEnabled && <Chat />}
+
+    //       {gameOver && (
+    //         <div className="result-div">
+    //           {typeof returnCountdown === "number" && (
+    //             <div className="mt-3 text-body font-bold text-white bg-black/65 px-2 py-3 rounded-md ">
+    //               Returning to lobby in {returnCountdown}s...
+    //             </div>
+    //           )}
+
+    //           {winners?.length ? (
+    //             winners.length === 1 ? (
+    //               <>
+    //                 Winner: <strong>{winners[0].id.slice(-4)}</strong> with{" "}
+    //                 <strong>{winners[0].score}</strong> bombs!
+    //               </>
+    //             ) : (
+    //               <>
+    //                 Tie:{" "}
+    //                 <strong>
+    //                   {winners.map((w) => w.id.slice(-4)).join(", ")}
+    //                 </strong>{" "}
+    //                 with <strong>{winners[0].score}</strong> bombs!
+    //               </>
+    //             )
+    //           ) : (
+    //             "All bombs found!"
+    //           )}
+    //           {leaderboard.length > 0 && (
+    //             <ul className="score-div list-disc list-inside text-sm">
+    //               {leaderboard.map(([id, score]) => (
+    //                 <li key={id}>
+    //                   {id.slice(-4)} — {score}
+    //                 </li>
+    //               ))}
+    //             </ul>
+    //           )}
+    //         </div>
+    //       )}
+    //     </div>
+    //   </div>
+    // </div>
   );
 }

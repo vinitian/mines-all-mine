@@ -104,8 +104,8 @@ app.prepare().then(() => {
 
   function getGameState(room_id, reason = "unspecified") {
     console.log(
-      `getting data of room id ${room_id} for ${reason} reason`,
-      JSON.stringify(roomData[room_id]["state"])
+      `getting data of room id ${room_id} for ${reason} reason`
+      // JSON.stringify(roomData[room_id]["state"])
     );
     return roomData[room_id]["state"];
   }
@@ -163,7 +163,7 @@ app.prepare().then(() => {
         this.time_remaining = this.max_time;
       }
       this.time_remaining = this.max_time;
-      console.log(`room id ${this.room_id} timer resetting`);
+      // console.log(`room id ${this.room_id} timer resetting`);
     }
   }
 
@@ -292,9 +292,9 @@ app.prepare().then(() => {
 
     // TODO investigate
 
-    const { id: currentPlayer, index: currentIndex } = state
+    const currentPlayer = state
       ? findCurrentPlayer(state.player_id_list, state.current_turn)
-      : { id: undefined, index: undefined };
+      : undefined;
 
     io.emit("playersUpdated", {
       players: Array.from(sockets.keys()),
@@ -328,7 +328,7 @@ app.prepare().then(() => {
     // }
 
     socket.on("requestState", () => {
-      const { id: currentPlayer, index: currentIndex } = findCurrentPlayer(
+      const currentPlayer = findCurrentPlayer(
         state.player_id_list,
         state.current_turn
       );
@@ -346,10 +346,13 @@ app.prepare().then(() => {
         const hits = field.get_hit_count();
 
         socket.emit("map:ready", {
+          roomId: state.id,
+          roomName: state.name,
           size: state.size,
           bombsTotal: state.bomb_count,
           bombsFound: hits,
           turnLimit: state.turn_limit ?? 10,
+          chatEnabled: state.chat_enabled,
           currentPlayer: currentPlayer || null,
           revealed: field.export_display_data(),
         });
@@ -455,20 +458,14 @@ app.prepare().then(() => {
       field.generate_field([state.size, state.size], state.bomb_count);
       state.placement = field.field;
 
-      // TODO depricate, remove dependence
-      // state.bombs = new Set();
-      // for (let i = 0; i < state.field.field.length; i++) {
-      //   if (state.field.field[i].bomb) {
-      //     state.bombs.add(i);
-      //   }
-      // }
-
-      // state.found = new Set();
       state.scores = new Map();
+      roomPlayers[current_room_id].forEach((player) => {
+        state.scores.set(player.userID, 0);
+      });
+
       state.game_started = true;
 
-      //shuffle players
-      //TODO make winner start first
+      // shuffle players. the winner of the previous game starts first
       state.player_id_list = fisherYatesShuffle(state.player_id_list);
       if (
         state.prev_winner &&
@@ -486,22 +483,27 @@ app.prepare().then(() => {
         `Game started: ${state.size}x${state.size}, ${state.bomb_count} bombs, ${state.turn_limit}s turns`
       );
 
-      // change to room level (chganged)
+      // change to room level (changed)
       state.current_turn = 0;
-      const { id: currentPlayer, index: currentIndex } = findCurrentPlayer(
+      const currentPlayer = findCurrentPlayer(
         state.player_id_list,
         state.current_turn
       );
       console.log("starting game with current player", currentPlayer);
 
-      //console.log("startGame map:ready emit");
-      io.to(current_room_id).emit("map:ready", {
-        size: state.size,
-        bombsTotal: state.bomb_count,
-        bombsFound: 0,
-        turnLimit: state.turn_limit,
-        currentPlayer: currentPlayer,
-        revealed: field.export_display_data(),
+      io.to(current_room_id).emit("toGamePage"); // redirect player to game page
+
+      // this is just like emitting `currentPlayers` but with scores
+      socket.on("requestPlayerListOnStartGame", () => {
+        console.log("483-request from game page!");
+        roomPlayers[current_room_id].forEach((player) => {
+          player.score = state.scores.get(player.userID) || 0;
+        });
+        console.log("491", roomPlayers[current_room_id]);
+        io.to(current_room_id).emit(
+          "playerListOnStartGame",
+          roomPlayers[current_room_id]
+        );
       });
 
       console.log(
@@ -682,13 +684,13 @@ app.prepare().then(() => {
     });
 
     socket.on("pickCell", (index) => {
-      console.log(`Picking cell at index ${index}`);
+      // console.log(`Picking cell at index ${index}`);
       if (!state.game_started) {
         socket.emit("error", { message: "Game hasn't started yet" });
         return;
       }
 
-      const { id: currentPlayer, index: currentIndex } = findCurrentPlayer(
+      const currentPlayer = findCurrentPlayer(
         state.player_id_list,
         state.current_turn
       );
@@ -708,7 +710,7 @@ app.prepare().then(() => {
       const [y, x] = field.index_to_coordinate(index); // needed to swap this
       const [flag, success] = field.open_cell(x, y);
 
-      console.log(`Picking cell at (${x},${y})`);
+      // console.log(`Picking cell at (${x},${y})`);
 
       const hit = flag == Field.open_cell_flags.BOMB;
 
@@ -736,7 +738,7 @@ app.prepare().then(() => {
         revealMap: field.export_display_data(),
         bombsFound: hits,
         bombsTotal: state.bomb_count,
-        scores: state.scores,
+        scores: Array.from(state.scores.entries()),
       });
 
       // end game scenario
@@ -819,7 +821,7 @@ app.prepare().then(() => {
 
       // TODO still broken needs fixing
       // remove player
-      const { id: currentPlayer, index: currentIndex } = findCurrentPlayer(
+      const currentPlayer = findCurrentPlayer(
         state.player_id_list,
         state.current_turn
       );
@@ -913,9 +915,13 @@ app.prepare().then(() => {
     field.generate_field([state.size, state.size], state.bomb_count);
     state.placement = field.field;
     state.scores = new Map();
+    roomPlayers[state.id].forEach((player) => {
+      state.scores.set(player.userID, 0);
+    });
     state.current_turn = 0;
     state.player_id_list = fisherYatesShuffle(state.player_id_list);
-    console.log("825-resetted state", state);
+    // console.log("825-resetted state", state);
+
     // if (state.turnTimer) { // migrate timer (Done)
     //   clearInterval(state.turnTimer);
     //   state.turnTimer = null;
@@ -969,10 +975,7 @@ app.prepare().then(() => {
   //convert from current turn to old turn index
   function findCurrentPlayer(players, current_turn) {
     const index = current_turn % players.length;
-    return {
-      id: players[index],
-      index: index,
-    };
+    return players[index];
   }
 
   //TODO redo this remove current_turn_index
@@ -980,7 +983,7 @@ app.prepare().then(() => {
     console.log(`Starting new turn because reason ${reason}`);
     timer.reset(); // migrate timer (Done)
     state.current_turn = state.current_turn + 1;
-    const { id: currentPlayer, index: currentIndex } = findCurrentPlayer(
+    const currentPlayer = findCurrentPlayer(
       state.player_id_list,
       state.current_turn
     );

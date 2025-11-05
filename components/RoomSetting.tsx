@@ -80,7 +80,6 @@ export default function RoomSettings({
   const router = useRouter();
   const [showCountdown, setShowCountdown] = useState(false);
   const bombs = densityToCount(bombCount, mapSize);
-  const [firstUpdate, setFirstUpdate] = useState(true);
   const [countdownSeconds, setCountdownSeconds] = useState(3);
   const [totalSeconds, setTotalSeconds] = useState(3);
   const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -108,15 +107,14 @@ export default function RoomSettings({
   );
 
   useEffect(() => {
-    const onReady = (data: any) => {
-      console.log("navigating", data);
+    const onToGamePage = () => {
       router.push("/game");
     };
 
-    socket.once("map:ready", onReady);
+    socket.once("toGamePage", onToGamePage);
 
     return () => {
-      socket.off("map:ready", onReady);
+      socket.off("toGamePage", onToGamePage);
     };
   }, [router]);
 

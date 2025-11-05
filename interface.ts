@@ -10,6 +10,10 @@ export interface Player {
   username: string;
 }
 
+export interface PlayerWithScore extends Player {
+  score: number;
+}
+
 export type MapSize = 6 | 8 | 10 | 20 | 30;
 export type BombDensity = "low" | "medium" | "high";
 export type PlayerLimit = 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
