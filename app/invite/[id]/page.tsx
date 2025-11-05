@@ -8,7 +8,7 @@ import socket from "@/socket";
 import { Room } from "@/interface";
 import StatisticsButton from "@/components/StatisticsButton";
 import DuplicateUserPopup from "@/components/DuplicateConnectedUserPopup";
-import handleSignOut from "@/services/client/handleSignOut";
+import handleSignOut from "@/services/handleSignOut";
 import getRoom from "@/services/client/getRoom";
 
 export default function InvitePage() {

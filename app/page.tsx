@@ -6,7 +6,7 @@ import Image from "next/image";
 import { signIn, useSession } from "next-auth/react";
 import StatisticsButton from "@/components/StatisticsButton";
 import { useRouter } from "next/navigation";
-import handleSignOut from "@/services/client/handleSignOut";
+import handleSignOut from "@/services/handleSignOut";
 import DuplicateUserPopup from "@/components/DuplicateConnectedUserPopup";
 import LoadingModal from "@/components/LoadingModal";
 
