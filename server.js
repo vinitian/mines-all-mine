@@ -686,7 +686,7 @@ app.prepare().then(() => {
 
       const field = new Field();
       field.load(state.placement, [state.size, state.size], state.bomb_count);
-      const [y, x] = field.index_to_coordinate(index); // needed to swap this
+      const [x, y] = field.index_to_coordinate(index);
       const [flag, success] = field.open_cell(x, y);
 
       // console.log(`Picking cell at (${x},${y})`);
