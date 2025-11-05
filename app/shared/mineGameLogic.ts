@@ -30,7 +30,6 @@ export default function MineGameLogic() {
   const [turnLimit, setTurnLimit] = useState<number>(0);
   const [chatEnabled, setChatEnabled] = useState(true);
   const [winners, setWinners] = useState<Winner[] | null>(null);
-  const [leaderboard, setLeaderboard] = useState<[string, number][]>([]);
 
   const [currentPlayer, setCurrentPlayer] = useState<string | null>(null);
   const [players, setPlayers] = useState<string[]>([]);
@@ -43,38 +42,25 @@ export default function MineGameLogic() {
 
   const pickCell = useCallback(
     (i: number) => {
-      console.log(`picking cell index ${i}`);
+      // console.log(`picking cell index ${i}`);
       if (!started || gameOver || revealed[i].is_open) {
-        // console.log("Conditions not met", !started, gameOver, revealed[i]);
         return;
       }
       if (currentPlayer !== myId) {
-        console.log("Not your turn!");
+        // console.log("Not your turn!");
         return;
       }
-      console.log(`requesting pickCell ${i}`);
+      // console.log(`requesting pickCell ${i}`);
       socket.emit("pickCell", i);
     },
     [started, gameOver, revealed, currentPlayer, myId]
   );
-
-  // const startGame = useCallback((opts?: { size?: number; bombCount?: number; tl?: number }) => {
-  //     const payload: any = {};
-  //     if (typeof opts?.size === "number") payload.size = opts.size;
-  //     if (typeof opts?.bombCount === "number") payload.bombCount = opts.bombCount;
-  //     if (typeof opts?.tl === "number") payload.tl = opts.tl;
-
-  //     setStarted(true);
-  //     socket.emit('startGame', payload);
-  //   }, []);
-
   const resetLocal = useCallback(() => {
     //setRevealed({}); ?/Todo come back to investigate
     setBombsInfo(null);
     setWinners(null);
-    setLeaderboard([]);
     setGameOver(false);
-    console.log("set started resetLocal");
+    // console.log("set started resetLocal");
     setStarted(false);
     setTurnLimit(0);
     setCurrentPlayer(null);
@@ -100,13 +86,10 @@ export default function MineGameLogic() {
       setRevealed(data.revealed);
       setGameOver(false);
       setWinners(null);
-      setLeaderboard([]);
       setSize(data.size);
       setTurnLimit(data.turnLimit ?? 10);
       setChatEnabled(data.chatEnabled);
-      console.log("setting started to true");
       setStarted(true);
-      //console.log(started);
       if (data.currentPlayer) setCurrentPlayer(data.currentPlayer);
     };
 
@@ -133,7 +116,6 @@ export default function MineGameLogic() {
       bombCount: number;
     }) => {
       setGameOver(true);
-      console.log("set started onOver");
       setStarted(false);
       setCurrentPlayer(null);
       const scores = new Map(p.scores);
@@ -149,7 +131,6 @@ export default function MineGameLogic() {
         }
       }
       setWinners(w);
-      setLeaderboard(Array.from(scores.entries()).sort((a, b) => b[1] - a[1]));
       setReturnCountdown(10);
       const intervalId = setInterval(() => {
         setReturnCountdown((prev) => {
@@ -205,7 +186,6 @@ export default function MineGameLogic() {
       setRevealed({});
       setBombsInfo(null);
       setWinners(null);
-      setLeaderboard([]);
       setGameOver(false);
       setStarted(false);
       setTurnLimit(0);
@@ -246,7 +226,6 @@ export default function MineGameLogic() {
     revealed,
     bombsInfo,
     winners,
-    leaderboard,
     turnLimit,
     chatEnabled,
     currentPlayer,

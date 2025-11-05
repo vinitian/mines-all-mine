@@ -30,8 +30,7 @@ export async function POST(request: NextRequest) {
     });
 
     console.log(
-      `${new Date().toISOString()} : [INFO] Created new room with ID ${
-        newRoom.id
+      `${new Date().toISOString()} : [INFO] Created new room with ID ${newRoom.id
       }`
     );
 
@@ -77,7 +76,6 @@ export async function PATCH(request: NextRequest) {
 
     return NextResponse.json({ success: true, data: updateRoom });
   } catch (error: any) {
-    console.log("78-route ERROR", error);
     return NextResponse.json(
       { error: "Failed to update room information: " + error.message },
       { status: 500 }

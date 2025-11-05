@@ -55,9 +55,9 @@ function countToDensity(count: number, size: number): BombDensity {
 export default function RoomSettings({
   room,
   isHost,
-  setLobbyRoomNameAction = () => {},
-  setLobbyChatEnableAction = () => {},
-  handleLeaveRoomAction = () => {},
+  setLobbyRoomNameAction = () => { },
+  setLobbyChatEnableAction = () => { },
+  handleLeaveRoomAction = () => { },
 }: {
   room: Room;
   isHost: boolean;
@@ -163,14 +163,11 @@ export default function RoomSettings({
   };
 
   const requestEditRoomSettings = async (payload: object) => {
-    console.log("201-room setting change requested consisting of", payload);
     const promise: Promise<object> = new Promise((resolve, reject) => {
       if (!socket.auth.userID) {
         reject({ ok: false, error: "Failed auth" });
       }
       socket.emit("room:update-settings", payload, (response: any) => {
-        // callback
-        console.log("Updating room setting");
         resolve(response);
       });
     });
@@ -181,7 +178,6 @@ export default function RoomSettings({
   useEffect(() => {
     // listen setting update from server
     socket.on("room:update-settings-success", (state) => {
-      console.log("207state", state);
       setRoomname(state.name);
       setLobbyRoomNameAction(state.name);
       setMapSize(state.size);
@@ -225,9 +221,8 @@ export default function RoomSettings({
             {[6, 8, 10, 20, 30].map((size) => (
               <Button
                 onClick={() => requestEditRoomSettings({ size: size })}
-                className={`w-min ${
-                  mapSize === size ? "text-white" : "bg-white text-black"
-                }`}
+                className={`w-min ${mapSize === size ? "text-white" : "bg-white text-black"
+                  }`}
                 key={size}
               >
                 {size}×{size}
