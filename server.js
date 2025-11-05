@@ -4,10 +4,10 @@ import { Server } from "socket.io";
 import InMemoryUserStore from "./userStore.js";
 import { randomBytes } from "node:crypto";
 import { Field } from "./services/game_logic.js";
-import createRoom from "./services/client/createRoom.js";
-import editRoom from "./services/client/editRoom.js";
-import addScores from "./services/client/addScores.js";
-import updatePlayerList from "./services/client/updatePlayerList.js";
+import createRoom from "./services/api/createRoom.js";
+import editRoom from "./services/api/editRoom.js";
+import addScores from "./services/api/addScores.js";
+import updatePlayerList from "./services/api/updatePlayerList.js";
 
 const dev = process.env.NODE_ENV !== "production";
 const hostname = "localhost";

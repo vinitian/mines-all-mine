@@ -1,15 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { useParams } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import { signIn, useSession } from "next-auth/react";
 import socket from "@/socket";
 import { Room } from "@/interface";
 import StatisticsButton from "@/components/StatisticsButton";
 import DuplicateUserPopup from "@/components/DuplicateConnectedUserPopup";
 import handleSignOut from "@/services/handleSignOut";
-import getRoom from "@/services/client/getRoom";
+import getRoom from "@/services/api/getRoom";
 
 export default function InvitePage() {
   const { data: session } = useSession();

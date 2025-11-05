@@ -2,10 +2,10 @@
 
 import { useEffect, useState } from "react";
 import socket from "@/socket";
-import StatisticsButton from "@/components/StatisticsButton";
 import { useRouter } from "next/navigation";
-import getRooms from "@/services/client/getRooms";
-import getRoom from "@/services/client/getRoom";
+import getRooms from "@/services/api/getRooms";
+import getRoom from "@/services/api/getRoom";
+import StatisticsButton from "@/components/StatisticsButton";
 import { Room as RoomType } from "@/interface";
 
 export default function Room() {
