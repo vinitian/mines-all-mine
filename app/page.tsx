@@ -120,7 +120,7 @@ export default function Home() {
       username: username,
     };
     localStorage.setItem("userID", userID);
-    console.log("connectSocket auth", socket.auth);
+    console.log("My auth info:", socket.auth);
     socket.emit("setAuthSuccessful");
   };
 
