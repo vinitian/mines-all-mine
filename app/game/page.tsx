@@ -1,6 +1,6 @@
 "use client";
 import GameGrid from "@/components/gameGrid";
-import MineGameLogic from "../shared/mineGameLogic";
+import MineGameLogic from "@/services/mineGameLogic";
 import WelcomeMessage from "@/components/WelcomeMessage";
 import RoomName from "@/components/RoomName";
 import InGamePlayerList from "@/components/InGamePlayerList";
@@ -66,7 +66,7 @@ export default function GamePage() {
     return () => {
       socket.off("requestPlayerListOnStartGame");
       socket.off("playerListOnStartGame");
-      socket.off("message")
+      socket.off("message");
     };
   }, [players]);
 
@@ -156,12 +156,10 @@ export default function GamePage() {
                   <>
                     Tie between{" "}
                     <strong>
-                      {
-                        winnersWithUsername
-                          .slice(0, -1)
-                          .map((w) => w.username)
-                          .join(", ")
-                      }
+                      {winnersWithUsername
+                        .slice(0, -1)
+                        .map((w) => w.username)
+                        .join(", ")}
                     </strong>
                     {" and "}
                     <strong>
@@ -179,17 +177,17 @@ export default function GamePage() {
             </div>
             {playersWithUsername.slice().sort((a, b) => b.score - a.score)
               .length > 0 && (
-                <ul className="list-disc list-inside text-sm text-left">
-                  {playersWithUsername
-                    .slice()
-                    .sort((a, b) => b.score - a.score)
-                    .map((p) => (
-                      <li key={p.userID}>
-                        {p.username} — {p.score}
-                      </li>
-                    ))}
-                </ul>
-              )}
+              <ul className="list-disc list-inside text-sm text-left">
+                {playersWithUsername
+                  .slice()
+                  .sort((a, b) => b.score - a.score)
+                  .map((p) => (
+                    <li key={p.userID}>
+                      {p.username} — {p.score}
+                    </li>
+                  ))}
+              </ul>
+            )}
             {typeof returnCountdown === "number" && (
               <div className="mt-3 text-body font-bold text-white bg-black/50 px-2 py-3 rounded-md ">
                 Returning to lobby in {returnCountdown}s...
