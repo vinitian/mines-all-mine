@@ -5,12 +5,14 @@ import "./page.css";
 import Link from "next/link";
 import socket from "@/socket";
 import WelcomeMessage from "@/components/WelcomeMessage";
-import { useEffect } from "react";
+import { useContext, useEffect } from "react";
 import Button from "@/components/Button";
 import { useRouter } from "next/navigation";
+import { ChatContext } from "@/components/ChatContext";
 
 export default function GamePage() {
   const router = useRouter();
+  const { messages, setMessages } = useContext(ChatContext);
   const {
     size,
     started,
@@ -32,6 +34,7 @@ export default function GamePage() {
   const onLeaveRoom = async () => {
     socket.emit("leaveRoom");
     router.push("/");
+    setMessages([]);
   };
 
   // REMOVED duplicate return - fixed syntax error
