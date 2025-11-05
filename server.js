@@ -210,8 +210,8 @@ app.prepare().then(() => {
       auth.userID && auth.userID.trim()
         ? auth.userID
         : user && user.userID
-        ? user.userID
-        : randomId();
+          ? user.userID
+          : randomId();
     socket.data.username =
       auth.username && auth.username.trim() ? auth.username : user.username;
     userStore.saveUser(socket.data.userID, {
@@ -784,7 +784,7 @@ app.prepare().then(() => {
       }
     });
 
-    socket.on("disconnect", () => {
+    socket.on("disconnect", async () => {
       console.log("User disconnected", socket.data.userID);
 
       // Automatically removes the player from the room they're in
@@ -809,6 +809,36 @@ app.prepare().then(() => {
             break outerLoop;
           }
         }
+      }
+
+      // assign new host when disconnect (Copied from leaveRoom)
+      const hostLeaving =
+        roomData[current_room_id]["state"]["host_id"] === socket.data.userID;
+
+      if (hostLeaving) {
+        const newHost = assignNewHost(current_room_id);
+
+        io.to(current_room_id).emit("hostChanged", newHost.userID);
+        // update state
+
+        roomData[current_room_id]["state"]["host_id"] = newHost.userID;
+
+        //update new host in database
+        try {
+          roomData[current_room_id]["state"].updateRoomInDatabase("host leaving");
+        } catch (error) {
+          console.log(error);
+        }
+      }
+
+      try {
+        const response = await updatePlayerList({
+          userId: socket.data.userID,
+          roomId: parseInt(current_room_id),
+          addPlayer: false,
+        });
+      } catch (error) {
+        console.error(error);
       }
 
       userStore.saveUser(socket.data.userID, {
@@ -1027,7 +1057,7 @@ app.prepare().then(() => {
     // randomly select new host from remaining players
     const newHost =
       roomPlayers[room_id][
-        Math.floor(Math.random() * roomPlayers[room_id].length)
+      Math.floor(Math.random() * roomPlayers[room_id].length)
       ];
     return newHost;
   }
