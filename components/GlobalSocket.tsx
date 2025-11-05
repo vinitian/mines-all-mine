@@ -1,9 +1,10 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import socket from "@/socket";
 import LoadingModal from "./LoadingModal";
+import { ChatContext } from "./ChatContext";
 
 export default function GlobalSocket({
   children,
@@ -12,15 +13,17 @@ export default function GlobalSocket({
 }) {
   const router = useRouter();
   const [deletedRoomPopup, setDeletedRoomPopup] = useState(false);
+  const { messages, setMessages } = useContext(ChatContext);
 
   useEffect(() => {
     socket.on("kickAllPlayersInEveryRoom", () => {
       socket.emit("leaveRoom");
       setDeletedRoomPopup(true);
+      setMessages([]);
       setTimeout(() => {
         setDeletedRoomPopup(false);
         router.replace("/");
-      }, 3000);
+      }, 2000);
     });
 
     return () => {

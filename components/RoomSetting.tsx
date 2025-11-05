@@ -1,8 +1,7 @@
 "use client";
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import socket from "@/socket";
-import editRoom from "@/services/client/editRoom";
 import CountdownModal from "@/components/CountDownModal";
 import Input from "@/components/Input";
 import Button from "@/components/Button";
@@ -81,6 +80,31 @@ export default function RoomSettings({
   const router = useRouter();
   const [showCountdown, setShowCountdown] = useState(false);
   const bombs = densityToCount(bombCount, mapSize);
+  const [countdownSeconds, setCountdownSeconds] = useState(3);
+  const [totalSeconds, setTotalSeconds] = useState(3);
+  const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const onCountdown = useCallback(
+    ({ seconds, startAt }: { seconds: number; startAt: number }) => {
+      setTotalSeconds(seconds);
+
+      const tick = () => {
+        const msLeft = startAt - Date.now();
+        const sLeft = Math.max(0, Math.ceil(msLeft / 1000));
+        setCountdownSeconds(sLeft);
+        if (sLeft <= 0 && countdownTimerRef.current) {
+          clearInterval(countdownTimerRef.current);
+          countdownTimerRef.current = null;
+        }
+      };
+
+      if (countdownTimerRef.current) clearInterval(countdownTimerRef.current);
+      tick();
+      countdownTimerRef.current = setInterval(tick, 200);
+      setShowCountdown(true);
+    },
+    []
+  );
 
   useEffect(() => {
     const onToGamePage = () => {
@@ -93,6 +117,19 @@ export default function RoomSettings({
       socket.off("toGamePage", onToGamePage);
     };
   }, [router]);
+
+  useEffect(() => {
+    socket.on("game:countdown", onCountdown);
+    return () => {
+      socket.off("game:countdown", onCountdown);
+      if (countdownTimerRef.current) clearInterval(countdownTimerRef.current);
+    };
+  }, [onCountdown]);
+  useEffect(() => {
+    if (showCountdown && countdownSeconds <= 0) {
+      setShowCountdown(false);
+    }
+  }, [showCountdown, countdownSeconds]);
 
   // Send default state to server
   useEffect(() => {
@@ -117,28 +154,25 @@ export default function RoomSettings({
       console.error("Socket not connected!");
       return;
     }
-    setShowCountdown(true);
+    const seconds = 3;
+    socket.emit("game:request-countdown", {
+      roomID: room.id,
+      seconds,
+    });
+    //setShowCountdown(true);
   };
 
-  const requestEditRoomSettings = async (
-    payload: object,
-    updateDb: boolean
-  ) => {
+  const requestEditRoomSettings = async (payload: object) => {
     console.log("201-room setting change requested consisting of", payload);
     const promise: Promise<object> = new Promise((resolve, reject) => {
       if (!socket.auth.userID) {
         reject({ ok: false, error: "Failed auth" });
       }
-      socket.emit(
-        "room:update-settings",
-        payload,
-        updateDb,
-        (response: any) => {
-          // callback
-          console.log("Updating room setting");
-          resolve(response);
-        }
-      );
+      socket.emit("room:update-settings", payload, (response: any) => {
+        // callback
+        console.log("Updating room setting");
+        resolve(response);
+      });
     });
 
     return promise;
@@ -160,6 +194,7 @@ export default function RoomSettings({
 
     return () => {
       socket.off("room:update-settings-success");
+      if (countdownTimerRef.current) clearInterval(countdownTimerRef.current);
     };
   }, []);
 
@@ -176,7 +211,7 @@ export default function RoomSettings({
             onChange={(e) => {
               setRoomname(e.target.value);
             }}
-            onBlur={() => requestEditRoomSettings({ name: roomname }, false)}
+            onBlur={() => requestEditRoomSettings({ name: roomname })}
           />
         ) : (
           <div className="text-xl">{roomname || "Unnamed"}</div>
@@ -189,7 +224,7 @@ export default function RoomSettings({
           <div className="flex flex-wrap gap-[6px]">
             {[6, 8, 10, 20, 30].map((size) => (
               <Button
-                onClick={() => requestEditRoomSettings({ size: size }, false)}
+                onClick={() => requestEditRoomSettings({ size: size })}
                 className={`w-min ${
                   mapSize === size ? "text-white" : "bg-white text-black"
                 }`}
@@ -216,10 +251,9 @@ export default function RoomSettings({
             <select
               value={playerLimit}
               onChange={(e) =>
-                requestEditRoomSettings(
-                  { player_limit: Number(e.target.value) },
-                  false
-                )
+                requestEditRoomSettings({
+                  player_limit: Number(e.target.value),
+                })
               }
               aria-label="Set the maximum number of players for the game."
               className="w-full"
@@ -247,16 +281,13 @@ export default function RoomSettings({
               id="num-bombs"
               value={bombCount}
               onChange={(e) =>
-                requestEditRoomSettings(
-                  {
-                    bomb_count: densityToCount(
-                      e.target.value as BombDensity,
-                      mapSize
-                    ),
-                    density: e.target.value,
-                  },
-                  false
-                )
+                requestEditRoomSettings({
+                  bomb_count: densityToCount(
+                    e.target.value as BombDensity,
+                    mapSize
+                  ),
+                  density: e.target.value,
+                })
               }
               aria-label="Set the amount of bomb density you want for the game."
               className="w-full"
@@ -282,10 +313,9 @@ export default function RoomSettings({
               id="chat"
               value={chatState ? "enable" : "disable"}
               onChange={(e) =>
-                requestEditRoomSettings(
-                  { chat_enabled: e.target.value == "enable" ? true : false },
-                  false
-                )
+                requestEditRoomSettings({
+                  chat_enabled: e.target.value == "enable" ? true : false,
+                })
               }
               aria-label="Set to enable/disable chat"
               className="w-full"
@@ -311,10 +341,9 @@ export default function RoomSettings({
             <select
               value={turnLimit}
               onChange={(e) =>
-                requestEditRoomSettings(
-                  { turn_limit: Number(e.target.value) as TurnLimit },
-                  false
-                )
+                requestEditRoomSettings({
+                  turn_limit: Number(e.target.value) as TurnLimit,
+                })
               }
               aria-label="Timer"
               className="w-full"
@@ -349,39 +378,30 @@ export default function RoomSettings({
 
         <CountdownModal
           open={showCountdown}
-          seconds={3}
+          totalSeconds={totalSeconds}
+          remainingSeconds={countdownSeconds}
           onComplete={async () => {
-            const bombs = densityToCount(bombCount, mapSize);
-            console.log("Starting game with settings:", {
-              size: mapSize,
-              bombCount: bombs,
-              turnLimit,
-              playerLimit,
-              chatEnabled: chatState,
-            });
-
-            const ack: any = await requestEditRoomSettings(
-              {
+            // Host starts the game (or move this to server for perfect sync)
+            if (isHost) {
+              const bombs = densityToCount(bombCount, mapSize);
+              const ack: any = await requestEditRoomSettings({
                 size: mapSize,
                 bomb_count: bombs,
                 turn_limit: turnLimit,
                 player_limit: playerLimit,
                 chat_enabled: chatState,
                 name: roomname,
-              },
-              true
-            );
-
-            if (!ack?.ok) {
-              console.error("Failed to save settings:", ack?.error);
-              return;
+              });
+              if (!ack?.ok) {
+                console.error("Failed to save settings:", ack?.error);
+                return;
+              }
+              socket.emit("startGame", {
+                size: mapSize,
+                bombCount: densityToCount(bombCount, mapSize),
+                turnLimit,
+              });
             }
-
-            socket.emit("startGame", {
-              size: mapSize,
-              bombCount: densityToCount(bombCount, mapSize),
-              turnLimit,
-            });
           }}
         />
       </div>

@@ -4,10 +4,10 @@ import { Server } from "socket.io";
 import InMemoryUserStore from "./userStore.js";
 import { randomBytes } from "node:crypto";
 import { Field } from "./services/game_logic.js";
-import getGameState from "./services/client/getGameState.js";
-import updateGameState from "./services/client/updateGameState.js";
 import createRoom from "./services/client/createRoom.js";
 import editRoom from "./services/client/editRoom.js";
+import addScores from "./services/client/addScores.js";
+import updatePlayerList from "./services/client/updatePlayerList.js";
 
 const dev = process.env.NODE_ENV !== "production";
 const hostname = "localhost";
@@ -66,22 +66,28 @@ app.prepare().then(() => {
       this.prev_winner = undefined;
     }
 
-    updateRoomInDatabase(socket, reason = "unspecified") {
-      //TODO link to database.
-      // TODO NEXT - IMPLEMENT server or client
-
-      // return await editRoom({
-      //   user_id: socket.data.userID,
-      //   name: this.name,
-      //   size: this.size,
-      //   bomb_count: this.bomb_count,
-      //   turn_limit: this.turn_limit,
-      //   player_limit: this.player_limit,
-      //   chat_enabled: this.chat_enabled,
-      // });
-      console.log(`updating database for ${reason} reason`);
+    async updateRoomInDatabase(reason = "unspecified") {
+      await editRoom({
+        id: this.id,
+        name: this.name,
+        size: this.size,
+        bomb_count: this.bomb_count,
+        turn_limit: this.turn_limit,
+        player_limit: this.player_limit,
+        chat_enabled: this.chat_enabled,
+        host_id: this.host_id,
+      });
+      console.log(`updated database for ${reason} reason`);
       return;
     }
+
+    async addScores(winnerIdList) {
+      await addScores({ user_id_list: winnerIdList });
+      console.log(
+        `updated scores for winners of room ${this.id}: ${winnerIdList}`
+      );
+    }
+
     loadDatabase() {
       //TODO link to database.
     }
@@ -220,6 +226,13 @@ app.prepare().then(() => {
 
   io.on("connection", (socket) => {
     console.log("User connected", socket.data.userID);
+    socket.on("game:request-countdown", ({ roomID, seconds }) => {
+      // synchronized start time
+      const startAt = Date.now() + seconds * 1000;
+
+      // broadcast to everyone in the room
+      io.to(roomID).emit("game:countdown", { seconds, startAt, roomID });
+    });
 
     userStore.saveUser(socket.data.userID, {
       username: socket.data.username,
@@ -374,7 +387,7 @@ app.prepare().then(() => {
       io.to(room_id).emit("kickPlayer", user_id);
     });
 
-    socket.on("room:update-settings", (payload, updateDb, callback) => {
+    socket.on("room:update-settings", (payload, callback) => {
       console.log(
         `Room setting update request received from ${current_room_id} with payload ${JSON.stringify(
           payload
@@ -385,15 +398,13 @@ app.prepare().then(() => {
       // TODO not implemeted yet
       state.update(payload);
 
-      if (updateDb) {
-        try {
-          state.updateRoomInDatabase(state, socket);
-        } catch (error) {
-          console.log(error);
-        }
-        // TODO: improve error handling. should we handle here, or inside updateDatabase?
-        // TODO: return fail if unable to update DB and revert socket state too
+      try {
+        state.updateRoomInDatabase("room settings updated");
+      } catch (error) {
+        console.log(error);
       }
+      // TODO: improve error handling. should we handle here, or inside updateDatabase?
+      // TODO: return fail if unable to update DB and revert socket state too
 
       if ("turn_limit" in payload) {
         timer.max_time = payload.turn_limit;
@@ -561,7 +572,7 @@ app.prepare().then(() => {
     });
 
     socket.on("leaveRoom", () => {
-      socket.rooms.forEach((room) => {
+      socket.rooms.forEach(async (room) => {
         if (room !== socket.id) {
           socket.leave(room);
           if (roomPlayers[room]) {
@@ -569,6 +580,7 @@ app.prepare().then(() => {
               (p) => p.userID !== socket.data.userID
             );
 
+            console.log(state);
             //if may not be necessay if roomPlayers always sync with this
             if (state && state.player_id_list.includes(socket.data.userID)) {
               state.player_id_list.splice(
@@ -576,10 +588,81 @@ app.prepare().then(() => {
                 1
               );
             }
-
-            io.to(room).emit("currentPlayers", roomPlayers[room]);
             // tell other players that a player has left
-            io.to(room).emit("playerLeft", socket.data.userID);
+            io.to(room).emit("currentPlayers", roomPlayers[room]);
+
+            const hostLeaving =
+              roomData[room]["state"]["host_id"] === socket.data.userID;
+
+            if (hostLeaving) {
+              const newHost = assignNewHost(room);
+
+              io.to(room).emit("hostChanged", newHost.userID);
+              // update state
+
+              roomData[room]["state"]["host_id"] = newHost.userID;
+
+              //update new host in database
+              try {
+                roomData[room]["state"].updateRoomInDatabase("host leaving");
+              } catch (error) {
+                console.log(error);
+              }
+            }
+
+            try {
+              const response = await updatePlayerList({
+                userId: socket.data.userID,
+                roomId: parseInt(room),
+                addPlayer: false,
+              });
+            } catch (error) {
+              console.error(error);
+            }
+          }
+        }
+
+        if (state.game_started) {
+          const { id: currentPlayer, index: currentIndex } = findCurrentPlayer(
+            state.player_id_list,
+            state.current_turn
+          );
+          const playerIndex = state.player_id_list.indexOf(socket.data.userID);
+          let newCurrentPlayer;
+          let leftIsCurrentPlayer;
+          if (currentPlayer == socket.data.userID) {
+            // is current player
+            ({ id: newCurrentPlayer } = findCurrentPlayer(
+              state.player_id_list,
+              state.current_turn + 1
+            ));
+            leftIsCurrentPlayer = true;
+          } else {
+            // is not current player
+            newCurrentPlayer = currentPlayer;
+            leftIsCurrentPlayer = false;
+          }
+
+          console.log(state.player_id_list);
+          state.player_id_list = state.player_id_list.filter(
+            (p) => p !== socket.data.userID
+          );
+
+          state.current_turn = state.player_id_list.indexOf(newCurrentPlayer);
+
+          //emit only if player is in room?
+          if (current_room_id) {
+            io.to(current_room_id).emit("playersUpdated", {
+              players: state.player_id_list,
+              currentPlayer: newCurrentPlayer,
+            });
+          }
+          if (
+            leftIsCurrentPlayer &&
+            state.game_started &&
+            state.player_id_list.length > 0
+          ) {
+            nextTurn(current_room_id, state, timer, "playerLeft");
           }
         }
       });
@@ -670,6 +753,8 @@ app.prepare().then(() => {
 
         state.game_started = false;
         const winners = computeWinners(state.scores);
+        state.addScores(winners.map((winner) => winner.id));
+
         state.prev_winner = winners[0].id;
 
         //broadcast to current room only?
@@ -752,17 +837,19 @@ app.prepare().then(() => {
         let leftIsCurrentPlayer;
         if (currentPlayer == socket.data.userID) {
           // is current player
-          newCurrentPlayer = findCurrentPlayer(
+          ({ id: newCurrentPlayer } = findCurrentPlayer(
             state.player_id_list,
             state.current_turn + 1
-          );
+          ));
           leftIsCurrentPlayer = true;
         } else {
           // is not current player
           newCurrentPlayer = currentPlayer;
           leftIsCurrentPlayer = false;
         }
-        state.player_id_list.splice(playerIndex, 1);
+        state.player_id_list = state.player_id_list.filter(
+          (p) => p !== socket.data.userID
+        );
 
         state.current_turn = state.player_id_list.indexOf(newCurrentPlayer);
 
@@ -929,6 +1016,20 @@ app.prepare().then(() => {
     }
 
     return array;
+  }
+
+  function assignNewHost(room_id) {
+    console.log("roomplayer", roomPlayers[room_id]);
+
+    if (!roomPlayers[room_id] || roomPlayers[room_id].length === 0) {
+      return null; // no players left
+    }
+    // randomly select new host from remaining players
+    const newHost =
+      roomPlayers[room_id][
+        Math.floor(Math.random() * roomPlayers[room_id].length)
+      ];
+    return newHost;
   }
 
   httpServer

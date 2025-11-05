@@ -6,12 +6,12 @@ import { Player, Room } from "@/interface";
 
 export default function PlayerList({
   players,
-  room,
   isHost,
+  room,
 }: {
   players: Player[];
-  room: Room;
   isHost: boolean;
+  room: Room;
 }) {
   const [playerLimit, setPlayerLimit] = useState<number>(room.player_limit);
 
@@ -41,12 +41,18 @@ export default function PlayerList({
       </div>
       <div className="text-h3">
         {players.map((player: Player) => {
+          const isPlayerHost = player.userID === room.host_id;
           return (
             <div
               key={player.userID}
               className="flex justify-between items-baseline"
             >
-              <span>- {player.username}</span>
+              <span>
+                - {player.username}{" "}
+                {isPlayerHost && (
+                  <span className="ml-1 text-gray-dark"> (host)</span>
+                )}
+              </span>
 
               {isHost && player.userID !== socket.auth.userID && (
                 <span className="px-2">

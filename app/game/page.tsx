@@ -4,13 +4,17 @@ import MineGameLogic from "../shared/mineGameLogic";
 import WelcomeMessage from "@/components/WelcomeMessage";
 import RoomName from "@/components/RoomName";
 import InGamePlayerList from "@/components/InGamePlayerList";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useContext } from "react";
 import socket from "@/socket";
 import { PlayerWithScore } from "@/interface";
 import Chat from "@/components/Chat";
 import { Bomb, Hourglass } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { ChatContext } from "@/components/ChatContext";
 
 export default function GamePage() {
+  const router = useRouter();
+  const { messages, setMessages } = useContext(ChatContext);
   const {
     roomId,
     roomName,

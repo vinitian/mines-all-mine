@@ -48,6 +48,7 @@ export async function POST(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   const data = await request.json();
   const {
+    id,
     user_id,
     name,
     size,
@@ -55,12 +56,13 @@ export async function PATCH(request: NextRequest) {
     turn_limit,
     player_limit,
     chat_enabled,
+    host_id,
   } = data;
 
   try {
     const updateRoom = await prisma.room.update({
       where: {
-        host_id: user_id,
+        id: id,
       },
       data: {
         name: name,
@@ -69,6 +71,7 @@ export async function PATCH(request: NextRequest) {
         timer: turn_limit,
         player_limit: player_limit,
         chat_enabled: chat_enabled,
+        host_id: host_id,
       },
     });
 
