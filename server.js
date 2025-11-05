@@ -745,10 +745,11 @@ app.prepare().then(() => {
         });
         setTimeout(() => {
           console.log(`Room ${current_room_id}: Sending return to lobby `);
-          io.to(current_room_id).emit("returnToLobby", { reason: "gameEnded" }); // TODO: no .to(room)?? Probably needed so added
-          resetGame(state, timer); // เริ่มใหม่ตาหน้า <- added parameters for this func
+          io.to(current_room_id).emit("returnToLobby", { reason: "gameEnded" });
+          resetGame(state, timer); // พร้อมเริ่มตาหน้าใหม่
         }, 10000);
 
+        state.updateRoomInDatabase("game over"); // set game_started back to false in database
         return;
       }
 
@@ -757,7 +758,7 @@ app.prepare().then(() => {
       } else {
         // console.log("Hit bomb, restarting timer");
         timer.reset();
-        timer.start(); //migrate timer (Done)
+        timer.start();
       }
     });
 
@@ -927,6 +928,9 @@ app.prepare().then(() => {
     state.player_id_list = fisherYatesShuffle(state.player_id_list);
 
     timer.reset();
+
+    state.updateRoomInDatabase("reset game"); // set game_started back to false in database
+
     console.log(` Room ${state.id}: Game reset`);
   }
 
