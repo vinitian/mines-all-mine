@@ -48,22 +48,16 @@ app.prepare().then(() => {
       this.player_id_list = [host_id];
       this.size = undefined; // for both x and y
       this.player_limit = undefined;
-      this.bomb_count = undefined; //init bombs count
+      this.bomb_count = undefined; // initial bomb count
       this.chat_enabled = undefined;
-      this.timer = undefined; //init time amount
       this.game_started = undefined;
       this.placement = undefined;
-      //this.score_list = undefined; // list of integers score, index same as player id list
-      //VV now this is index?
-      this.current_turn = 0; //count by player (to find amout of cycles through all players use division)
-      console.log(`Player ID ${host_id} created room ${id}`);
-      //possibly temp
-      this.current_turn_index = undefined; // to be depricated
-      this.scores = undefined; // migrate from score_list Map<string, number>
-      // also know as timer in db?
-      this.turn_limit = undefined;
-      this.density = undefined; // for proporgation only
+      this.current_turn = 0; // index of player_id_list. count by player (to find amout of cycles through all players, use division)
+      this.scores = undefined;
+      this.turn_limit = undefined; // "timer" field in database
       this.prev_winner = undefined;
+
+      console.log(`Player ID ${host_id} created room ${id}`);
     }
 
     async updateRoomInDatabase(reason = "unspecified") {
@@ -88,9 +82,6 @@ app.prepare().then(() => {
       );
     }
 
-    loadDatabase() {
-      //TODO link to database.
-    }
     update(updateJson) {
       for (let key in updateJson) {
         if (this.hasOwnProperty(key) && updateJson[key] !== undefined) {
@@ -300,7 +291,7 @@ app.prepare().then(() => {
       currentPlayer: state && state.game_started ? currentPlayer : null,
     });
 
-    // convert state.found? convert state.current_turn_index? may be needed for joining mid game?
+    // convert state.found? convert state.current_turn? may be needed for joining mid game?
     // If game is in progress, send current state to the connecting player
     // dont know if needed
     // if (state && state.game_started) {
@@ -310,17 +301,17 @@ app.prepare().then(() => {
     //     bombsTotal: state.bomb_count,
     //     bombsFound: hits,
     //     turnLimit: state.turn_limit ?? 10,
-    //     currentPlayer: state.player_id_list[state.current_turn_index] || null,
+    //     currentPlayer: state.player_id_list[state.current_turn] || null,
     //   });
 
     //   socket.emit("turnChanged", {
-    //     currentPlayer: state.player_id_list[state.current_turn_index],
+    //     currentPlayer: state.player_id_list[state.current_turn],
     //     reason: "joined",
     //   });
 
     //   if (state.turn_limit > 0) {
     //     socket.emit("turnTime", {
-    //       currentPlayer: state.player_id_list[state.current_turn_index],
+    //       currentPlayer: state.player_id_list[state.current_turn],
     //       timeRemaining: state.turnTimeRemaining,
     //     });
     //   }
@@ -608,7 +599,7 @@ app.prepare().then(() => {
         }
 
         if (state.game_started) {
-          const { id: currentPlayer, index: currentIndex } = findCurrentPlayer(
+          const currentPlayer = findCurrentPlayer(
             state.player_id_list,
             state.current_turn
           );
@@ -617,10 +608,10 @@ app.prepare().then(() => {
           let leftIsCurrentPlayer;
           if (currentPlayer == socket.data.userID) {
             // is current player
-            ({ id: newCurrentPlayer } = findCurrentPlayer(
+            newCurrentPlayer = findCurrentPlayer(
               state.player_id_list,
               state.current_turn + 1
-            ));
+            );
             leftIsCurrentPlayer = true;
           } else {
             // is not current player
@@ -845,10 +836,10 @@ app.prepare().then(() => {
         let leftIsCurrentPlayer;
         if (currentPlayer == socket.data.userID) {
           // is current player
-          ({ id: newCurrentPlayer } = findCurrentPlayer(
+          newCurrentPlayer = findCurrentPlayer(
             state.player_id_list,
             state.current_turn + 1
-          ));
+          );
           leftIsCurrentPlayer = true;
         } else {
           // is not current player
@@ -888,12 +879,12 @@ app.prepare().then(() => {
     //     turnLimit: state.turn_limit ?? 10,
     //   });
     //   socket.emit("turnChanged", {
-    //     currentPlayer: state.player_id_list[state.current_turn_index],
+    //     currentPlayer: state.player_id_list[state.current_turn],
     //     reason: "reconnect",
     //   });
     //   if (state.turn_limit > 0) {
     //     socket.emit("turnTime", {
-    //       currentPlayer: state.player_id_list[state.current_turn_index],
+    //       currentPlayer: state.player_id_list[state.current_turn],
     //       timeRemaining: timer,
     //     });
     //   }
@@ -949,40 +940,12 @@ app.prepare().then(() => {
   //   field: null,
   // };
 
-  // TODO replace with new timer object
-  // function startTurnTimer() {
-  //   if (state.turnTimer) {
-  //     clearInterval(state.turnTimer);
-  //   }
-  //   state.turnTimeRemaining = state.turn_limit;
-
-  //   io.emit("turnTime", {
-  //     currentPlayer: state.player_id_list[state.current_turn_index],
-  //     timeRemaining: state.turnTimeRemaining,
-  //   });
-  //   if (state.turn_limit === 0) return;
-
-  //   state.turnTimer = setInterval(() => {
-  //     state.turnTimeRemaining--;
-
-  //     io.emit("turnTime", {
-  //       currentPlayer: state.player_id_list[state.current_turn_index],
-  //       timeRemaining: state.turnTimeRemaining,
-  //     });
-
-  //     if (state.turnTimeRemaining <= 0) {
-  //       nextTurn("times up"); // TODO: reason should be same format -> timesUp
-  //     }
-  //   }, 1000);
-  // }
-
   //convert from current turn to old turn index
   function findCurrentPlayer(players, current_turn) {
     const index = current_turn % players.length;
     return players[index];
   }
 
-  //TODO redo this remove current_turn_index
   function nextTurn(current_room_id, state, timer, reason = "miss") {
     console.log(
       `Room ${current_room_id}: Starting new turn because reason ${reason}`
