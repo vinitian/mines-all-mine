@@ -4,8 +4,6 @@ import { Server } from "socket.io";
 import InMemoryUserStore from "./userStore.js";
 import { randomBytes } from "node:crypto";
 import { Field } from "./services/game_logic.js";
-import getGameState from "./services/client/getGameState.js";
-import updateGameState from "./services/client/updateGameState.js";
 import createRoom from "./services/client/createRoom.js";
 import editRoom from "./services/client/editRoom.js";
 import addScores from "./services/client/addScores.js";
@@ -212,8 +210,8 @@ app.prepare().then(() => {
       auth.userID && auth.userID.trim()
         ? auth.userID
         : user && user.userID
-          ? user.userID
-          : randomId();
+        ? user.userID
+        : randomId();
     socket.data.username =
       auth.username && auth.username.trim() ? auth.username : user.username;
     userStore.saveUser(socket.data.userID, {
@@ -608,9 +606,7 @@ app.prepare().then(() => {
               } catch (error) {
                 console.log(error);
               }
-
             }
-
 
             try {
               const response = await updatePlayerList({
@@ -1028,7 +1024,7 @@ app.prepare().then(() => {
     // randomly select new host from remaining players
     const newHost =
       roomPlayers[room_id][
-      Math.floor(Math.random() * roomPlayers[room_id].length)
+        Math.floor(Math.random() * roomPlayers[room_id].length)
       ];
     return newHost;
   }

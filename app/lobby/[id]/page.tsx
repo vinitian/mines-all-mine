@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useContext, useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Message, Room } from "@/interface";
 import getRoom from "@/services/client/getRoom";
@@ -71,7 +71,6 @@ export default function LobbyPage() {
             addPlayer: true,
           });
         }
-
       } catch (error) {
         console.error("Error fetching room:", error);
       } finally {
