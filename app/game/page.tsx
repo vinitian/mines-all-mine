@@ -6,7 +6,7 @@ import RoomName from "@/components/RoomName";
 import InGamePlayerList from "@/components/InGamePlayerList";
 import { useEffect, useState, useContext } from "react";
 import socket from "@/socket";
-import { PlayerWithScore } from "@/interface";
+import { Message, PlayerWithScore } from "@/interface";
 import Chat from "@/components/Chat";
 import { Bomb, Hourglass } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -48,9 +48,22 @@ export default function GamePage() {
       setPlayersWithUsername(players);
     });
 
+    socket.on("message", (msg: Message) => {
+      setMessages((prev: Message[]) => [
+        ...prev,
+        {
+          userID: msg.userID,
+          username: msg.username,
+          text: msg.text,
+          timestamp: msg.timestamp,
+        },
+      ]);
+    });
+
     return () => {
       socket.off("requestPlayerListOnStartGame");
       socket.off("playerListOnStartGame");
+      socket.off("message")
     };
   }, [players]);
 
