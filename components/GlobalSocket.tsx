@@ -23,7 +23,7 @@ export default function GlobalSocket({
       setTimeout(() => {
         setDeletedRoomPopup(false);
         router.replace("/");
-      }, 3000);
+      }, 2000);
     });
 
     return () => {

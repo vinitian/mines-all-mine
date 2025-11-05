@@ -105,7 +105,7 @@ export default function LobbyPage() {
       setTimeout(() => {
         setDeletedRoomPopup(false);
         router.replace("/");
-      }, 3000);
+      }, 2000);
     });
 
     // player needs to go back to home page when kicked
@@ -117,7 +117,7 @@ export default function LobbyPage() {
         setTimeout(() => {
           setKickedPopup(false);
           router.replace("/");
-        }, 3000);
+        }, 2000);
       }
     });
 
