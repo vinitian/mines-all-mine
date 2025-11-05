@@ -48,7 +48,6 @@ export default function GamePage() {
   useEffect(() => {
     socket.emit("requestPlayerListOnStartGame");
     socket.on("playerListOnStartGame", (players: PlayerWithScore[]) => {
-      // console.log("34-Players in room:", players);
       setPlayersWithUsername(players);
     });
 
@@ -148,7 +147,7 @@ export default function GamePage() {
                         winnersWithUsername
                           .slice(0, -1)
                           .map((w) => w.username)
-                          .join(", ") // remove the last space
+                          .join(", ")
                       }
                     </strong>
                     {" and "}

@@ -22,6 +22,5 @@ export default async function createRoom(apiRequest: CreateRoomRequest) {
   }
 
   const result = await response.json();
-  console.log("Room created successfully", result);
   return result;
 }

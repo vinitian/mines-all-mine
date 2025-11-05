@@ -210,8 +210,8 @@ app.prepare().then(() => {
       auth.userID && auth.userID.trim()
         ? auth.userID
         : user && user.userID
-        ? user.userID
-        : randomId();
+          ? user.userID
+          : randomId();
     socket.data.username =
       auth.username && auth.username.trim() ? auth.username : user.username;
     userStore.saveUser(socket.data.userID, {
@@ -495,11 +495,9 @@ app.prepare().then(() => {
 
       // this is just like emitting `currentPlayers` but with scores
       socket.on("requestPlayerListOnStartGame", () => {
-        console.log("483-request from game page!");
         roomPlayers[current_room_id].forEach((player) => {
           player.score = state.scores.get(player.userID) || 0;
         });
-        console.log("491", roomPlayers[current_room_id]);
         io.to(current_room_id).emit(
           "playerListOnStartGame",
           roomPlayers[current_room_id]
@@ -521,22 +519,6 @@ app.prepare().then(() => {
     //Room Management
 
     socket.on("joinRoom", (room_id) => {
-      // // check if player is in another room. if so, leave that room and join the new room
-      // // deprecated as we implemented leave room on disconnect
-      // socket.rooms.forEach((room) => {
-      //   if (room !== socket.id) {
-      //     socket.leave(room);
-      //     // leave room
-      //     if (roomPlayers[room]) {
-      //       roomPlayers[room] = roomPlayers[room].filter(
-      //         (p) => p.userID !== socket.data.userID
-      //       );
-
-      //       console.log("514-weird join");
-      //       io.to(room).emit("currentPlayers", roomPlayers[room]);
-      //     }
-      //   }
-      // });
 
       socket.join(room_id);
       // if room doesn't exist
@@ -908,9 +890,7 @@ app.prepare().then(() => {
   }
 
   function resetGame(state, timer) {
-    console.log("816-state.game_started before", state.game_started);
     state.game_started = false;
-    console.log("818-state.game_started after", state.game_started);
     const field = new Field();
     field.generate_field([state.size, state.size], state.bomb_count);
     state.placement = field.field;
@@ -920,12 +900,7 @@ app.prepare().then(() => {
     });
     state.current_turn = 0;
     state.player_id_list = fisherYatesShuffle(state.player_id_list);
-    // console.log("825-resetted state", state);
 
-    // if (state.turnTimer) { // migrate timer (Done)
-    //   clearInterval(state.turnTimer);
-    //   state.turnTimer = null;
-    // }
     timer.reset();
     console.log("Game reset");
   }
@@ -993,7 +968,7 @@ app.prepare().then(() => {
       reason,
     });
     if (state.game_started) {
-      //console.log("Timer Restarting");
+      //console.log("Timer Restarting in room", current_room_id);
       timer.start();
     }
   }
@@ -1027,7 +1002,7 @@ app.prepare().then(() => {
     // randomly select new host from remaining players
     const newHost =
       roomPlayers[room_id][
-        Math.floor(Math.random() * roomPlayers[room_id].length)
+      Math.floor(Math.random() * roomPlayers[room_id].length)
       ];
     return newHost;
   }

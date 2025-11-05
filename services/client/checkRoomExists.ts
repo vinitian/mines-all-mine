@@ -7,7 +7,6 @@ export default async function checkRoomExists(
       // room not found
       return false;
     }
-    console.log("53-response statusText", response.status);
     throw new Error("Error checking room existence");
   }
 

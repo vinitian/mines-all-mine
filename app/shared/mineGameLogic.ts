@@ -42,16 +42,15 @@ export default function MineGameLogic() {
 
   const pickCell = useCallback(
     (i: number) => {
-      console.log(`picking cell index ${i}`);
+      // console.log(`picking cell index ${i}`);
       if (!started || gameOver || revealed[i].is_open) {
-        // console.log("Conditions not met", !started, gameOver, revealed[i]);
         return;
       }
       if (currentPlayer !== myId) {
-        console.log("Not your turn!");
+        // console.log("Not your turn!");
         return;
       }
-      console.log(`requesting pickCell ${i}`);
+      // console.log(`requesting pickCell ${i}`);
       socket.emit("pickCell", i);
     },
     [started, gameOver, revealed, currentPlayer, myId]
@@ -61,7 +60,7 @@ export default function MineGameLogic() {
     setBombsInfo(null);
     setWinners(null);
     setGameOver(false);
-    console.log("set started resetLocal");
+    // console.log("set started resetLocal");
     setStarted(false);
     setTurnLimit(0);
     setCurrentPlayer(null);
@@ -90,9 +89,7 @@ export default function MineGameLogic() {
       setSize(data.size);
       setTurnLimit(data.turnLimit ?? 10);
       setChatEnabled(data.chatEnabled);
-      console.log("setting started to true");
       setStarted(true);
-      //console.log(started);
       if (data.currentPlayer) setCurrentPlayer(data.currentPlayer);
     };
 
@@ -119,7 +116,6 @@ export default function MineGameLogic() {
       bombCount: number;
     }) => {
       setGameOver(true);
-      console.log("set started onOver");
       setStarted(false);
       setCurrentPlayer(null);
       const scores = new Map(p.scores);

@@ -24,6 +24,5 @@ export default async function createField(apiRequest: CreateFieldRequest) {
   }
 
   const result = await response.json();
-  console.log("Field created successfully", result);
   return result;
 }
