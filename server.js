@@ -493,19 +493,6 @@ app.prepare().then(() => {
 
       io.to(current_room_id).emit("toGamePage"); // redirect player to game page
 
-      // this is just like emitting `currentPlayers` but with scores
-      socket.on("requestPlayerListOnStartGame", () => {
-        console.log("483-request from game page!");
-        roomPlayers[current_room_id].forEach((player) => {
-          player.score = state.scores.get(player.userID) || 0;
-        });
-        console.log("491", roomPlayers[current_room_id]);
-        io.to(current_room_id).emit(
-          "playerListOnStartGame",
-          roomPlayers[current_room_id]
-        );
-      });
-
       console.log(
         `Turn changed to player ${currentPlayer} for reason gameStart`
       );
@@ -516,6 +503,19 @@ app.prepare().then(() => {
 
       //startTurnTimer(); //migrate timer
       timer.start();
+    });
+
+    // this is just like emitting `currentPlayers` but with scores
+    socket.on("requestPlayerListOnStartGame", () => {
+      console.log("483-request from game page!");
+      roomPlayers[current_room_id].forEach((player) => {
+        player.score = state.scores.get(player.userID) || 0;
+      });
+      console.log("491", roomPlayers[current_room_id]);
+      io.to(current_room_id).emit(
+        "playerListOnStartGame",
+        roomPlayers[current_room_id]
+      );
     });
 
     //Room Management
