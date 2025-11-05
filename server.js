@@ -8,6 +8,7 @@ import getGameState from "./services/client/getGameState.js";
 import updateGameState from "./services/client/updateGameState.js";
 import createRoom from "./services/client/createRoom.js";
 import editRoom from "./services/client/editRoom.js";
+import addScores from "./services/client/addScores.js";
 import updatePlayerList from "./services/client/updatePlayerList.js";
 
 const dev = process.env.NODE_ENV !== "production";
@@ -80,8 +81,15 @@ app.prepare().then(() => {
       });
       console.log(`updated database for ${reason} reason`);
       return;
-      1;
     }
+
+    async addScores(winnerIdList) {
+      await addScores({ user_id_list: winnerIdList });
+      console.log(
+        `updated scores for winners of room ${this.id}: ${winnerIdList}`
+      );
+    }
+
     loadDatabase() {
       //TODO link to database.
     }
@@ -747,6 +755,8 @@ app.prepare().then(() => {
 
         state.game_started = false;
         const winners = computeWinners(state.scores);
+        state.addScores(winners.map((winner) => winner.id));
+
         state.prev_winner = winners[0].id;
 
         //broadcast to current room only?
