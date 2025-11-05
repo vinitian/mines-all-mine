@@ -30,7 +30,6 @@ export default function MineGameLogic() {
   const [turnLimit, setTurnLimit] = useState<number>(0);
   const [chatEnabled, setChatEnabled] = useState(true);
   const [winners, setWinners] = useState<Winner[] | null>(null);
-  const [leaderboard, setLeaderboard] = useState<[string, number][]>([]);
 
   const [currentPlayer, setCurrentPlayer] = useState<string | null>(null);
   const [players, setPlayers] = useState<string[]>([]);
@@ -57,22 +56,10 @@ export default function MineGameLogic() {
     },
     [started, gameOver, revealed, currentPlayer, myId]
   );
-
-  // const startGame = useCallback((opts?: { size?: number; bombCount?: number; tl?: number }) => {
-  //     const payload: any = {};
-  //     if (typeof opts?.size === "number") payload.size = opts.size;
-  //     if (typeof opts?.bombCount === "number") payload.bombCount = opts.bombCount;
-  //     if (typeof opts?.tl === "number") payload.tl = opts.tl;
-
-  //     setStarted(true);
-  //     socket.emit('startGame', payload);
-  //   }, []);
-
   const resetLocal = useCallback(() => {
     //setRevealed({}); ?/Todo come back to investigate
     setBombsInfo(null);
     setWinners(null);
-    setLeaderboard([]);
     setGameOver(false);
     console.log("set started resetLocal");
     setStarted(false);
@@ -100,7 +87,6 @@ export default function MineGameLogic() {
       setRevealed(data.revealed);
       setGameOver(false);
       setWinners(null);
-      setLeaderboard([]);
       setSize(data.size);
       setTurnLimit(data.turnLimit ?? 10);
       setChatEnabled(data.chatEnabled);
@@ -149,7 +135,6 @@ export default function MineGameLogic() {
         }
       }
       setWinners(w);
-      setLeaderboard(Array.from(scores.entries()).sort((a, b) => b[1] - a[1]));
       setReturnCountdown(10);
       const intervalId = setInterval(() => {
         setReturnCountdown((prev) => {
@@ -205,7 +190,6 @@ export default function MineGameLogic() {
       setRevealed({});
       setBombsInfo(null);
       setWinners(null);
-      setLeaderboard([]);
       setGameOver(false);
       setStarted(false);
       setTurnLimit(0);
@@ -246,7 +230,6 @@ export default function MineGameLogic() {
     revealed,
     bombsInfo,
     winners,
-    leaderboard,
     turnLimit,
     chatEnabled,
     currentPlayer,
