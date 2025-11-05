@@ -29,11 +29,10 @@ export default function WelcomeMessage({
   if (!visible) return null;
 
   return (
-    <div className="fixed top-[10%] left-1/2 -translate-x-1/2 z-[9999] pointer-events-none">
-      <p className="text-4xl font-semibold text-black animate-fadeInOut select-none">
+    <div className="fixed top-[10%] left-1/2 -translate-x-1/2 z-[9999] pointer-events-none rounded-lg bg-blue p-2">
+      <p className="text-4xl font-semibold text-white animate-fadeInOut select-none">
         {displayText}
       </p>
-
     </div>
   );
 }

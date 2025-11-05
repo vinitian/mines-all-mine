@@ -124,7 +124,6 @@ export default function LobbyPage() {
     // add players into array when they join
     // may need to leave when socket disconnect
     socket.on("currentPlayers", (currentPlayers: Player[]) => {
-      console.log("92-Players in room:", currentPlayers);
       setPlayers(currentPlayers);
     });
 

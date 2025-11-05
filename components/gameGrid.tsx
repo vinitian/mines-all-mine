@@ -20,7 +20,6 @@ export default function GameGrid({
   onPickAction,
   revealed,
 }: GameGridProps) {
-  console.log("GameGrid render");
 
   const cells = Array.from({ length: size * size }, (_, i) => i);
 
@@ -67,8 +66,8 @@ export default function GameGrid({
             isRevealed && isBomb
               ? "#8499FF"
               : isRevealed && !isBomb
-              ? "#FFFFFF"
-              : "#D4D4D4";
+                ? "#FFFFFF"
+                : "#D4D4D4";
 
           const label =
             isRevealed && isBomb ? (
