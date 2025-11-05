@@ -8,6 +8,7 @@ import getGameState from "./services/client/getGameState.js";
 import updateGameState from "./services/client/updateGameState.js";
 import createRoom from "./services/client/createRoom.js";
 import editRoom from "./services/client/editRoom.js";
+import updatePlayerList from "./services/client/updatePlayerList.js";
 
 const dev = process.env.NODE_ENV !== "production";
 const hostname = "localhost";
@@ -66,18 +67,20 @@ app.prepare().then(() => {
       this.prev_winner = undefined;
     }
 
-    async updateRoomInDatabase(userID, reason = "unspecified") {
+    async updateRoomInDatabase(reason = "unspecified") {
       await editRoom({
-        user_id: userID,
+        id: this.id,
         name: this.name,
         size: this.size,
         bomb_count: this.bomb_count,
         turn_limit: this.turn_limit,
         player_limit: this.player_limit,
         chat_enabled: this.chat_enabled,
+        host_id: this.host_id,
       });
       console.log(`updated database for ${reason} reason`);
       return;
+      1;
     }
     loadDatabase() {
       //TODO link to database.
@@ -201,8 +204,8 @@ app.prepare().then(() => {
       auth.userID && auth.userID.trim()
         ? auth.userID
         : user && user.userID
-        ? user.userID
-        : randomId();
+          ? user.userID
+          : randomId();
     socket.data.username =
       auth.username && auth.username.trim() ? auth.username : user.username;
     userStore.saveUser(socket.data.userID, {
@@ -387,7 +390,7 @@ app.prepare().then(() => {
       state.update(payload);
 
       try {
-        state.updateRoomInDatabase(socket.data.userID);
+        state.updateRoomInDatabase("room settings updated");
       } catch (error) {
         console.log(error);
       }
@@ -561,7 +564,7 @@ app.prepare().then(() => {
     });
 
     socket.on("leaveRoom", () => {
-      socket.rooms.forEach((room) => {
+      socket.rooms.forEach(async (room) => {
         if (room !== socket.id) {
           socket.leave(room);
           if (roomPlayers[room]) {
@@ -569,6 +572,7 @@ app.prepare().then(() => {
               (p) => p.userID !== socket.data.userID
             );
 
+            console.log(state);
             //if may not be necessay if roomPlayers always sync with this
             if (state && state.player_id_list.includes(socket.data.userID)) {
               state.player_id_list.splice(
@@ -576,12 +580,42 @@ app.prepare().then(() => {
                 1
               );
             }
-
-            io.to(room).emit("currentPlayers", roomPlayers[room]);
             // tell other players that a player has left
-            io.to(room).emit("playerLeft", socket.data.userID);
+            io.to(room).emit("currentPlayers", roomPlayers[room]);
+
+            const hostLeaving =
+              roomData[room]["state"]["host_id"] === socket.data.userID;
+
+            if (hostLeaving) {
+              const newHost = assignNewHost(room);
+
+              io.to(room).emit("hostChanged", newHost.userID);
+              // update state
+
+              roomData[room]["state"]["host_id"] = newHost.userID;
+
+              //update new host in database
+              try {
+                roomData[room]["state"].updateRoomInDatabase("host leaving");
+              } catch (error) {
+                console.log(error);
+              }
+
+            }
+
+
+            try {
+              const response = await updatePlayerList({
+                userId: socket.data.userID,
+                roomId: parseInt(room),
+                addPlayer: false,
+              });
+            } catch (error) {
+              console.error(error);
+            }
           }
         }
+
         if (state.game_started) {
           const { id: currentPlayer, index: currentIndex } = findCurrentPlayer(
             state.player_id_list,
@@ -636,38 +670,6 @@ app.prepare().then(() => {
       current_room_id = undefined;
       state = undefined;
       timer = undefined;
-    });
-
-    function assignNewHost(room_id) {
-      if (!roomPlayers[room_id] || roomPlayers[room_id].length === 0) {
-        return null; // no players left
-      }
-      // randomly select new host from remaining players
-      const newHost =
-        roomPlayers[room_id][
-          Math.floor(Math.random() * roomPlayers[room_id].length)
-        ];
-      return newHost;
-    }
-
-    socket.on("hostLeave", (room_id) => {
-      const newHost = assignNewHost(room_id);
-      console.log("New host assigned:", newHost);
-
-      if (newHost) {
-        console.log(`New host for room ${room_id} is ${newHost.userID}`);
-        io.to(room_id).emit("hostChanged", newHost.userID);
-        // update state
-        const state = getGameState(room_id, "host leaving");
-        state.host_id = newHost.userID;
-
-        //update new host in database
-        try {
-          state.updateRoomInDatabase(socket, "host leaving");
-        } catch (error) {
-          console.log(error);
-        }
-      }
     });
 
     socket.on("resetNotice", () => {
@@ -1005,6 +1007,20 @@ app.prepare().then(() => {
     }
 
     return array;
+  }
+
+  function assignNewHost(room_id) {
+    console.log("roomplayer", roomPlayers[room_id]);
+
+    if (!roomPlayers[room_id] || roomPlayers[room_id].length === 0) {
+      return null; // no players left
+    }
+    // randomly select new host from remaining players
+    const newHost =
+      roomPlayers[room_id][
+      Math.floor(Math.random() * roomPlayers[room_id].length)
+      ];
+    return newHost;
   }
 
   httpServer
