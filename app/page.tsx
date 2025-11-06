@@ -6,7 +6,7 @@ import Image from "next/image";
 import { signIn, useSession } from "next-auth/react";
 import StatisticsButton from "@/components/StatisticsButton";
 import { useRouter } from "next/navigation";
-import handleSignOut from "@/services/client/handleSignOut";
+import handleSignOut from "@/services/handleSignOut";
 import DuplicateUserPopup from "@/components/DuplicateConnectedUserPopup";
 import LoadingModal from "@/components/LoadingModal";
 
@@ -120,7 +120,7 @@ export default function Home() {
       username: username,
     };
     localStorage.setItem("userID", userID);
-    console.log("connectSocket auth", socket.auth);
+    console.log("My auth info:", socket.auth);
     socket.emit("setAuthSuccessful");
   };
 

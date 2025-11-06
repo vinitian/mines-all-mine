@@ -2,18 +2,17 @@
 
 import { useContext, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Message, Room } from "@/interface";
-import getRoom from "@/services/client/getRoom";
+import socket from "@/socket";
+import { Message, Room, Player } from "@/interface";
+import getRoom from "@/services/api/getRoom";
+import deleteRoom from "@/services/api/deleteRoom";
+import updatePlayerList from "@/services/api/updatePlayerList";
 import RoomSettings from "@/components/RoomSetting";
 import Chat from "@/components/Chat";
 import RoomName from "@/components/RoomName";
 import LoadingModal from "@/components/LoadingModal";
-import socket from "@/socket";
-import deleteRoom from "@/services/client/deleteRoom";
 import { ChatContext } from "@/components/ChatContext";
-import updatePlayerList from "@/services/client/updatePlayerList";
 import PlayerList from "@/components/PlayerList";
-import { Player } from "@/interface";
 import Button from "@/components/Button";
 
 export default function LobbyPage() {

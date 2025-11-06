@@ -1,7 +1,9 @@
 "use client";
-import Button from "@/components/Button";
-import addScores from "@/services/client/addScores";
+
 import { useState } from "react";
+import Button from "@/components/Button";
+import addScores from "@/services/api/addScores";
+
 export default function TestAddScoresPage() {
   const [userIdList, setUserIdList] = useState<string[]>([]);
 

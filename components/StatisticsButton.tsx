@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from "react";
 import socket from "@/socket";
-import getRooms from "@/services/client/getRooms";
-import resetEverything from "@/services/client/resetEverything";
+import getRooms from "@/services/api/getRooms";
+import resetEverything from "@/services/api/resetEverything";
 
 export default function StatisticsButton() {
   const [isPopupOpen, setIsPopupOpen] = useState(false);

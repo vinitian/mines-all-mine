@@ -2,10 +2,10 @@
 
 import { useEffect, useState } from "react";
 import socket from "@/socket";
-import StatisticsButton from "@/components/StatisticsButton";
 import { useRouter } from "next/navigation";
-import getRooms from "@/services/client/getRooms";
-import getRoom from "@/services/client/getRoom";
+import getRooms from "@/services/api/getRooms";
+import getRoom from "@/services/api/getRoom";
+import StatisticsButton from "@/components/StatisticsButton";
 import { Room as RoomType } from "@/interface";
 
 export default function Room() {
@@ -66,6 +66,11 @@ export default function Room() {
       const roomData = await getRoom(roomId);
 
       const isFull = roomData.player_id_list.length >= roomData.player_limit;
+      if (roomData.game_started) {
+        setError("That room's game has already started");
+        return;
+      }
+
       if (isFull) {
         setError("That room is full");
         return;
@@ -237,18 +242,22 @@ export default function Room() {
                       <div className="mt-3 flex justify-center">
                         <button
                           onClick={(e) => {
-                            if (isFull) return; // block full rooms
+                            if (isFull || room.game_started) return; // block full rooms
                             handleJoinRoom(room.id);
                           }}
-                          disabled={isFull}
+                          disabled={isFull || room.game_started}
                           className={`w-full text-h3 border-2 rounded-2xl px-6 py-2 transition-colors duration-200 whitespace-nowrap flex-shrink-0
                           ${
-                            isFull
+                            isFull || room.game_started
                               ? "bg-gray-300 border-gray-dark text-gray-600 cursor-not-allowed"
                               : "bg-[#8499FF] hover:bg-[#7388ee] border-border text-white cursor-pointer"
                           }`}
                         >
-                          {isFull ? "Room Full" : "Join"}
+                          {room.game_started
+                            ? "Game is ongoing"
+                            : isFull
+                            ? "Room Full"
+                            : "Join"}
                         </button>
                       </div>
                     </div>

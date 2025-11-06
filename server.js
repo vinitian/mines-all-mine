@@ -4,10 +4,10 @@ import { Server } from "socket.io";
 import InMemoryUserStore from "./userStore.js";
 import { randomBytes } from "node:crypto";
 import { Field } from "./services/game_logic.js";
-import createRoom from "./services/client/createRoom.js";
-import editRoom from "./services/client/editRoom.js";
-import addScores from "./services/client/addScores.js";
-import updatePlayerList from "./services/client/updatePlayerList.js";
+import createRoom from "./services/api/createRoom.js";
+import editRoom from "./services/api/editRoom.js";
+import addScores from "./services/api/addScores.js";
+import updatePlayerList from "./services/api/updatePlayerList.js";
 
 const dev = process.env.NODE_ENV !== "production";
 const hostname = "localhost";
@@ -48,49 +48,40 @@ app.prepare().then(() => {
       this.player_id_list = [host_id];
       this.size = undefined; // for both x and y
       this.player_limit = undefined;
-      this.bomb_count = undefined; //init bombs count
+      this.bomb_count = undefined; // initial bomb count
       this.chat_enabled = undefined;
-      this.timer = undefined; //init time amount
       this.game_started = undefined;
       this.placement = undefined;
-      //this.score_list = undefined; // list of integers score, index same as player id list
-      //VV now this is index?
-      this.current_turn = 0; //count by player (to find amout of cycles through all players use division)
-      console.log(`player id ${host_id} created room id ${id}`);
-      //possibly temp
-      this.current_turn_index = undefined; // to be depricated
-      this.scores = undefined; // migrate from score_list Map<string, number>
-      // also know as timer in db?
-      this.turn_limit = undefined;
-      this.density = undefined; // for proporgation only
+      this.current_turn = 0; // index of player_id_list. count by player (to find amout of cycles through all players, use division)
+      this.scores = undefined;
+      this.turn_limit = undefined; // "timer" field in database
       this.prev_winner = undefined;
+
+      console.log(`Player ID ${host_id} created room ${id}`);
     }
 
     async updateRoomInDatabase(reason = "unspecified") {
-      await editRoom({
-        id: this.id,
+      await editRoom(this.id, {
         name: this.name,
+        host_id: this.host_id,
         size: this.size,
         bomb_count: this.bomb_count,
         turn_limit: this.turn_limit,
         player_limit: this.player_limit,
         chat_enabled: this.chat_enabled,
-        host_id: this.host_id,
+        game_started: this.game_started,
       });
-      console.log(`updated database for ${reason} reason`);
+      console.log(`Room ${this.id}: updated database for ${reason} reason`);
       return;
     }
 
     async addScores(winnerIdList) {
       await addScores({ user_id_list: winnerIdList });
       console.log(
-        `updated scores for winners of room ${this.id}: ${winnerIdList}`
+        `Room ${state.id}: updated scores for winners: ${winnerIdList}`
       );
     }
 
-    loadDatabase() {
-      //TODO link to database.
-    }
     update(updateJson) {
       for (let key in updateJson) {
         if (this.hasOwnProperty(key) && updateJson[key] !== undefined) {
@@ -104,7 +95,7 @@ app.prepare().then(() => {
 
   function getGameState(room_id, reason = "unspecified") {
     console.log(
-      `getting data of room id ${room_id} for ${reason} reason`
+      `getting data of room ID ${room_id} for ${reason} reason`
       // JSON.stringify(roomData[room_id]["state"])
     );
     return roomData[room_id]["state"];
@@ -141,7 +132,7 @@ app.prepare().then(() => {
       }
       if (this.max_time != 0) {
         this.on_run();
-        console.log(`room id ${this.room_id} timer starting`);
+        console.log(`Room ${this.room_id}: timer starting`);
         clearInterval(this.interval);
         this.interval = setInterval(() => {
           this.time_remaining = this.time_remaining - 1;
@@ -152,7 +143,7 @@ app.prepare().then(() => {
         }, 1000);
       } else {
         this.on_run();
-        console.log(`room id ${this.room_id} timer starting (unlimited mode)`);
+        console.log(`Room ${this.room_id}: timer starting (unlimited mode)`);
         clearInterval(this.interval);
       }
     }
@@ -188,12 +179,11 @@ app.prepare().then(() => {
   }
 
   function getTimer(room_id, reason = "unspecified") {
-    console.log(`getting timer of room id ${room_id} for ${reason} reason`);
+    console.log(`getting timer of room ID ${room_id} for ${reason} reason`);
     return roomData[room_id]["timer"];
   }
 
   io.use((socket, next) => {
-    console.log("handshake AUTH", socket.handshake.auth);
     const userID = socket.handshake.auth.userID;
     let user;
 
@@ -219,13 +209,13 @@ app.prepare().then(() => {
       connected: false,
     });
 
-    console.log("DONE io.use() socket socket data:", socket.data);
+    // console.log("DONE io.use() socket socket data:", socket.data);
 
     return next();
   });
 
   io.on("connection", (socket) => {
-    console.log("User connected", socket.data.userID);
+    console.log("User connected", socket.data.userID, socket.data.username);
     socket.on("game:request-countdown", ({ roomID, seconds }) => {
       // synchronized start time
       const startAt = Date.now() + seconds * 1000;
@@ -301,7 +291,7 @@ app.prepare().then(() => {
       currentPlayer: state && state.game_started ? currentPlayer : null,
     });
 
-    // convert state.found? convert state.current_turn_index? may be needed for joining mid game?
+    // convert state.found? convert state.current_turn? may be needed for joining mid game?
     // If game is in progress, send current state to the connecting player
     // dont know if needed
     // if (state && state.game_started) {
@@ -311,17 +301,17 @@ app.prepare().then(() => {
     //     bombsTotal: state.bomb_count,
     //     bombsFound: hits,
     //     turnLimit: state.turn_limit ?? 10,
-    //     currentPlayer: state.player_id_list[state.current_turn_index] || null,
+    //     currentPlayer: state.player_id_list[state.current_turn] || null,
     //   });
 
     //   socket.emit("turnChanged", {
-    //     currentPlayer: state.player_id_list[state.current_turn_index],
+    //     currentPlayer: state.player_id_list[state.current_turn],
     //     reason: "joined",
     //   });
 
     //   if (state.turn_limit > 0) {
     //     socket.emit("turnTime", {
-    //       currentPlayer: state.player_id_list[state.current_turn_index],
+    //       currentPlayer: state.player_id_list[state.current_turn],
     //       timeRemaining: state.turnTimeRemaining,
     //     });
     //   }
@@ -389,7 +379,7 @@ app.prepare().then(() => {
 
     socket.on("room:update-settings", (payload, callback) => {
       console.log(
-        `Room setting update request received from ${current_room_id} with payload ${JSON.stringify(
+        `Room ${current_room_id}: Room setting update request received with payload ${JSON.stringify(
           payload
         )}`
       );
@@ -422,12 +412,10 @@ app.prepare().then(() => {
           id: creatorData.id,
           username: creatorData.username,
         });
-        //console.log(response);
         const data = response.data;
         createRoomObject(data.id, data.name, data.host_id);
         createTimer(data.id, 10); // assuming 10 default, may need to change later, maybe useEffect will take care of this in roomsettings
         // may be needed to set defaults?
-        //const state = getGameState(data.id, reason = "init values on create room")
         // init state is defined at launch of room Setting
         callback(response);
       } catch (e) {
@@ -471,16 +459,20 @@ app.prepare().then(() => {
         state.prev_winner &&
         state.player_id_list.includes(state.prev_winner)
       ) {
-        console.log(`putting previous winner ${state.prev_winner} first`);
+        console.log(
+          `Room ${state.id}: putting previous winner ${state.prev_winner} first`
+        );
         state.player_id_list = state.player_id_list.filter(
           (p) => p !== state.prev_winner
         );
         state.player_id_list = [state.prev_winner, ...state.player_id_list];
-        console.log(`new player order ${state.player_id_list}`);
+        console.log(
+          `Room ${state.id}: new player order ${state.player_id_list}`
+        );
       }
 
       console.log(
-        `Game started: ${state.size}x${state.size}, ${state.bomb_count} bombs, ${state.turn_limit}s turns`
+        `Room ${state.id}: Game started: ${state.size}x${state.size}, ${state.bomb_count} bombs, ${state.turn_limit}s turns`
       );
 
       // change to room level (changed)
@@ -489,12 +481,14 @@ app.prepare().then(() => {
         state.player_id_list,
         state.current_turn
       );
-      console.log("starting game with current player", currentPlayer);
+      console.log(
+        `Room ${state.id}: starting game with current player ${currentPlayer}`
+      );
 
       io.to(current_room_id).emit("toGamePage"); // redirect player to game page
 
       console.log(
-        `Turn changed to player ${currentPlayer} for reason gameStart`
+        `Room ${state.id}: Turn changed to player ${currentPlayer} for reason gameStart`
       );
       io.to(current_room_id).emit("turnChanged", {
         currentPlayer: currentPlayer,
@@ -503,15 +497,15 @@ app.prepare().then(() => {
 
       //startTurnTimer(); //migrate timer
       timer.start();
+
+      state.updateRoomInDatabase("game start"); // set game_started to true in database
     });
 
     // this is just like emitting `currentPlayers` but with scores
     socket.on("requestPlayerListOnStartGame", () => {
-      console.log("483-request from game page!");
       roomPlayers[current_room_id].forEach((player) => {
         player.score = state.scores.get(player.userID) || 0;
       });
-      console.log("491", roomPlayers[current_room_id]);
       io.to(current_room_id).emit(
         "playerListOnStartGame",
         roomPlayers[current_room_id]
@@ -544,7 +538,7 @@ app.prepare().then(() => {
       io.to(room_id).emit("currentPlayers", roomPlayers[room_id]);
 
       console.log(
-        `[ JOIN ] ${newPlayer.userID} joined. current players in ${room_id}:`,
+        `[ JOIN ] ${newPlayer.userID} joined room ${room_id}. Current players:`,
         roomPlayers[room_id]
       );
 
@@ -563,8 +557,7 @@ app.prepare().then(() => {
               (p) => p.userID !== socket.data.userID
             );
 
-            console.log(state);
-            //if may not be necessay if roomPlayers always sync with this
+            //if may not be necessary if roomPlayers always sync with this
             if (state && state.player_id_list.includes(socket.data.userID)) {
               state.player_id_list.splice(
                 state.player_id_list.indexOf(socket.data.userID),
@@ -606,7 +599,7 @@ app.prepare().then(() => {
         }
 
         if (state.game_started) {
-          const { id: currentPlayer, index: currentIndex } = findCurrentPlayer(
+          const currentPlayer = findCurrentPlayer(
             state.player_id_list,
             state.current_turn
           );
@@ -615,10 +608,10 @@ app.prepare().then(() => {
           let leftIsCurrentPlayer;
           if (currentPlayer == socket.data.userID) {
             // is current player
-            ({ id: newCurrentPlayer } = findCurrentPlayer(
+            newCurrentPlayer = findCurrentPlayer(
               state.player_id_list,
               state.current_turn + 1
-            ));
+            );
             leftIsCurrentPlayer = true;
           } else {
             // is not current player
@@ -626,7 +619,6 @@ app.prepare().then(() => {
             leftIsCurrentPlayer = false;
           }
 
-          console.log(state.player_id_list);
           state.player_id_list = state.player_id_list.filter(
             (p) => p !== socket.data.userID
           );
@@ -650,11 +642,6 @@ app.prepare().then(() => {
         }
       });
 
-      console.log(
-        "leave room run",
-        roomPlayers[current_room_id],
-        state.player_id_list
-      );
       //tracking player room and setting state
       current_room_id = undefined;
       state = undefined;
@@ -690,7 +677,7 @@ app.prepare().then(() => {
 
       const field = new Field();
       field.load(state.placement, [state.size, state.size], state.bomb_count);
-      const [y, x] = field.index_to_coordinate(index); // needed to swap this
+      const [x, y] = field.index_to_coordinate(index);
       const [flag, success] = field.open_cell(x, y);
 
       // console.log(`Picking cell at (${x},${y})`);
@@ -711,12 +698,12 @@ app.prepare().then(() => {
 
       const hits = field.get_hit_count();
 
-      console.log(
-        "sending pickCellResult",
-        hits,
-        state.bomb_count,
-        state.scores
-      );
+      // console.log(
+      //   "sending pickCellResult",
+      //   hits,
+      //   state.bomb_count,
+      //   state.scores
+      // );
       io.to(current_room_id).emit("cellResult", {
         revealMap: field.export_display_data(),
         bombsFound: hits,
@@ -731,7 +718,7 @@ app.prepare().then(() => {
         //   clearInterval(state.turnTimer);
         //   state.turnTimer = null;
         // }
-        console.log("Game ending");
+        console.log(`Room ${current_room_id}: Game ending`);
         timer.reset();
 
         state.game_started = false;
@@ -748,22 +735,21 @@ app.prepare().then(() => {
           bombCount: state.bomb_count,
         });
         setTimeout(() => {
-          console.log(
-            `Sending return to lobby to room with id ${current_room_id}`
-          );
-          io.to(current_room_id).emit("returnToLobby", { reason: "gameEnded" }); // TODO: no .to(room)?? Probably needed so added
-          resetGame(state, timer); // เริ่มใหม่ตาหน้า <- added parameters for this func
+          console.log(`Room ${current_room_id}: Sending return to lobby `);
+          io.to(current_room_id).emit("returnToLobby", { reason: "gameEnded" });
+          resetGame(state, timer); // พร้อมเริ่มตาหน้าใหม่
         }, 10000);
 
+        state.updateRoomInDatabase("game over"); // set game_started back to false in database
         return;
       }
 
       if (!hit) {
         nextTurn(current_room_id, state, timer, "miss");
       } else {
-        console.log("Hit bomb, restarting timer");
+        // console.log("Hit bomb, restarting timer");
         timer.reset();
-        timer.start(); //migrate timer (Done)
+        timer.start();
       }
     });
 
@@ -774,12 +760,10 @@ app.prepare().then(() => {
       outerLoop: for (const [roomId, playersList] of Object.entries(
         roomPlayers
       )) {
-        console.log(`Key: ${parseInt(roomId)}, Value: ${playersList}`);
+        // console.log(`Key: ${parseInt(roomId)}, Value: ${playersList}`);
 
         for (const player of playersList) {
           if (socket.data.userID == player.userID) {
-            console.log(player);
-
             roomPlayers[parseInt(roomId)] = roomPlayers[
               parseInt(roomId)
             ].filter((p) => p.userID !== socket.data.userID);
@@ -852,10 +836,10 @@ app.prepare().then(() => {
         let leftIsCurrentPlayer;
         if (currentPlayer == socket.data.userID) {
           // is current player
-          ({ id: newCurrentPlayer } = findCurrentPlayer(
+          newCurrentPlayer = findCurrentPlayer(
             state.player_id_list,
             state.current_turn + 1
-          ));
+          );
           leftIsCurrentPlayer = true;
         } else {
           // is not current player
@@ -895,12 +879,12 @@ app.prepare().then(() => {
     //     turnLimit: state.turn_limit ?? 10,
     //   });
     //   socket.emit("turnChanged", {
-    //     currentPlayer: state.player_id_list[state.current_turn_index],
+    //     currentPlayer: state.player_id_list[state.current_turn],
     //     reason: "reconnect",
     //   });
     //   if (state.turn_limit > 0) {
     //     socket.emit("turnTime", {
-    //       currentPlayer: state.player_id_list[state.current_turn_index],
+    //       currentPlayer: state.player_id_list[state.current_turn],
     //       timeRemaining: timer,
     //     });
     //   }
@@ -935,7 +919,10 @@ app.prepare().then(() => {
     state.player_id_list = fisherYatesShuffle(state.player_id_list);
 
     timer.reset();
-    console.log("Game reset");
+
+    state.updateRoomInDatabase("reset game"); // set game_started back to false in database
+
+    console.log(` Room ${state.id}: Game reset`);
   }
 
   // let state = {
@@ -953,49 +940,25 @@ app.prepare().then(() => {
   //   field: null,
   // };
 
-  // TODO replace with new timer object
-  // function startTurnTimer() {
-  //   if (state.turnTimer) {
-  //     clearInterval(state.turnTimer);
-  //   }
-  //   state.turnTimeRemaining = state.turn_limit;
-
-  //   io.emit("turnTime", {
-  //     currentPlayer: state.player_id_list[state.current_turn_index],
-  //     timeRemaining: state.turnTimeRemaining,
-  //   });
-  //   if (state.turn_limit === 0) return;
-
-  //   state.turnTimer = setInterval(() => {
-  //     state.turnTimeRemaining--;
-
-  //     io.emit("turnTime", {
-  //       currentPlayer: state.player_id_list[state.current_turn_index],
-  //       timeRemaining: state.turnTimeRemaining,
-  //     });
-
-  //     if (state.turnTimeRemaining <= 0) {
-  //       nextTurn("times up"); // TODO: reason should be same format -> timesUp
-  //     }
-  //   }, 1000);
-  // }
-
   //convert from current turn to old turn index
   function findCurrentPlayer(players, current_turn) {
     const index = current_turn % players.length;
     return players[index];
   }
 
-  //TODO redo this remove current_turn_index
   function nextTurn(current_room_id, state, timer, reason = "miss") {
-    console.log(`Starting new turn because reason ${reason}`);
+    console.log(
+      `Room ${current_room_id}: Starting new turn because reason ${reason}`
+    );
     timer.reset(); // migrate timer (Done)
     state.current_turn = state.current_turn + 1;
     const currentPlayer = findCurrentPlayer(
       state.player_id_list,
       state.current_turn
     );
-    console.log(`Turn changed to player ${currentPlayer} for reason ${reason}`);
+    console.log(
+      `Room ${current_room_id}: Turn changed to player ${currentPlayer} for reason ${reason}`
+    );
     io.to(current_room_id).emit("turnChanged", {
       currentPlayer: currentPlayer,
       reason,
@@ -1027,7 +990,7 @@ app.prepare().then(() => {
   }
 
   function assignNewHost(room_id) {
-    console.log("roomplayer", roomPlayers[room_id]);
+    // console.log("roomplayer", roomPlayers[room_id]);
 
     if (!roomPlayers[room_id] || roomPlayers[room_id].length === 0) {
       return null; // no players left
