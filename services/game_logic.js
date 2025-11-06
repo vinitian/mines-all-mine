@@ -106,15 +106,18 @@ export class Field {
     //returns true if successful
     if (!this.is_in_field(x, y)) {
       //console.log(1)
+      //console.log(x, y, "not in field")
       return [Field.open_cell_flags.OUTSIDE, false];
     }
     let cell = this.field[this.coordinate_to_index(x, y)];
     if (cell.is_open || (cell.is_open == true && cell.bomb == true)) {
       //console.log(2)
+      //console.log(x, y, "already open")
       return [Field.open_cell_flags.OPENED, false];
     }
     if (cell.bomb == true) {
       //console.log(3)
+      //console.log(x, y, "bomb")
       cell.is_open = true;
       this.bombs = this.bombs - 1;
       //console.log(this.field[this.coordinate_to_index(x,y)])
@@ -135,7 +138,7 @@ export class Field {
           if (this.is_in_field(xc, yc)) {
             index = this.coordinate_to_index(xc, yc);
             sel = this.field[index];
-            if (!(xc == 0 && yc == 0) && sel.is_open == false) {
+            if (!(dx == 0 && dy == 0) && sel.is_open == false) {
               //console.log(xc,yc);
               this.open_cell(xc, yc);
             }
@@ -144,6 +147,7 @@ export class Field {
       });
     }
     cell.is_open = true;
+    //console.log(x, y, "no bomb")
     return [Field.open_cell_flags.NOBOMB, true];
   }
   print_field() {
@@ -206,32 +210,32 @@ export class Field {
 
 // // Create an interface for reading input and writing output
 // const rl = readline.createInterface({
-//   input: process.stdin,
-//   output: process.stdout
+//     input: process.stdin,
+//     output: process.stdout
 // });
 
-// let field=new Field()
+// let field = new Field()
 // let result;
-// field.generate_field([10,10],20)
+// field.generate_field([4, 4], 0)
 
 // // Function to handle user commands
 // function handleCommand(position) {
-//     if(position=="x"){
+//     if (position == "x") {
 //         rl.close();
 //         return;
-//     }else{
-//         let coordinate=position.split(",")
-//         result=field.open_cell(Number(coordinate[0]),Number(coordinate[1]))
+//     } else {
+//         let coordinate = position.split(",")
+//         result = field.open_cell(Number(coordinate[0]), Number(coordinate[1]))
 //         console.log(result)
 //     }
 //     field.print_field()
-//     console.log(field.bombs+ " bombs remaining")
+//     console.log(field.bombs + " bombs remaining")
 //     askForCommand();
 // }
 
 // // Function to prompt user repeatedly
 // function askForCommand() {
-//   rl.question("\nPosition: ", handleCommand);
+//     rl.question("\nPosition: ", handleCommand);
 // }
 
 // // Start the loop
