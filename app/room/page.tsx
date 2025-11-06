@@ -66,13 +66,13 @@ export default function Room() {
       const roomData = await getRoom(roomId);
 
       const isFull = roomData.player_id_list.length >= roomData.player_limit;
-      if (isFull) {
-        setError("That room is full");
+      if (roomData.game_started) {
+        setError("That room's game has already started");
         return;
       }
 
-      if (roomData.game_started) {
-        setError("That room's game has already started");
+      if (isFull) {
+        setError("That room is full");
         return;
       }
 
@@ -253,10 +253,10 @@ export default function Room() {
                               : "bg-[#8499FF] hover:bg-[#7388ee] border-border text-white cursor-pointer"
                           }`}
                         >
-                          {isFull
+                          {room.game_started
+                            ? "Game is ongoing"
+                            : isFull
                             ? "Room Full"
-                            : room.game_started
-                            ? "Game has already started"
                             : "Join"}
                         </button>
                       </div>

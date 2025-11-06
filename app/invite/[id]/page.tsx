@@ -199,10 +199,10 @@ export default function InvitePage() {
                               : "bg-[#8499FF] hover:bg-[#7388ee] border-border text-white cursor-pointer"
                           }`}
         >
-          {room.player_id_list.length >= room.player_limit
-            ? "Room Full"
-            : room.game_started
+          {room.game_started
             ? "Game has already started"
+            : room.player_id_list.length >= room.player_limit
+            ? "Room Full"
             : "Join Room"}
         </button>
 
