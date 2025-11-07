@@ -87,7 +87,7 @@ export default function StatisticsButton() {
     return () => {
       socket.off("onlineCountUpdate", handleOnlineCountUpdate);
     };
-  }, []);
+  }, [isPopupOpen]);
 
   const handleOpenPopup = () => {
     setIsPopupOpen(true);
@@ -146,7 +146,7 @@ export default function StatisticsButton() {
               <div className="flex justify-between items-center py-2">
                 <span className="text-body font-medium">Currently online</span>
                 <span className="text-body text-gray-600">
-                  {onlineCount} Players
+                  {onlineCount} Player{onlineCount == 1 ? "" : "s"}
                 </span>
               </div>
             )}

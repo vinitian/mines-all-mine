@@ -756,6 +756,13 @@ app.prepare().then(() => {
     socket.on("disconnect", async () => {
       console.log("User disconnected", socket.data.userID);
 
+      // tracking players (global) (upon disconnect)
+      sockets.delete(socket.data.userID);
+      socket.emit("onlineCountUpdate", {
+        count: sockets.size,
+        isHost: isLocalhost,
+      });
+
       // Automatically removes the player from the room they're in
       outerLoop: for (const [roomId, playersList] of Object.entries(
         roomPlayers
@@ -814,9 +821,6 @@ app.prepare().then(() => {
         username: socket.data.username,
         connected: false,
       });
-
-      // tracking players (global) (upon disconnect)
-      sockets.delete(socket.data.userID);
 
       // TODO still broken needs fixing
       // remove player
