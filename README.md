@@ -42,19 +42,19 @@ Online Minesweeper clone project for 2190472 Netcentric Architecture.
    - Server randomizes first player that will start the game.
 
 4. Additional features
-- Sign in with Google for server device
-- Room settings
-  - More map sizes
-  - Timer options
-  - Max player
-- Database for rooms and signed-in users
-- Randomize map generation
-- Join room by code, invite link, or room list
-- Chat which persists in lobby and game page
-- Responsive web
-- Room host actions: kick players and delete room
-- Player can leave room by disconnect or ":eave Room" button
-- Open cell logic & bomb hint numbers
+   - Sign in with Google for server device
+   - Room settings
+     - More map sizes
+     - Timer options
+     - Max player
+   - Database for rooms and signed-in users
+   - Randomize map generation
+   - Join room by code, invite link, or room list
+   - Chat which persists in lobby and game page
+   - Responsive web
+   - Room host actions: kick players and delete room
+   - Player can leave room by disconnect or ":eave Room" button
+   - Open cell logic & bomb hint numbers
 
 ## Screenshots
 ![Screenshot of home page 1](public/screenshots/1%20-%20Home%20page.png)
